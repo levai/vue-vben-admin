@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { $t } from '#/locales';
+import { $t } from '@/locales';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         },
         name: 'NaiveDemos',
         path: '/demos/element',
-        component: () => import('#/views/demos/element/index.vue'),
+        component: () => import('@/views/demos/element/index.vue'),
       },
       {
         meta: {
@@ -27,7 +27,7 @@ const routes: RouteRecordRaw[] = [
         },
         name: 'BasicForm',
         path: '/demos/form',
-        component: () => import('#/views/demos/form/basic.vue'),
+        component: () => import('@/views/demos/form/basic.vue'),
       },
     ],
   },

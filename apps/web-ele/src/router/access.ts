@@ -6,13 +6,12 @@ import type {
 import { generateAccessible } from '@vben/access';
 import { preferences } from '@vben/preferences';
 
+import { getAllMenusApi } from '@/api';
+import { BasicLayout, IFrameView } from '@/layouts';
+import { $t } from '@/locales';
 import { ElMessage } from 'element-plus';
 
-import { getAllMenusApi } from '#/api';
-import { BasicLayout, IFrameView } from '#/layouts';
-import { $t } from '#/locales';
-
-const forbiddenComponent = () => import('#/views/_core/fallback/forbidden.vue');
+const forbiddenComponent = () => import('@/views/_core/fallback/forbidden.vue');
 
 async function generateAccess(options: GenerateMenuAndRoutesOptions) {
   const pageMap: ComponentRecordType = import.meta.glob('../views/**/*.vue');

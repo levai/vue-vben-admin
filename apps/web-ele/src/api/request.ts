@@ -13,9 +13,8 @@ import {
 } from '@vben/request';
 import { useAccessStore } from '@vben/stores';
 
+import { useAuthStore } from '@/store';
 import { ElMessage } from 'element-plus';
-
-import { useAuthStore } from '#/store';
 
 import { refreshTokenApi } from './core';
 

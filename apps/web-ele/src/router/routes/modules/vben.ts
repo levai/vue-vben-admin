@@ -10,8 +10,8 @@ import {
 } from '@vben/constants';
 import { SvgAntdvLogoIcon, SvgTDesignIcon } from '@vben/icons';
 
-import { IFrameView } from '#/layouts';
-import { $t } from '#/locales';
+import { IFrameView } from '@/layouts';
+import { $t } from '@/locales';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -82,7 +82,7 @@ const routes: RouteRecordRaw[] = [
   {
     name: 'VbenAbout',
     path: '/vben-admin/about',
-    component: () => import('#/views/_core/about/index.vue'),
+    component: () => import('@/views/_core/about/index.vue'),
     meta: {
       icon: 'lucide:copyright',
       title: $t('demos.vben.about'),
@@ -92,7 +92,7 @@ const routes: RouteRecordRaw[] = [
   {
     name: 'Profile',
     path: '/profile',
-    component: () => import('#/views/_core/profile/index.vue'),
+    component: () => import('@/views/_core/profile/index.vue'),
     meta: {
       icon: 'lucide:user',
       hideInMenu: true,
