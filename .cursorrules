@@ -10,6 +10,7 @@
 - **UI 框架**: Element Plus (当前项目使用)
 - **样式方案**: TailwindCSS + PostCSS
 - **包管理**: pnpm 10+ (必须使用 pnpm)
+- **官方文档**: 遇到问题或需要了解详细功能时，可参考 `docs/src/guide/` 目录下的官方文档
 
 ## 核心开发原则
 
@@ -1373,6 +1374,56 @@ export const useTable = <T>(fetchFn: (params: any) => Promise<T[]>) => {
 // 使用 Performance API 分析性能
 ```
 
+## 官方文档参考
+
+在开发过程中，如果遇到问题或需要了解详细功能，请优先参考 `docs/src/guide/` 目录下的官方文档：
+
+### 基础指南 (essentials/)
+- `concept.md` - 核心概念
+- `development.md` - 开发指南
+- `route.md` - 路由配置
+- `settings.md` - 配置说明
+- `styles.md` - 样式方案
+- `icons.md` - 图标使用
+- `build.md` - 构建部署
+- `server.md` - 服务端交互
+- `external-module.md` - 外部模块
+
+### 深入理解 (in-depth/)
+- `access.md` - **权限控制**（按钮权限、路由权限）
+- `theme.md` - 主题配置
+- `layout.md` - 布局系统
+- `locale.md` - 国际化
+- `login.md` - 登录认证
+- `loading.md` - 加载状态
+- `features.md` - 功能特性
+- `ui-framework.md` - UI 框架适配
+- `check-updates.md` - 版本更新
+
+### 项目配置 (project/)
+- `dir.md` - 目录结构
+- `standard.md` - 开发规范
+- `cli.md` - 命令行工具
+- `vite.md` - Vite 配置
+- `tailwindcss.md` - TailwindCSS 配置
+- `changeset.md` - 变更日志
+- `test.md` - 测试指南
+
+### 其他 (other/)
+- `faq.md` - 常见问题
+- `project-update.md` - 项目升级
+- `remove-code.md` - 代码清理
+
+### 使用建议
+
+1. **遇到权限控制问题** → 查看 `in-depth/access.md`
+2. **需要配置路由** → 查看 `essentials/route.md`
+3. **样式相关问题** → 查看 `essentials/styles.md` 和 `project/tailwindcss.md`
+4. **构建部署问题** → 查看 `essentials/build.md` 和 `project/vite.md`
+5. **国际化配置** → 查看 `in-depth/locale.md`
+6. **主题定制** → 查看 `in-depth/theme.md`
+7. **常见问题** → 查看 `other/faq.md`
+
 ## 总结
 
 - 始终保持类型安全
@@ -1380,3 +1431,4 @@ export const useTable = <T>(fetchFn: (params: any) => Promise<T[]>) => {
 - 保持代码简洁、可维护
 - 注重性能和用户体验
 - 及时更新技术栈
+- **遇到问题优先查阅官方文档**
