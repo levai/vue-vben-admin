@@ -142,7 +142,12 @@ setupVbenVxeTable({
      */
     vxeUI.renderer.add('CellOperation', {
       renderTableDefault({ attrs, options, props }, { column, row }) {
-        const defaultProps = { size: 'small', link: true, ...props };
+        const defaultProps = {
+          size: 'small',
+          link: true,
+          type: 'primary',
+          ...props,
+        };
         let align = 'end';
         switch (column.align) {
           case 'center': {
@@ -174,7 +179,7 @@ setupVbenVxeTable({
           .map((opt) => {
             if (isString(opt)) {
               return presets[opt]
-                ? { code: opt, ...presets[opt], ...defaultProps }
+                ? { code: opt, ...defaultProps, ...presets[opt] }
                 : {
                     code: opt,
                     text: $te(`common.${opt}`) ? $t(`common.${opt}`) : opt,
