@@ -86,8 +86,16 @@ setupVbenVxeTable({
       renderTableDefault({ options, props }, { column, row }) {
         const value = get(row, column.field);
         const tagOptions = options ?? [
-          { color: 'success', label: $t('common.enabled'), value: 1 },
-          { color: 'danger', label: $t('common.disabled'), value: 0 },
+          {
+            type: 'primary',
+            label: $t('common.enabled'),
+            value: 1,
+          },
+          {
+            type: 'danger',
+            label: $t('common.disabled'),
+            value: 0,
+          },
         ];
         const tagItem = tagOptions.find((item) => item.value === value);
 
