@@ -87,106 +87,57 @@ const dashboardMenus = [
   },
 ];
 
-const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
-  const roleWithMenus = {
-    admin: {
-      component: '/demos/access/admin-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.adminVisible',
-      },
-      name: 'AccessAdminVisibleDemo',
-      path: '/demos/access/admin-visible',
+const systemMenus = [
+  {
+    meta: {
+      order: 9997,
+      title: 'system.title',
     },
-    super: {
-      component: '/demos/access/super-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.superVisible',
-      },
-      name: 'AccessSuperVisibleDemo',
-      path: '/demos/access/super-visible',
-    },
-    user: {
-      component: '/demos/access/user-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.userVisible',
-      },
-      name: 'AccessUserVisibleDemo',
-      path: '/demos/access/user-visible',
-    },
-  };
-
-  return [
-    {
-      meta: {
-        icon: 'ic:baseline-view-in-ar',
-        keepAlive: true,
-        order: 1000,
-        title: 'demos.title',
-      },
-      name: 'Demos',
-      path: '/demos',
-      redirect: '/demos/access',
-      children: [
-        {
-          name: 'AccessDemos',
-          path: '/demosaccess',
-          meta: {
-            icon: 'mdi:cloud-key-outline',
-            title: 'demos.access.backendPermissions',
-          },
-          redirect: '/demos/access/page-control',
-          children: [
-            {
-              name: 'AccessPageControlDemo',
-              path: '/demos/access/page-control',
-              component: '/demos/access/index',
-              meta: {
-                icon: 'mdi:page-previous-outline',
-                title: 'demos.access.pageAccess',
-              },
-            },
-            {
-              name: 'AccessButtonControlDemo',
-              path: '/demos/access/button-control',
-              component: '/demos/access/button-control',
-              meta: {
-                icon: 'mdi:button-cursor',
-                title: 'demos.access.buttonControl',
-              },
-            },
-            {
-              name: 'AccessMenuVisible403Demo',
-              path: '/demos/access/menu-visible-403',
-              component: '/demos/access/menu-visible-403',
-              meta: {
-                authority: ['no-body'],
-                icon: 'mdi:button-cursor',
-                menuVisibleWithForbidden: true,
-                title: 'demos.access.menuVisible403',
-              },
-            },
-            roleWithMenus[role],
-          ],
+    name: 'System',
+    path: '/system',
+    children: [
+      {
+        name: 'SystemMenu',
+        path: '/system/menu',
+        component: '/system/menu/list',
+        meta: {
+          icon: 'carbon:menu',
+          title: 'system.menu.title',
         },
-      ],
-    },
-  ];
-};
+      },
+      {
+        name: 'SystemDept',
+        path: '/system/dept',
+        component: '/system/dept/list',
+        meta: {
+          icon: 'carbon:container-services',
+          title: 'system.dept.title',
+        },
+      },
+      {
+        name: 'SystemRole',
+        path: '/system/role',
+        component: '/system/role/list',
+        meta: {
+          icon: 'carbon:user-role',
+          title: 'system.role.title',
+        },
+      },
+    ],
+  },
+];
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: [...dashboardMenus, ...systemMenus],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: [...dashboardMenus, ...systemMenus],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...dashboardMenus, ...systemMenus],
     username: 'jack',
   },
 ];
@@ -315,7 +266,7 @@ export const MOCK_MENU_LIST = [
     meta: {
       badgeType: 'dot',
       order: 9998,
-      title: 'demos.vben.title',
+      title: 'Vben Admin',
       icon: 'carbon:data-center',
     },
     name: 'Project',
@@ -334,7 +285,7 @@ export const MOCK_MENU_LIST = [
         meta: {
           icon: 'carbon:book',
           iframeSrc: 'https://doc.vben.pro',
-          title: 'demos.vben.document',
+          title: '在线文档',
         },
       },
       {
@@ -363,7 +314,7 @@ export const MOCK_MENU_LIST = [
           icon: 'carbon:hexagon-vertical-solid',
           badgeType: 'dot',
           link: 'https://ant.vben.pro',
-          title: 'demos.vben.antdv',
+          title: 'Ant Design Vue 版本',
         },
       },
     ],
@@ -376,7 +327,7 @@ export const MOCK_MENU_LIST = [
     meta: {
       icon: 'lucide:copyright',
       order: 9999,
-      title: 'demos.vben.about',
+      title: '关于',
     },
     name: 'About',
     path: '/about',
