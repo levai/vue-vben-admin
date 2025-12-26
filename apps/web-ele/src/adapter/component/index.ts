@@ -3,6 +3,8 @@
  * 可用于 vben-form、vben-modal、vben-drawer 等组件使用,
  */
 
+/* eslint-disable vue/one-component-per-file */
+
 import type { Component } from 'vue';
 
 import type { BaseFormComponentType } from '@vben/common-ui';
@@ -15,6 +17,12 @@ import { $t } from '@vben/locales';
 
 import { ElNotification } from 'element-plus';
 
+const ElAutocomplete = defineAsyncComponent(() =>
+  Promise.all([
+    import('element-plus/es/components/autocomplete/index'),
+    import('element-plus/es/components/autocomplete/style/css'),
+  ]).then(([res]) => res.ElAutocomplete),
+);
 const ElButton = defineAsyncComponent(() =>
   Promise.all([
     import('element-plus/es/components/button/index'),
@@ -57,6 +65,13 @@ const ElInput = defineAsyncComponent(() =>
     import('element-plus/es/components/input/style/css'),
   ]).then(([res]) => res.ElInput),
 );
+// Textarea 使用 ElInput 并设置 type="textarea"
+const Textarea = defineComponent({
+  name: 'VbenTextarea',
+  setup(props, { attrs, slots }) {
+    return () => h(ElInput, { ...props, ...attrs, type: 'textarea' }, slots);
+  },
+});
 const ElInputNumber = defineAsyncComponent(() =>
   Promise.all([
     import('element-plus/es/components/input-number/index'),
@@ -156,6 +171,7 @@ const withDefaultPlaceholder = <T extends Component>(
 export type ComponentType =
   | 'ApiSelect'
   | 'ApiTreeSelect'
+  | 'AutoComplete'
   | 'Checkbox'
   | 'CheckboxGroup'
   | 'DatePicker'
@@ -164,9 +180,11 @@ export type ComponentType =
   | 'Input'
   | 'InputNumber'
   | 'RadioGroup'
+  | 'RangePicker'
   | 'Select'
   | 'Space'
   | 'Switch'
+  | 'Textarea'
   | 'TimePicker'
   | 'TreeSelect'
   | 'Upload'
@@ -204,6 +222,57 @@ async function initComponentAdapter() {
         visibleEvent: 'onVisibleChange',
       },
     ),
+    AutoComplete: (props, { attrs, slots }) => {
+      // Element Plus 的 ElAutocomplete 需要 fetchSuggestions 回调
+      // Ant Design Vue 使用 options 数组和 filterOption 方法
+      const { options, filterOption, ...restAttrs } = attrs;
+
+      // 创建 fetchSuggestions 回调函数
+      const fetchSuggestions = (
+        queryString: string,
+        callback: (suggestions: any[]) => void,
+      ) => {
+        if (!options || !Array.isArray(options)) {
+          callback([]);
+          return;
+        }
+
+        // 如果没有输入，返回所有选项
+        if (!queryString) {
+          callback(options);
+          return;
+        }
+
+        // 如果有自定义的 filterOption 函数，使用它
+        if (typeof filterOption === 'function') {
+          const filtered = options.filter((option) =>
+            filterOption(queryString, option),
+          );
+          callback(filtered);
+        } else {
+          // 默认过滤逻辑：匹配 value 字段
+          const filtered = options.filter((option) => {
+            const value = option.value || option.label || '';
+            return value.toLowerCase().includes(queryString.toLowerCase());
+          });
+          callback(filtered);
+        }
+      };
+
+      return h(
+        ElAutocomplete,
+        {
+          ...props,
+          ...restAttrs,
+          fetchSuggestions,
+          placeholder:
+            props?.placeholder ||
+            attrs?.placeholder ||
+            $t('ui.placeholder.input'),
+        },
+        slots,
+      );
+    },
     Checkbox: ElCheckbox,
     CheckboxGroup: (props, { attrs, slots }) => {
       let defaultSlot;
@@ -240,6 +309,7 @@ async function initComponentAdapter() {
     }),
     Input: withDefaultPlaceholder(ElInput, 'input'),
     InputNumber: withDefaultPlaceholder(ElInputNumber, 'input'),
+    Textarea: withDefaultPlaceholder(Textarea, 'input'),
     RadioGroup: (props, { attrs, slots }) => {
       let defaultSlot;
       if (Reflect.has(slots, 'default')) {
@@ -299,6 +369,27 @@ async function initComponentAdapter() {
       return h(
         ElDatePicker,
         {
+          ...props,
+          ...attrs,
+          ...extraProps,
+        },
+        slots,
+      );
+    },
+    RangePicker: (props, { attrs, slots }) => {
+      const { name, id } = props;
+      const extraProps: Recordable<any> = {};
+      // RangePicker 默认是日期范围选择
+      if (name && !Array.isArray(name)) {
+        extraProps.name = [name, `${name}_end`];
+      }
+      if (id && !Array.isArray(id)) {
+        extraProps.id = [id, `${id}_end`];
+      }
+      return h(
+        ElDatePicker,
+        {
+          type: 'daterange',
           ...props,
           ...attrs,
           ...extraProps,

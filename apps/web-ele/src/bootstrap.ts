@@ -9,7 +9,7 @@ import '@vben/styles/ele';
 
 import { $t, setupI18n } from '@/locales';
 import { useTitle } from '@vueuse/core';
-import { ElLoading } from 'element-plus';
+import { ElButton, ElLoading } from 'element-plus';
 
 import { initComponentAdapter } from './adapter/component';
 import { initSetupVbenForm } from './adapter/form';
@@ -32,6 +32,9 @@ async function bootstrap(namespace: string) {
   //   zIndex: 2000,
   // });
   const app = createApp(App);
+
+  // 注册Element Plus组件
+  app.component('ElButton', ElButton);
 
   // 注册Element Plus提供的v-loading指令
   app.directive('loading', ElLoading.directive);
