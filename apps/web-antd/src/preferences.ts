@@ -10,4 +10,18 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     name: import.meta.env.VITE_APP_TITLE,
   },
+  theme: {
+    mode: 'light',
+  },
+  widget: {
+    fullscreen: true, // 全屏
+    globalSearch: true, // 全局搜索
+    languageToggle: false, // 语言切换
+    lockScreen: true, // 锁屏
+    notification: true, // 通知
+    refresh: true, // 刷新
+    sidebarToggle: true, // 侧边栏显示/隐藏
+    themeToggle: true, // 主题切换
+    timezone: false, // 时区
+  },
 });
