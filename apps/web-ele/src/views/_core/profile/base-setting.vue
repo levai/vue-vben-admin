@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { VbenFormSchema } from '@/adapter/form';
+import type { VbenFormSchema } from '#/adapter/form';
 
 import type { BasicOption } from '@vben/types';
 
@@ -7,7 +7,7 @@ import { computed, onMounted, ref } from 'vue';
 
 import { ProfileBaseSetting } from '@vben/common-ui';
 
-import { getUserInfoApi } from '@/api';
+import { getUserInfoApi } from '#/api';
 
 const profileBaseSettingRef = ref();
 

@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { $t } from '@/locales';
+import { $t } from '#/locales';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:account-group',
           title: $t('system.role.title'),
         },
-        component: () => import('@/views/system/role/list.vue'),
+        component: () => import('#/views/system/role/list.vue'),
       },
       {
         path: '/system/menu',
@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:menu',
           title: $t('system.menu.title'),
         },
-        component: () => import('@/views/system/menu/list.vue'),
+        component: () => import('#/views/system/menu/list.vue'),
       },
       {
         path: '/system/dept',
@@ -37,7 +37,7 @@ const routes: RouteRecordRaw[] = [
           icon: 'charm:organisation',
           title: $t('system.dept.title'),
         },
-        component: () => import('@/views/system/dept/list.vue'),
+        component: () => import('#/views/system/dept/list.vue'),
       },
     ],
   },

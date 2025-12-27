@@ -1,5 +1,3 @@
-import { fileURLToPath, URL } from 'node:url';
-
 import { defineConfig } from '@vben/vite-config';
 
 import ElementPlus from 'unplugin-element-plus/vite';
@@ -13,11 +11,6 @@ export default defineConfig(async () => {
           format: 'esm',
         }),
       ],
-      resolve: {
-        alias: {
-          '@': fileURLToPath(new URL('src', import.meta.url)),
-        },
-      },
       server: {
         proxy: {
           '/api': {

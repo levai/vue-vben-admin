@@ -1,12 +1,12 @@
-import type { VbenFormSchema } from '@/adapter/form';
-import type { OnActionClickFn } from '@/adapter/vxe-table';
-import type { SystemDeptApi } from '@/api/system/dept';
+import type { VbenFormSchema } from '#/adapter/form';
+import type { OnActionClickFn } from '#/adapter/vxe-table';
+import type { SystemDeptApi } from '#/api/system/dept';
 
 import type { VxeTableGridOptions } from '@vben/plugins/vxe-table';
 
-import { z } from '@/adapter/form';
-import { getDeptList } from '@/api/system/dept';
-import { $t } from '@/locales';
+import { z } from '#/adapter/form';
+import { getDeptList } from '#/api/system/dept';
+import { $t } from '#/locales';
 
 /**
  * 获取编辑表单的字段配置。如果没有使用多语言，可以直接export一个数组常量

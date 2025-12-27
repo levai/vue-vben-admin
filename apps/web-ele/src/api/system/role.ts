@@ -1,6 +1,6 @@
 import type { Recordable } from '@vben/types';
 
-import { requestClient } from '@/api/request';
+import { requestClient } from '#/api/request';
 
 export namespace SystemRoleApi {
   export interface SystemRole {

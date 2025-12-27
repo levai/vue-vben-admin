@@ -13,7 +13,7 @@ import {
 } from '@vben/plugins/vxe-table';
 import { get, isFunction, isString } from '@vben/utils';
 
-import { $t } from '@/locales';
+import { $t } from '#/locales';
 import { objectOmit } from '@vueuse/core';
 import { ElButton, ElImage, ElPopconfirm, ElSwitch, ElTag } from 'element-plus';
 

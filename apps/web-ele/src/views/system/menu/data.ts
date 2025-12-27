@@ -1,7 +1,7 @@
-import type { OnActionClickFn, VxeTableGridOptions } from '@/adapter/vxe-table';
-import type { SystemMenuApi } from '@/api/system/menu';
+import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
+import type { SystemMenuApi } from '#/api/system/menu';
 
-import { $t } from '@/locales';
+import { $t } from '#/locales';
 
 export function getMenuTypeOptions() {
   return [

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { VbenFormSchema } from '@/adapter/form';
+import type { VbenFormSchema } from '#/adapter/form';
 
 import type { Recordable } from '@vben/types';
 
@@ -9,7 +9,7 @@ import { useVbenDrawer } from '@vben/common-ui';
 import { $te } from '@vben/locales';
 import { getPopupContainer } from '@vben/utils';
 
-import { useVbenForm, z } from '@/adapter/form';
+import { useVbenForm, z } from '#/adapter/form';
 import {
   createMenu,
   getMenuList,
@@ -17,9 +17,9 @@ import {
   isMenuPathExists,
   SystemMenuApi,
   updateMenu,
-} from '@/api/system/menu';
-import { $t } from '@/locales';
-import { componentKeys } from '@/router/routes';
+} from '#/api/system/menu';
+import { $t } from '#/locales';
+import { componentKeys } from '#/router/routes';
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 
 import { getMenuTypeOptions } from '../data';

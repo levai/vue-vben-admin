@@ -7,8 +7,8 @@ import { LOGIN_PATH } from '@vben/constants';
 import { preferences } from '@vben/preferences';
 import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '@/api';
-import { $t } from '@/locales';
+import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import { $t } from '#/locales';
 import { ElNotification } from 'element-plus';
 import { defineStore } from 'pinia';
 

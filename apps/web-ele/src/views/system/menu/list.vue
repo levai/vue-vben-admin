@@ -2,16 +2,16 @@
 import type {
   OnActionClickParams,
   VxeTableGridOptions,
-} from '@/adapter/vxe-table';
+} from '#/adapter/vxe-table';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
 
 import { MenuBadge } from '@vben-core/menu-ui';
 
-import { useVbenVxeGrid } from '@/adapter/vxe-table';
-import { deleteMenu, getMenuList, SystemMenuApi } from '@/api/system/menu';
-import { $t } from '@/locales';
+import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
+import { $t } from '#/locales';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useColumns } from './data';

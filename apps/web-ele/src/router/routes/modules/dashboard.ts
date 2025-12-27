@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { $t } from '@/locales';
+import { $t } from '#/locales';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'Analytics',
         path: '/analytics',
-        component: () => import('@/views/dashboard/analytics/index.vue'),
+        component: () => import('#/views/dashboard/analytics/index.vue'),
         meta: {
           affixTab: true,
           icon: 'lucide:area-chart',
@@ -25,7 +25,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'Workspace',
         path: '/workspace',
-        component: () => import('@/views/dashboard/workspace/index.vue'),
+        component: () => import('#/views/dashboard/workspace/index.vue'),
         meta: {
           icon: 'carbon:workspace',
           title: $t('page.dashboard.workspace'),

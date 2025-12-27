@@ -1,15 +1,15 @@
 <script lang="ts" setup>
-import type { SystemRoleApi } from '@/api/system/role';
+import type { SystemRoleApi } from '#/api/system/role';
 
 import { computed, nextTick, ref } from 'vue';
 
 import { Tree, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon } from '@vben/icons';
 
-import { useVbenForm } from '@/adapter/form';
-import { getMenuList } from '@/api/system/menu';
-import { createRole, updateRole } from '@/api/system/role';
-import { $t } from '@/locales';
+import { useVbenForm } from '#/adapter/form';
+import { getMenuList } from '#/api/system/menu';
+import { createRole, updateRole } from '#/api/system/role';
+import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
 

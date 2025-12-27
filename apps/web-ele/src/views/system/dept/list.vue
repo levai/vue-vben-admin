@@ -2,15 +2,15 @@
 import type {
   OnActionClickParams,
   VxeTableGridOptions,
-} from '@/adapter/vxe-table';
-import type { SystemDeptApi } from '@/api/system/dept';
+} from '#/adapter/vxe-table';
+import type { SystemDeptApi } from '#/api/system/dept';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { useVbenVxeGrid } from '@/adapter/vxe-table';
-import { deleteDept, getDeptList } from '@/api/system/dept';
-import { $t } from '@/locales';
+import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { deleteDept, getDeptList } from '#/api/system/dept';
+import { $t } from '#/locales';
 import { ElButton, ElMessage } from 'element-plus';
 
 import { useColumns } from './data';

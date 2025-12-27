@@ -15,9 +15,9 @@ import {
 import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { $t } from '@/locales';
-import { useAuthStore } from '@/store';
-import LoginForm from '@/views/_core/authentication/login.vue';
+import { $t } from '#/locales';
+import { useAuthStore } from '#/store';
+import LoginForm from '#/views/_core/authentication/login.vue';
 
 const notifications = ref<NotificationItem[]>([
   {
