@@ -8,10 +8,11 @@ import type { SystemDeptApi } from '#/api/system/dept';
 import { Page, useVbenModal } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
+import { ElButton, ElMessage } from 'element-plus';
+
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteDept, getDeptList } from '#/api/system/dept';
 import { $t } from '#/locales';
-import { ElButton, ElMessage } from 'element-plus';
 
 import { useColumns } from './data';
 import Form from './modules/form.vue';

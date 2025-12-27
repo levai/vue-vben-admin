@@ -9,10 +9,11 @@ import { IconifyIcon, Plus } from '@vben/icons';
 
 import { MenuBadge } from '@vben-core/menu-ui';
 
+import { ElButton, ElMessage } from 'element-plus';
+
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
 import { $t } from '#/locales';
-import { ElButton, ElMessage } from 'element-plus';
 
 import { useColumns } from './data';
 import Form from './modules/form.vue';

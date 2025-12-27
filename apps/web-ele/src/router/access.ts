@@ -6,10 +6,11 @@ import type {
 import { generateAccessible } from '@vben/access';
 import { preferences } from '@vben/preferences';
 
+import { ElMessage } from 'element-plus';
+
 import { getAllMenusApi } from '#/api';
 import { BasicLayout, IFrameView } from '#/layouts';
 import { $t } from '#/locales';
-import { ElMessage } from 'element-plus';
 
 const forbiddenComponent = () => import('#/views/_core/fallback/forbidden.vue');
 

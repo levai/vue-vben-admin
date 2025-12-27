@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { VbenFormSchema } from '#/adapter/form';
-
 import type { BasicOption } from '@vben/types';
+
+import type { VbenFormSchema } from '#/adapter/form';
 
 import { computed, onMounted, ref } from 'vue';
 

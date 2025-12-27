@@ -7,9 +7,10 @@ import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/ele';
 
-import { $t, setupI18n } from '#/locales';
 import { useTitle } from '@vueuse/core';
 import { ElButton, ElLoading } from 'element-plus';
+
+import { $t, setupI18n } from '#/locales';
 
 import { initComponentAdapter } from './adapter/component';
 import { initSetupVbenForm } from './adapter/form';

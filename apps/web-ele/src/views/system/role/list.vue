@@ -1,19 +1,20 @@
 <script lang="ts" setup>
+import type { Recordable } from '@vben/types';
+
 import type {
   OnActionClickParams,
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
-import type { Recordable } from '@vben/types';
-
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
+
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteRole, getRoleList, updateRole } from '#/api';
 import { $t } from '#/locales';
-import { ElButton, ElMessage, ElMessageBox } from 'element-plus';
 
 import { useColumns, useGridFormSchema } from './data';
 import Form from './modules/form.vue';

@@ -1,13 +1,15 @@
 <script lang="ts" setup>
-import type { VbenFormSchema } from '#/adapter/form';
-
 import type { Recordable } from '@vben/types';
+
+import type { VbenFormSchema } from '#/adapter/form';
 
 import { computed, ref } from 'vue';
 
 import { useVbenDrawer } from '@vben/common-ui';
 import { $te } from '@vben/locales';
 import { getPopupContainer } from '@vben/utils';
+
+import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 
 import { useVbenForm, z } from '#/adapter/form';
 import {
@@ -20,7 +22,6 @@ import {
 } from '#/api/system/menu';
 import { $t } from '#/locales';
 import { componentKeys } from '#/router/routes';
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 
 import { getMenuTypeOptions } from '../data';
 
