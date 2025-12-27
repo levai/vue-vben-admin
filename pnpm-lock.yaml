@@ -645,6 +645,9 @@ importers:
 
   apps/web-antd:
     dependencies:
+      '@vben-core/menu-ui':
+        specifier: workspace:*
+        version: link:../../packages/@core/ui-kit/menu-ui
       '@vben/access':
         specifier: workspace:*
         version: link:../../packages/effects/access
@@ -696,6 +699,9 @@ importers:
       dayjs:
         specifier: 'catalog:'
         version: 1.11.19
+      json-bigint:
+        specifier: 'catalog:'
+        version: 1.0.0
       pinia:
         specifier: ^3.0.3
         version: 3.0.4(typescript@5.9.3)(vue@3.5.24(typescript@5.9.3))
@@ -705,6 +711,10 @@ importers:
       vue-router:
         specifier: 'catalog:'
         version: 4.6.3(vue@3.5.24(typescript@5.9.3))
+    devDependencies:
+      '@types/json-bigint':
+        specifier: 'catalog:'
+        version: 1.0.4
 
   apps/web-ele:
     dependencies:
