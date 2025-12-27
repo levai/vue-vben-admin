@@ -5,6 +5,10 @@
       "path": "apps/backend-mock",
     },
     {
+      "name": "@vben/web-antd",
+      "path": "apps/web-antd",
+    },
+    {
       "name": "@vben/web-ele",
       "path": "apps/web-ele",
     },
