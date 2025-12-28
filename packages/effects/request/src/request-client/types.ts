@@ -12,12 +12,16 @@ type ExtendOptions<T = any> = {
    * - comma: ids=1,2,3
    * - indices: ids[0]=1&ids[1]=2&ids[2]=3
    * - repeat: ids=1&ids=2&ids=3
+   * - rfc3986: 使用 RFC3986 格式，空格编码为 %20（推荐用于解决空格编码问题）
+   * - rfc3986-repeat: RFC3986 格式 + repeat 数组格式
    */
   paramsSerializer?:
     | 'brackets'
     | 'comma'
     | 'indices'
     | 'repeat'
+    | 'rfc3986'
+    | 'rfc3986-repeat'
     | AxiosRequestConfig<T>['paramsSerializer'];
   /**
    * 响应数据的返回方式。

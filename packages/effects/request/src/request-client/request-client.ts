@@ -31,6 +31,13 @@ function getParamsSerializer(
       case 'repeat': {
         return (params: any) => qs.stringify(params, { arrayFormat: 'repeat' });
       }
+      case 'rfc3986': {
+        return (params: any) => qs.stringify(params, { format: 'RFC3986' });
+      }
+      case 'rfc3986-repeat': {
+        return (params: any) =>
+          qs.stringify(params, { format: 'RFC3986', arrayFormat: 'repeat' });
+      }
     }
   }
   return paramsSerializer;
