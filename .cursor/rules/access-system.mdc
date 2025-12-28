@@ -1,0 +1,663 @@
+---
+alwaysApply: true
+---
+
+# Web-Antd 权限系统设计分析
+
+## 📋 目录
+
+1. [权限系统架构概览](#权限系统架构概览)
+2. [路由权限设计](#路由权限设计)
+3. [按钮权限设计](#按钮权限设计)
+4. [角色权限设计](#角色权限设计)
+5. [权限码权限设计](#权限码权限设计)
+6. [权限模式（前端/后端）](#权限模式前后端)
+7. [核心组件与 API](#核心组件与-api)
+8. [实际使用示例](#实际使用示例)
+
+---
+
+## 权限系统架构概览
+
+Vue Vben Admin 的权限系统采用**多层级权限控制**设计，支持：
+
+- ✅ **路由权限**：控制页面访问
+- ✅ **按钮权限**：控制按钮/组件显示
+- ✅ **角色权限**：基于角色的访问控制（RBAC）
+- ✅ **权限码权限**：基于权限码的细粒度控制
+
+### 权限系统流程图
+
+```
+用户登录
+  ↓
+获取 accessToken
+  ↓
+获取用户信息（包含 roles）
+  ↓
+获取权限码列表（accessCodes）
+  ↓
+路由守卫拦截
+  ↓
+生成可访问路由（根据 roles 或后端菜单）
+  ↓
+生成可访问菜单
+  ↓
+页面渲染
+  ↓
+组件/按钮权限检查（v-access 指令）
+```
+
+---
+
+## 路由权限设计
+
+### 1. 路由守卫机制
+
+路由权限通过 `router/guard.ts` 中的 `setupAccessGuard` 实现：
+
+```typescript:47:120:apps/web-antd/src/router/guard.ts
+function setupAccessGuard(router: Router) {
+  router.beforeEach(async (to, from) => {
+    const accessStore = useAccessStore();
+    const userStore = useUserStore();
+    const authStore = useAuthStore();
+
+    // 基本路由，这些路由不需要进入权限拦截
+    if (coreRouteNames.includes(to.name as string)) {
+      if (to.path === LOGIN_PATH && accessStore.accessToken) {
+        return decodeURIComponent(
+          (to.query?.redirect as string) ||
+            userStore.userInfo?.homePath ||
+            preferences.app.defaultHomePath,
+        );
+      }
+      return true;
+    }
+
+    // accessToken 检查
+    if (!accessStore.accessToken) {
+      // 明确声明忽略权限访问权限，则可以访问
+      if (to.meta.ignoreAccess) {
+        return true;
+      }
+
+      // 没有访问权限，跳转登录页面
+      if (to.fullPath !== LOGIN_PATH) {
+        return {
+          path: LOGIN_PATH,
+          query:
+            to.fullPath === preferences.app.defaultHomePath
+              ? {}
+              : { redirect: encodeURIComponent(to.fullPath) },
+          replace: true,
+        };
+      }
+      return to;
+    }
+
+    // 是否已经生成过动态路由
+    if (accessStore.isAccessChecked) {
+      return true;
+    }
+
+    // 生成路由表
+    // 当前登录用户拥有的角色标识列表
+    const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
+    const userRoles = userInfo.roles ?? [];
+
+    // 生成菜单和路由
+    const { accessibleMenus, accessibleRoutes } = await generateAccess({
+      roles: userRoles,
+      router,
+      routes: accessRoutes,
+    });
+
+    // 保存菜单信息和路由信息
+    accessStore.setAccessMenus(accessibleMenus);
+    accessStore.setAccessRoutes(accessibleRoutes);
+    accessStore.setIsAccessChecked(true);
+    const redirectPath = (from.query.redirect ??
+      (to.path === preferences.app.defaultHomePath
+        ? userInfo.homePath || preferences.app.defaultHomePath
+        : to.fullPath)) as string;
+
+    return {
+      ...router.resolve(decodeURIComponent(redirectPath)),
+      replace: true,
+    };
+  });
+}
+```
+
+### 2. 路由权限配置
+
+在路由配置中，通过 `meta.authority` 字段控制权限：
+
+```typescript
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/system/role',
+    name: 'SystemRole',
+    meta: {
+      title: '角色管理',
+      // 需要拥有 'admin' 或 'system:role:view' 角色才能访问
+      authority: ['admin', 'system:role:view'],
+    },
+    component: () => import('#/views/system/role/list.vue'),
+  },
+];
+```
+
+### 3. 路由权限判断逻辑
+
+**前端模式**（`accessMode: 'frontend'`）：
+- 根据用户角色（`userRoles`）过滤路由
+- 使用 `hasAuthority` 函数判断路由是否有权限
+
+```typescript:36:44:packages/utils/src/helpers/generate-routes-frontend.ts
+function hasAuthority(route: RouteRecordRaw, access: string[]) {
+  const authority = route.meta?.authority;
+  if (!authority) {
+    return true;
+  }
+  const canAccess = access.some((value) => authority.includes(value));
+
+  return canAccess || (!canAccess && menuHasVisibleWithForbidden(route));
+}
+```
+
+**后端模式**（`accessMode: 'backend'`）：
+- 从后端获取菜单列表
+- 后端返回的菜单即为可访问的路由
+
+### 4. 特殊路由配置
+
+- **`ignoreAccess: true`**：忽略权限检查，直接可访问
+- **`menuVisibleWithForbidden: true`**：菜单可见，但访问时跳转到 403 页面
+- **核心路由**：登录、404 等基础路由，不走权限拦截
+
+---
+
+## 按钮权限设计
+
+### 1. 权限指令 `v-access`
+
+框架提供了 `v-access` 指令用于控制按钮/组件的显示：
+
+```vue
+<script setup lang="ts">
+// 权限指令会自动注册，无需手动导入
+</script>
+
+<template>
+  <!-- 基于角色控制 -->
+  <button v-access:role="'admin'">管理员按钮</button>
+  <button v-access:role="['admin', 'editor']">编辑按钮</button>
+
+  <!-- 基于权限码控制 -->
+  <button v-access:code="'user:add'">添加用户</button>
+  <button v-access:code="['user:add', 'user:edit']">操作按钮</button>
+</template>
+```
+
+### 2. 权限指令实现
+
+```typescript:11:30:packages/effects/access/src/directive.ts
+function isAccessible(
+  el: Element,
+  binding: DirectiveBinding<string | string[]>,
+) {
+  const { accessMode, hasAccessByCodes, hasAccessByRoles } = useAccess();
+
+  const value = binding.value;
+
+  if (!value) return;
+  const authMethod =
+    accessMode.value === 'frontend' && binding.arg === 'role'
+      ? hasAccessByRoles
+      : hasAccessByCodes;
+
+  const values = Array.isArray(value) ? value : [value];
+
+  if (!authMethod(values)) {
+    el?.remove();
+  }
+}
+```
+
+**工作原理**：
+1. 根据 `accessMode` 和指令参数（`role`/`code`）选择权限判断方法
+2. 如果用户没有权限，直接移除 DOM 元素
+
+### 3. AccessControl 组件
+
+除了指令，还提供了 `AccessControl` 组件：
+
+```vue
+<script setup lang="ts">
+import { AccessControl } from '@vben/access';
+</script>
+
+<template>
+  <AccessControl :codes="['user:add']" type="code">
+    <button>添加用户</button>
+  </AccessControl>
+
+  <AccessControl :codes="['admin']" type="role">
+    <button>管理员操作</button>
+  </AccessControl>
+</template>
+```
+
+---
+
+## 角色权限设计
+
+### 1. 角色存储
+
+用户角色存储在 `useUserStore` 中：
+
+```typescript:24:61:packages/stores/src/modules/user.ts
+interface AccessState {
+  /**
+   * 用户信息
+   */
+  userInfo: BasicUserInfo | null;
+  /**
+   * 用户角色
+   */
+  userRoles: string[];
+}
+
+export const useUserStore = defineStore('core-user', {
+  actions: {
+    setUserInfo(userInfo: BasicUserInfo | null) {
+      // 设置用户信息
+      this.userInfo = userInfo;
+      // 设置角色信息
+      const roles = userInfo?.roles ?? [];
+      this.setUserRoles(roles);
+    },
+    setUserRoles(roles: string[]) {
+      this.userRoles = roles;
+    },
+  },
+  state: (): AccessState => ({
+    userInfo: null,
+    userRoles: [],
+  }),
+});
+```
+
+### 2. 角色权限判断
+
+通过 `useAccess` 组合式函数判断角色权限：
+
+```typescript:18:22:packages/effects/access/src/use-access.ts
+function hasAccessByRoles(roles: string[]) {
+  const userRoleSet = new Set(userStore.userRoles);
+  const intersection = roles.filter((item) => userRoleSet.has(item));
+  return intersection.length > 0;
+}
+```
+
+**判断逻辑**：
+- 用户角色与所需角色有交集 → 有权限
+- 无交集 → 无权限
+
+### 3. 角色获取流程
+
+```typescript:28:78:apps/web-antd/src/store/auth.ts
+async function authLogin(
+  params: Recordable<any>,
+  onSuccess?: () => Promise<void> | void,
+) {
+  let userInfo: null | UserInfo = null;
+  try {
+    loginLoading.value = true;
+    const { accessToken } = await loginApi(params);
+
+    if (accessToken) {
+      accessStore.setAccessToken(accessToken);
+
+      // 获取用户信息并存储到 accessStore 中
+      const [fetchUserInfoResult, accessCodes] = await Promise.all([
+        fetchUserInfo(),
+        getAccessCodesApi(),
+      ]);
+
+      userInfo = fetchUserInfoResult;
+
+      userStore.setUserInfo(userInfo);
+      accessStore.setAccessCodes(accessCodes);
+      // ...
+    }
+  } finally {
+    loginLoading.value = false;
+  }
+
+  return {
+    userInfo,
+  };
+}
+```
+
+---
+
+## 权限码权限设计
+
+### 1. 权限码存储
+
+权限码存储在 `useAccessStore` 中：
+
+```typescript:7:46:packages/stores/src/modules/access.ts
+interface AccessState {
+  /**
+   * 权限码
+   */
+  accessCodes: string[];
+  /**
+   * 可访问的菜单列表
+   */
+  accessMenus: MenuRecordRaw[];
+  /**
+   * 可访问的路由列表
+   */
+  accessRoutes: RouteRecordRaw[];
+  /**
+   * 登录 accessToken
+   */
+  accessToken: AccessToken;
+  /**
+   * 是否已经检查过权限
+   */
+  isAccessChecked: boolean;
+  // ...
+}
+```
+
+### 2. 权限码获取
+
+通过 API 获取用户权限码：
+
+```typescript:47:51:apps/web-antd/src/api/core/auth.ts
+/**
+ * 获取用户权限码
+ */
+export async function getAccessCodesApi() {
+  return requestClient.get<string[]>('/auth/codes');
+}
+```
+
+### 3. 权限码判断
+
+```typescript:29:34:packages/effects/access/src/use-access.ts
+function hasAccessByCodes(codes: string[]) {
+  const userCodesSet = new Set(accessStore.accessCodes);
+
+  const intersection = codes.filter((item) => userCodesSet.has(item));
+  return intersection.length > 0;
+}
+```
+
+**判断逻辑**：
+- 用户权限码与所需权限码有交集 → 有权限
+- 无交集 → 无权限
+
+---
+
+## 权限模式（前端/后端）
+
+### 1. 前端模式（`accessMode: 'frontend'`）
+
+**特点**：
+- 路由配置在前端定义
+- 根据用户角色过滤路由
+- 菜单根据路由自动生成
+
+**适用场景**：
+- 权限相对固定
+- 前端需要完全控制路由结构
+
+**配置**：
+```typescript
+// preferences.ts
+import { definePreferences } from '@vben/preferences';
+
+export default definePreferences({
+  app: {
+    accessMode: 'frontend',
+  },
+});
+```
+
+### 2. 后端模式（`accessMode: 'backend'`）
+
+**特点**：
+- 路由/菜单从后端获取
+- 后端返回的菜单即为可访问的路由
+- 更灵活，权限完全由后端控制
+
+**适用场景**：
+- 权限动态变化
+- 需要后端统一管理权限
+
+**配置**：
+```typescript
+// preferences.ts
+import { definePreferences } from '@vben/preferences';
+
+export default definePreferences({
+  app: {
+    accessMode: 'backend',
+  },
+});
+```
+
+**后端菜单 API**：
+```typescript:8:10:apps/web-antd/src/api/core/menu.ts
+export async function getAllMenusApi() {
+  return requestClient.get<RouteRecordStringComponent[]>('/menu/all');
+}
+```
+
+### 3. 权限生成逻辑
+
+```typescript:17:40:apps/web-antd/src/router/access.ts
+async function generateAccess(options: GenerateMenuAndRoutesOptions) {
+  const pageMap: ComponentRecordType = import.meta.glob('../views/**/*.vue');
+
+  const layoutMap: ComponentRecordType = {
+    BasicLayout,
+    IFrameView,
+  };
+
+  return await generateAccessible(preferences.app.accessMode, {
+    ...options,
+    fetchMenuListAsync: async () => {
+      message.loading({
+        content: `${$t('common.loadingMenu')}...`,
+        duration: 1.5,
+      });
+      return await getAllMenusApi();
+    },
+    forbiddenComponent,
+    layoutMap,
+    pageMap,
+  });
+}
+```
+
+---
+
+## 核心组件与 API
+
+### 1. Store
+
+#### `useAccessStore` - 权限状态管理
+- `accessToken`: 登录令牌
+- `accessCodes`: 权限码列表
+- `accessMenus`: 可访问菜单
+- `accessRoutes`: 可访问路由
+- `isAccessChecked`: 是否已检查权限
+
+#### `useUserStore` - 用户信息管理
+- `userInfo`: 用户信息
+- `userRoles`: 用户角色列表
+
+#### `useAuthStore` - 认证管理
+- `authLogin()`: 登录
+- `logout()`: 登出
+- `fetchUserInfo()`: 获取用户信息
+
+### 2. 组合式函数
+
+#### `useAccess()` - 权限判断工具
+```typescript
+import { useAccess } from '@vben/access';
+
+const {
+  accessMode,          // 权限模式
+  hasAccessByCodes,   // 基于权限码判断
+  hasAccessByRoles,    // 基于角色判断
+  toggleAccessMode,    // 切换权限模式
+} = useAccess();
+```
+
+### 3. API
+
+```typescript
+// 导入 API 函数
+import {
+  loginApi,
+  getUserInfoApi,
+  getAccessCodesApi,
+  getAllMenusApi,
+} from '#/api';
+
+// API 函数说明
+// - loginApi(params): 登录
+// - getUserInfoApi(): 获取用户信息
+// - getAccessCodesApi(): 获取权限码
+// - getAllMenusApi(): 获取所有菜单（后端模式）
+```
+
+---
+
+## 实际使用示例
+
+### 1. 路由权限配置
+
+```typescript
+// router/routes/modules/system.ts
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/system/role',
+    name: 'SystemRole',
+    meta: {
+      title: '角色管理',
+      // 需要 admin 或 system:role:view 角色
+      authority: ['admin', 'system:role:view'],
+    },
+    component: () => import('#/views/system/role/list.vue'),
+  },
+];
+```
+
+### 2. 按钮权限控制
+
+```vue
+<script setup lang="ts">
+import { AccessControl } from '@vben/access';
+import { Button as AButton } from 'ant-design-vue';
+
+function handleAdd() {
+  // 新增逻辑
+}
+
+function handleDelete() {
+  // 删除逻辑
+}
+
+function handleEdit() {
+  // 编辑逻辑
+}
+</script>
+
+<template>
+  <div>
+    <!-- 使用指令 -->
+    <a-button
+      v-access:code="'system:role:add'"
+      type="primary"
+      @click="handleAdd"
+    >
+      新增角色
+    </a-button>
+
+    <a-button
+      v-access:role="'admin'"
+      danger
+      @click="handleDelete"
+    >
+      删除
+    </a-button>
+
+    <!-- 使用组件 -->
+    <AccessControl :codes="['system:role:edit']" type="code">
+      <a-button @click="handleEdit">编辑</a-button>
+    </AccessControl>
+  </div>
+</template>
+```
+
+### 3. 编程式权限判断
+
+```vue
+<script setup lang="ts">
+import { message } from 'ant-design-vue';
+import { useAccess } from '@vben/access';
+
+const { hasAccessByCodes, hasAccessByRoles } = useAccess();
+
+// 判断是否有权限
+const canAdd = hasAccessByCodes(['system:role:add']);
+const isAdmin = hasAccessByRoles(['admin']);
+
+function handleAction() {
+  if (!canAdd) {
+    message.warning('您没有添加权限');
+    return;
+  }
+  // 执行操作
+}
+</script>
+```
+
+### 4. 路由守卫中的权限检查
+
+```typescript
+// 在路由守卫中，权限检查是自动的
+// 只需要在路由配置中设置 meta.authority
+// 框架会自动过滤无权限的路由
+```
+
+---
+
+## 总结
+
+Vue Vben Admin 的权限系统设计特点：
+
+1. **多层级控制**：路由、按钮、角色、权限码四个维度
+2. **灵活配置**：支持前端和后端两种权限模式
+3. **易于使用**：提供指令、组件、组合式函数多种使用方式
+4. **类型安全**：完整的 TypeScript 类型定义
+5. **自动过滤**：路由和菜单自动根据权限过滤
+
+权限系统核心流程：
+1. 用户登录 → 获取 token
+2. 获取用户信息（包含 roles）
+3. 获取权限码列表
+4. 路由守卫拦截 → 生成可访问路由
+5. 页面渲染 → 按钮/组件权限检查
