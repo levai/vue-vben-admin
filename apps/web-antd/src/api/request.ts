@@ -27,6 +27,9 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
     ...options,
     baseURL,
+    // 使用 RFC3986 格式确保空格被编码为 %20 而不是 +
+    // 这样可以解决表单搜索时空格变成 + 的问题
+    paramsSerializer: 'rfc3986-repeat',
     transformResponse: (data: any, header: AxiosResponseHeaders) => {
       // storeAsString指示将BigInt存储为字符串，设为false则会存储为内置的BigInt类型
       if (
