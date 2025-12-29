@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+
+logging:
+  level:
+    root: INFO
+    com.vben.admin: DEBUG

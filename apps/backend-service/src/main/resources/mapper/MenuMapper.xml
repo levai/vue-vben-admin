@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vben.admin.mapper.MenuMapper">
+
+    <select id="existsByName" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM sys_menu
+        WHERE name = #{name}
+        AND deleted = 0
+        <if test="id != null and id != ''">
+            AND id != #{id}
+        </if>
+    </select>
+
+    <select id="existsByPath" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM sys_menu
+        WHERE path = #{path}
+        AND deleted = 0
+        <if test="id != null and id != ''">
+            AND id != #{id}
+        </if>
+    </select>
+
+    <select id="countByPid" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_menu
+        WHERE pid = #{pid}
+        AND deleted = 0
+    </select>
+
+</mapper>

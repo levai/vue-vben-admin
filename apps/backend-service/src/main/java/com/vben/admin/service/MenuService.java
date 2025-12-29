@@ -1,0 +1,69 @@
+package com.vben.admin.service;
+
+import com.vben.admin.model.dto.MenuDTO;
+import com.vben.admin.model.vo.MenuVO;
+
+import java.util.List;
+
+/**
+ * 菜单服务接口
+ *
+ * @author vben
+ */
+public interface MenuService {
+
+    /**
+     * 获取所有菜单（用于路由）
+     *
+     * @return 菜单列表（树形结构）
+     */
+    List<MenuVO> getAllMenus();
+
+    /**
+     * 获取菜单列表
+     *
+     * @return 菜单列表
+     */
+    List<MenuVO> getMenuList();
+
+    /**
+     * 检查菜单名称是否存在
+     *
+     * @param name 菜单名称
+     * @param id   菜单ID（可选，用于更新时排除自己）
+     * @return 是否存在
+     */
+    boolean isNameExists(String name, String id);
+
+    /**
+     * 检查菜单路径是否存在
+     *
+     * @param path 菜单路径
+     * @param id   菜单ID（可选，用于更新时排除自己）
+     * @return 是否存在
+     */
+    boolean isPathExists(String path, String id);
+
+    /**
+     * 创建菜单
+     *
+     * @param menuDTO 菜单信息
+     * @return 菜单ID
+     */
+    String createMenu(MenuDTO menuDTO);
+
+    /**
+     * 更新菜单
+     *
+     * @param id      菜单ID
+     * @param menuDTO 菜单信息
+     */
+    void updateMenu(String id, MenuDTO menuDTO);
+
+    /**
+     * 删除菜单
+     *
+     * @param id 菜单ID
+     */
+    void deleteMenu(String id);
+}

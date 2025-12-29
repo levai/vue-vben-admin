@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: backend-service
+  profiles:
+    active: dev
+  sql:
+    init:
+      mode: never
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useOldAliasMetadataBehavior=true&zeroDateTimeBehavior=convertToNull&autoReconnect=true
+      username: root
+      password: root
+      initial-size: 1
+      min-idle: 1
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      # 连接初始化 SQL：设置时区为 Asia/Shanghai
+      connection-init-sqls: SET time_zone = '+08:00'
+      # 延迟初始化，避免启动时数据库连接失败导致应用无法启动
+      continue-on-error: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      # 自动转义保留关键字（MySQL）
+      keep-global-format: true
+  type-aliases-package: com.vben.admin.model.entity
+  mapper-locations: classpath:mapper/**/*.xml
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  tomcat:
+    uri-encoding: UTF-8
+
+logging:
+  level:
+    root: INFO
+    com.vben.admin: DEBUG
+    com.vben.admin.core.exception: DEBUG
+    com.baomidou.mybatisplus: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+
+jwt:
+  secret: vben-admin-secret-key-for-jwt-token-generation-minimum-256-bits-required-for-hmac-sha256-algorithm
+  access-token-expiration: 7200000
+  refresh-token-expiration: 604800000
+
+# Knife4j 配置
+knife4j:
+  enable: true
+  production: false
