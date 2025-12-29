@@ -81,11 +81,15 @@ public class SecurityConfiguration {
         ignoreUrls.add(new AntPathRequestMatcher("/auth/logout")); // 退出登录允许无token访问
         ignoreUrls.add(new AntPathRequestMatcher("/auth/refresh"));
         ignoreUrls.add(new AntPathRequestMatcher("/test/**")); // 测试接口（仅开发环境）
+        // Knife4j 文档相关路径
         ignoreUrls.add(new AntPathRequestMatcher("/doc.html"));
         ignoreUrls.add(new AntPathRequestMatcher("/v3/api-docs/**"));
+        ignoreUrls.add(new AntPathRequestMatcher("/v3/api-docs"));
         ignoreUrls.add(new AntPathRequestMatcher("/swagger-ui/**"));
         ignoreUrls.add(new AntPathRequestMatcher("/swagger-ui.html"));
+        ignoreUrls.add(new AntPathRequestMatcher("/swagger-resources/**"));
         ignoreUrls.add(new AntPathRequestMatcher("/webjars/**"));
+        ignoreUrls.add(new AntPathRequestMatcher("/favicon.ico"));
         return ignoreUrls;
     }
 

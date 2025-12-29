@@ -2,8 +2,6 @@ package com.vben.admin.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
@@ -14,17 +12,17 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2WebMvc;
 
 /**
  * Knife4j (Swagger) 配置
- * 修复 Spring Boot 2.7.x 兼容性问题
+ * Knife4j 3.0.3 基于 Springfox 3.0，支持 OpenAPI 3.0 注解
  *
  * @author vben
  */
 @Configuration
 @EnableSwagger2WebMvc
-public class Knife4jConfig implements WebMvcConfigurer {
+public class Knife4jConfig {
 
     @Bean
     public Docket createRestApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
+        return new Docket(DocumentationType.OAS_30)
                 .apiInfo(apiInfo())
                 .select()
                 .apis(RequestHandlerSelectors.basePackage("com.vben.admin.controller"))
@@ -38,14 +36,5 @@ public class Knife4jConfig implements WebMvcConfigurer {
                 .description("Vben Admin 后端服务 API 接口文档")
                 .version("1.0.0")
                 .build();
-    }
-
-    /**
-     * 配置 Swagger 静态资源
-     */
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("doc.html").addResourceLocations("classpath:/META-INF/resources/");
-        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
 }
