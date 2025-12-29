@@ -43,6 +43,7 @@
     "clean": "node ./scripts/clean.mjs",
     "commit": "czg",
     "dev": "turbo-run dev",
+    "dev:backend": "pnpm -F @vben/backend-service run dev",
     "dev:docs": "pnpm -F @vben/docs run dev",
     "dev:ele": "pnpm -F @vben/web-ele run dev",
     "dev:play": "pnpm -F @vben/playground run dev",
