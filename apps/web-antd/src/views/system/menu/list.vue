@@ -4,8 +4,6 @@ import type {
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 
-import { ref } from 'vue';
-
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
 import { $t } from '@vben/locales';
@@ -25,21 +23,10 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
   destroyOnClose: true,
 });
 
-// 展开/折叠状态
-const isExpanded = ref(true);
-
-/**
- * 切换展开/折叠
- */
-function toggleExpand() {
-  isExpanded.value = !isExpanded.value;
-  // 直接调用 setAllTreeExpand 立即生效
-  if (gridApi.grid) {
-    gridApi.grid.setAllTreeExpand(isExpanded.value);
-  }
-}
-
 const [Grid, gridApi] = useVbenVxeGrid({
+  // 启用树形表格展开/折叠功能
+  enableTreeExpandToggle: true,
+  defaultTreeExpanded: true,
   gridOptions: {
     columns: useColumns(onActionClick),
     height: 'auto',
@@ -50,17 +37,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async (_params) => {
-          const result = await getMenuList();
-          // 数据返回后，使用微任务确保树形结构构建完成后再设置展开状态
-          // 使用 Promise.resolve().then() 确保在下一个事件循环中执行，避免闪烁
-          Promise.resolve().then(() => {
-            requestAnimationFrame(() => {
-              if (gridApi.grid) {
-                gridApi.grid.setAllTreeExpand(isExpanded.value);
-              }
-            });
-          });
-          return result;
+          return await getMenuList();
         },
       },
     },
@@ -77,8 +54,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
       parentField: 'pid',
       rowField: 'id',
       transform: false,
-      // 初始状态跟随 isExpanded
-      expandAll: isExpanded.value,
     },
   } as VxeTableGridOptions,
 });
@@ -107,15 +82,6 @@ function onActionClick({
 }
 
 function onRefresh() {
-  // 刷新前确保 treeConfig 与 isExpanded 状态一致
-  gridApi.setGridOptions({
-    treeConfig: {
-      parentField: 'pid',
-      rowField: 'id',
-      transform: false,
-      expandAll: isExpanded.value,
-    },
-  });
   gridApi.query();
 }
 function onEdit(row: SystemMenuApi.SystemMenu) {
@@ -155,18 +121,6 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
         <Button type="primary" @click="onCreate">
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.menu.name')]) }}
-        </Button>
-        <Button
-          class="ml-2 flex !h-8 !w-8 items-center justify-center !rounded-full !p-0"
-          v-tippy="{ content: isExpanded ? '折叠全部' : '展开全部' }"
-          @click="toggleExpand"
-        >
-          <IconifyIcon
-            :icon="
-              isExpanded ? 'lucide:chevrons-down-up' : 'lucide:chevrons-up-down'
-            "
-            class="size-4"
-          />
         </Button>
       </template>
       <template #title="{ row }">

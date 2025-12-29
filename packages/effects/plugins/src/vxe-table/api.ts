@@ -23,6 +23,8 @@ function getDefaultState(): VxeGridProps {
     gridEvents: {},
     formOptions: undefined,
     showSearchForm: true,
+    enableTreeExpandToggle: false,
+    defaultTreeExpanded: true,
   };
 }
 

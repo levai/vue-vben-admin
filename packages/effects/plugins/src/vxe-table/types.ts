@@ -76,16 +76,34 @@ export interface VxeGridProps<
    * 搜索表单与表格主体之间的分隔条
    */
   separator?: boolean | SeparatorOptions;
+  /**
+   * 是否启用树形表格展开/折叠功能（仅对树形表格有效）
+   * @default false
+   */
+  enableTreeExpandToggle?: boolean;
+  /**
+   * 树形表格默认展开状态（仅在 enableTreeExpandToggle 为 true 时有效）
+   * @default true
+   */
+  defaultTreeExpanded?: boolean;
 }
 
 export type ExtendedVxeGridApi<
   D extends Record<string, any> = any,
   F extends BaseFormComponentType = BaseFormComponentType,
-> = VxeGridApi<D> & {
+> = {
+  /**
+   * 获取树形表格展开状态
+   */
+  getTreeExpanded?: () => boolean;
+  /**
+   * 切换树形表格展开/折叠状态
+   */
+  toggleTreeExpand?: () => void;
   useStore: <T = NoInfer<VxeGridProps<D, F>>>(
     selector?: (state: NoInfer<VxeGridProps<any, any>>) => T,
   ) => Readonly<Ref<T>>;
-};
+} & VxeGridApi<D>;
 
 export interface SetupVxeTable {
   configVxeTable: (ui: VxeUIExport) => void;
