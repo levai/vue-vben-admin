@@ -5,8 +5,10 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemDeptApi } from '#/api/system/dept';
 
+import { nextTick, ref } from 'vue';
+
 import { Page, useVbenModal } from '@vben/common-ui';
-import { Plus } from '@vben/icons';
+import { IconifyIcon, Plus } from '@vben/icons';
 
 import { Button, message } from 'ant-design-vue';
 
@@ -91,6 +93,19 @@ function onActionClick({
   }
 }
 
+// 展开/折叠状态
+const isExpanded = ref(true);
+
+/**
+ * 切换展开/折叠
+ */
+function toggleExpand() {
+  isExpanded.value = !isExpanded.value;
+  if (gridApi.grid) {
+    gridApi.grid.setAllTreeExpand(isExpanded.value);
+  }
+}
+
 const [Grid, gridApi] = useVbenVxeGrid({
   gridEvents: {},
   gridOptions: {
@@ -103,7 +118,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async (_params) => {
-          return await getDeptList();
+          const result = await getDeptList();
+          // 数据加载完成后，默认展开所有节点
+          nextTick(() => {
+            if (isExpanded.value && gridApi.grid) {
+              gridApi.grid.setAllTreeExpand(true);
+            }
+          });
+          return result;
         },
       },
     },
@@ -117,6 +139,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       parentField: 'pid',
       rowField: 'id',
       transform: false,
+      // 默认展开所有节点
+      expandAll: true,
     },
   } as VxeTableGridOptions,
 });
@@ -136,6 +160,18 @@ function refreshGrid() {
         <Button type="primary" @click="onCreate">
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.dept.name')]) }}
+        </Button>
+        <Button
+          class="ml-2 flex !h-8 !w-8 items-center justify-center !rounded-full !p-0"
+          v-tippy="{ content: isExpanded ? '折叠全部' : '展开全部' }"
+          @click="toggleExpand"
+        >
+          <IconifyIcon
+            :icon="
+              isExpanded ? 'lucide:chevrons-down-up' : 'lucide:chevrons-up-down'
+            "
+            class="size-4"
+          />
         </Button>
       </template>
     </Grid>
