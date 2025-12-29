@@ -5,7 +5,7 @@ import type {
 } from '#/adapter/vxe-table';
 import type { SystemDeptApi } from '#/api/system/dept';
 
-import { nextTick, ref } from 'vue';
+import { ref } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
@@ -101,6 +101,7 @@ const isExpanded = ref(true);
  */
 function toggleExpand() {
   isExpanded.value = !isExpanded.value;
+  // 直接调用 setAllTreeExpand 立即生效
   if (gridApi.grid) {
     gridApi.grid.setAllTreeExpand(isExpanded.value);
   }
@@ -119,11 +120,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
       ajax: {
         query: async (_params) => {
           const result = await getDeptList();
-          // 数据加载完成后，默认展开所有节点
-          nextTick(() => {
-            if (isExpanded.value && gridApi.grid) {
-              gridApi.grid.setAllTreeExpand(true);
-            }
+          // 数据返回后，使用微任务确保树形结构构建完成后再设置展开状态
+          // 使用 Promise.resolve().then() 确保在下一个事件循环中执行，避免闪烁
+          Promise.resolve().then(() => {
+            requestAnimationFrame(() => {
+              if (gridApi.grid) {
+                gridApi.grid.setAllTreeExpand(isExpanded.value);
+              }
+            });
           });
           return result;
         },
@@ -139,8 +143,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
       parentField: 'pid',
       rowField: 'id',
       transform: false,
-      // 默认展开所有节点
-      expandAll: true,
+      // 初始状态跟随 isExpanded
+      expandAll: isExpanded.value,
     },
   } as VxeTableGridOptions,
 });
@@ -149,6 +153,15 @@ const [Grid, gridApi] = useVbenVxeGrid({
  * 刷新表格
  */
 function refreshGrid() {
+  // 刷新前确保 treeConfig 与 isExpanded 状态一致
+  gridApi.setGridOptions({
+    treeConfig: {
+      parentField: 'pid',
+      rowField: 'id',
+      transform: false,
+      expandAll: isExpanded.value,
+    },
+  });
   gridApi.query();
 }
 </script>
