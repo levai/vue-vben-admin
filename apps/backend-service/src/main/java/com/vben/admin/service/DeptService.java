@@ -41,4 +41,13 @@ public interface DeptService {
      * @param id 部门ID
      */
     void deleteDept(String id);
+
+    /**
+     * 检查部门名称是否存在
+     *
+     * @param name 部门名称
+     * @param id   部门ID（更新时排除自己）
+     * @return 是否存在
+     */
+    boolean isNameExists(String name, String id);
 }

@@ -36,6 +36,11 @@ public class DeptServiceImpl implements DeptService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createDept(DeptDTO deptDTO) {
+        // 检查名称是否已存在
+        if (isNameExists(deptDTO.getName(), null)) {
+            throw new BusinessException("部门名称已存在");
+        }
+
         SysDept dept = new SysDept();
         BeanUtils.copyProperties(deptDTO, dept);
         if (dept.getPid() == null) {
@@ -55,6 +60,13 @@ public class DeptServiceImpl implements DeptService {
         SysDept dept = deptMapper.selectById(id);
         if (dept == null) {
             throw new BusinessException("部门不存在");
+        }
+
+        // 如果修改了名称，检查新名称是否已存在
+        if (deptDTO.getName() != null && !deptDTO.getName().equals(dept.getName())) {
+            if (isNameExists(deptDTO.getName(), id)) {
+                throw new BusinessException("部门名称已存在");
+            }
         }
 
         BeanUtils.copyProperties(deptDTO, dept, "id");
@@ -113,6 +125,11 @@ public class DeptServiceImpl implements DeptService {
         }
 
         return rootDepts;
+    }
+
+    @Override
+    public boolean isNameExists(String name, String id) {
+        return deptMapper.existsByName(name, id);
     }
 
     /**

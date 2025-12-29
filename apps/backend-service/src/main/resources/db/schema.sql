@@ -92,7 +92,9 @@ CREATE TABLE IF NOT EXISTS `sys_dept` (
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` INT(1) DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_name` (`name`),
+    -- 唯一约束：只对未删除的记录生效（使用函数索引，MySQL 8.0+）
+    -- 当 deleted=0 时，第二个字段为 0，检查唯一性；当 deleted=1 时，第二个字段为 id（唯一），不检查唯一性
+    UNIQUE KEY `uk_name` (`name`, (IF(`deleted` = 0, 0, `id`))),
     KEY `idx_pid` (`pid`),
     KEY `idx_status` (`status`),
     KEY `idx_deleted` (`deleted`)

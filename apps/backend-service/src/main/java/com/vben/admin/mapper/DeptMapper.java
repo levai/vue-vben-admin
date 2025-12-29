@@ -18,4 +18,13 @@ public interface DeptMapper extends BaseMapper<SysDept> {
      * @return 子部门数量
      */
     int countByPid(@Param("pid") String pid);
+
+    /**
+     * 检查部门名称是否存在
+     *
+     * @param name 部门名称
+     * @param id   部门ID（更新时排除自己）
+     * @return 是否存在
+     */
+    boolean existsByName(@Param("name") String name, @Param("id") String id);
 }
