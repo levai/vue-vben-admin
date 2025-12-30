@@ -39,14 +39,14 @@ public class SysUser {
     private String realName;
 
     /**
+     * 部门ID
+     */
+    private String deptId;
+
+    /**
      * 状态：0-禁用，1-启用
      */
     private Integer status;
-
-    /**
-     * 首页路径
-     */
-    private String homePath;
 
     /**
      * 创建时间

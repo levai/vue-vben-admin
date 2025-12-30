@@ -95,9 +95,16 @@ echo $! > target/app.pid
 - `POST /auth/refresh` - 刷新 Token
 - `GET /auth/codes` - 获取权限码列表
 
-### 用户相关 (`/user/*`)
+### 用户相关 (`/user/*`, `/system/user/*`)
 
-- `GET /user/info` - 获取用户信息
+- `GET /user/info` - 获取当前登录用户信息
+- `GET /system/user/list` - 获取用户列表（支持分页和搜索）
+- `GET /system/user/{id}` - 获取用户详细信息
+- `POST /system/user` - 创建用户
+- `PUT /system/user/{id}` - 更新用户信息
+- `DELETE /system/user/{id}` - 删除用户（逻辑删除）
+- `PUT /system/user/{id}/status` - 启用/禁用用户
+- `PUT /system/user/{id}/password` - 重置用户密码
 
 ### 菜单相关 (`/menu/*`, `/system/menu/*`)
 

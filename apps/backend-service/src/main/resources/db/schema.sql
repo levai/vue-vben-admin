@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
     `username` VARCHAR(50) NOT NULL COMMENT '用户名',
     `password` VARCHAR(255) NOT NULL COMMENT '密码',
     `real_name` VARCHAR(50) DEFAULT NULL COMMENT '真实姓名',
+    `dept_id` VARCHAR(64) DEFAULT NULL COMMENT '部门ID',
     `status` INT(1) DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
     `home_path` VARCHAR(255) DEFAULT NULL COMMENT '首页路径',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -33,7 +34,8 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`),
     KEY `idx_status` (`status`),
-    KEY `idx_deleted` (`deleted`)
+    KEY `idx_deleted` (`deleted`),
+    KEY `idx_dept_id` (`dept_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- =============================================

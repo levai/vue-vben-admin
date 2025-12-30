@@ -1,0 +1,111 @@
+package com.vben.admin.controller;
+
+import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.core.model.PageResult;
+import com.vben.admin.model.dto.UserDTO;
+import com.vben.admin.model.vo.UserVO;
+import com.vben.admin.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * 系统用户管理控制器
+ *
+ * @author vben
+ */
+@Tag(name = "系统用户管理", description = "系统用户管理接口")
+@RestController
+@RequestMapping("/system/user")
+@RequiredArgsConstructor
+public class SystemUserController {
+
+    private final UserService userService;
+
+    @Operation(summary = "获取用户列表", description = "获取用户列表（支持分页和搜索）")
+    @GetMapping("/list")
+    public BaseResult<PageResult<UserVO>> getList(
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String realName,
+            @RequestParam(required = false) String deptId,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+        PageResult<UserVO> result = userService.getUserList(page, pageSize, username, realName, deptId, status, startTime, endTime);
+        return new BaseResult<>(result);
+    }
+
+    @Operation(summary = "获取用户信息", description = "根据ID获取用户详细信息")
+    @GetMapping("/{id}")
+    public BaseResult<UserVO> getById(@PathVariable String id) {
+        UserVO user = userService.getUserById(id);
+        return new BaseResult<>(user);
+    }
+
+    @Operation(summary = "创建用户", description = "创建新用户")
+    @PostMapping
+    public BaseResult<String> create(@Validated(UserDTO.Create.class) @RequestBody UserDTO userDTO) {
+        String id = userService.createUser(userDTO);
+        return new BaseResult<>(id);
+    }
+
+    @Operation(summary = "更新用户", description = "更新用户信息")
+    @PutMapping("/{id}")
+    public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+        userService.updateUser(id, userDTO);
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "删除用户", description = "删除用户（逻辑删除）")
+    @DeleteMapping("/{id}")
+    public BaseResult<Boolean> delete(@PathVariable String id) {
+        userService.deleteUser(id);
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "启用/禁用用户", description = "更新用户状态")
+    @PutMapping("/{id}/status")
+    public BaseResult<Boolean> updateStatus(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateStatusDTO statusDTO) {
+        userService.updateUserStatus(id, statusDTO.getStatus());
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "重置密码", description = "重置用户密码")
+    @PutMapping("/{id}/password")
+    public BaseResult<Boolean> resetPassword(
+            @PathVariable String id,
+            @Valid @RequestBody ResetPasswordDTO passwordDTO) {
+        userService.resetPassword(id, passwordDTO.getPassword());
+        return new BaseResult<>(true);
+    }
+
+    /**
+     * 更新状态DTO
+     */
+    @Data
+    public static class UpdateStatusDTO {
+        @NotNull(message = "状态不能为空")
+        private Integer status;
+    }
+
+    /**
+     * 重置密码DTO
+     */
+    @Data
+    public static class ResetPasswordDTO {
+        @NotBlank(message = "密码不能为空")
+        @Size(min = 6, max = 50, message = "密码长度必须在6-50之间")
+        private String password;
+    }
+}

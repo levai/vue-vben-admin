@@ -61,5 +61,23 @@
     "operation": "Operation",
     "permissions": "Permissions",
     "setPermissions": "Permissions"
+  },
+  "user": {
+    "title": "User Management",
+    "list": "User List",
+    "name": "User",
+    "username": "Username",
+    "realName": "Real Name",
+    "dept": "Department",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "roles": "Roles",
+    "setRoles": "Assign Roles",
+    "status": "Status",
+    "createTime": "Create Time",
+    "updateTime": "Update Time",
+    "operation": "Operation",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password"
   }
 }

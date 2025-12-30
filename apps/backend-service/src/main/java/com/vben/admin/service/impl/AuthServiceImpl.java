@@ -123,7 +123,6 @@ public class AuthServiceImpl implements AuthService {
         userInfo.setUsername(user.getUsername());
         userInfo.setRealName(user.getRealName());
         userInfo.setRoles(roleIds);
-        userInfo.setHomePath(user.getHomePath());
 
         return userInfo;
     }
