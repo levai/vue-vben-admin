@@ -6,6 +6,9 @@
     "deptName": "Department Name",
     "status": "Status",
     "createTime": "Create Time",
+    "createBy": "Created By",
+    "updateBy": "Updated By",
+    "updateTime": "Update Time",
     "remark": "Remark",
     "operation": "Operation",
     "parentDept": "Parent Department"
@@ -76,6 +79,7 @@
     "genderFemale": "Female",
     "employeeNo": "Employee No",
     "dept": "Department",
+    "createBy": "Created By",
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "roles": "Roles",

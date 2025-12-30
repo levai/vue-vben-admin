@@ -2,14 +2,17 @@ package com.vben.admin.service.impl;
 
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.mapper.DeptMapper;
+import com.vben.admin.mapper.UserMapper;
 import com.vben.admin.model.dto.DeptDTO;
 import com.vben.admin.model.entity.SysDept;
+import com.vben.admin.model.entity.SysUser;
 import com.vben.admin.model.vo.DeptVO;
 import com.vben.admin.service.DeptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class DeptServiceImpl implements DeptService {
 
     private final DeptMapper deptMapper;
+    private final UserMapper userMapper;
 
     @Override
     public List<DeptVO> getDeptList() {
@@ -140,6 +144,23 @@ public class DeptServiceImpl implements DeptService {
         BeanUtils.copyProperties(dept, vo);
         // 确保 createTime 被正确复制
         vo.setCreateTime(dept.getCreateTime());
+
+        // 查询创建人名称
+        if (StringUtils.hasText(dept.getCreateBy())) {
+            SysUser creator = userMapper.selectById(dept.getCreateBy());
+            if (creator != null) {
+                vo.setCreateByName(creator.getRealName() != null ? creator.getRealName() : creator.getUsername());
+            }
+        }
+
+        // 查询更新人名称
+        if (StringUtils.hasText(dept.getUpdateBy())) {
+            SysUser updater = userMapper.selectById(dept.getUpdateBy());
+            if (updater != null) {
+                vo.setUpdateByName(updater.getRealName() != null ? updater.getRealName() : updater.getUsername());
+            }
+        }
+
         return vo;
     }
 }

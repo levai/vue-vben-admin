@@ -3,6 +3,9 @@
   "dept": {
     "list": "部门列表",
     "createTime": "创建时间",
+    "createBy": "创建人",
+    "updateBy": "更新人",
+    "updateTime": "更新时间",
     "deptName": "部门名称",
     "name": "部门",
     "operation": "操作",
@@ -78,6 +81,8 @@
     "genderFemale": "女",
     "employeeNo": "工号",
     "dept": "部门",
+    "createBy": "创建人",
+    "updateBy": "更新人",
     "password": "密码",
     "confirmPassword": "确认密码",
     "roles": "角色",

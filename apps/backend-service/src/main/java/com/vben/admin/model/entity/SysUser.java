@@ -69,9 +69,19 @@ public class SysUser {
     private Integer status;
 
     /**
+     * 创建人ID
+     */
+    private String createBy;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
+
+    /**
+     * 更新人ID
+     */
+    private String updateBy;
 
     /**
      * 更新时间

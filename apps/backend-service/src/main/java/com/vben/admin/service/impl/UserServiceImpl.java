@@ -352,6 +352,22 @@ public class UserServiceImpl implements UserService {
             }
         }
 
+        // 查询创建人名称
+        if (StringUtils.hasText(user.getCreateBy())) {
+            SysUser creator = userMapper.selectById(user.getCreateBy());
+            if (creator != null) {
+                vo.setCreateByName(creator.getRealName() != null ? creator.getRealName() : creator.getUsername());
+            }
+        }
+
+        // 查询更新人名称
+        if (StringUtils.hasText(user.getUpdateBy())) {
+            SysUser updater = userMapper.selectById(user.getUpdateBy());
+            if (updater != null) {
+                vo.setUpdateByName(updater.getRealName() != null ? updater.getRealName() : updater.getUsername());
+            }
+        }
+
         return vo;
     }
 }

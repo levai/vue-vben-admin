@@ -17,7 +17,11 @@ export namespace SystemUserApi {
     roles?: string[];
     roleNames?: string[];
     status: 0 | 1;
+    createBy?: string;
+    createByName?: string;
     createTime?: string;
+    updateBy?: string;
+    updateByName?: string;
     updateTime?: string;
   }
 }

@@ -210,6 +210,11 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       title: $t('system.user.dept'),
     },
     {
+      field: 'createByName',
+      minWidth: 100,
+      title: $t('system.user.createBy'),
+    },
+    {
       cellRender: {
         attrs: { beforeChange: onStatusChange },
         name: onStatusChange ? 'CellSwitch' : 'CellTag',
@@ -222,6 +227,16 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       field: 'createTime',
       minWidth: 180,
       title: $t('system.user.createTime'),
+    },
+    {
+      field: 'updateByName',
+      minWidth: 100,
+      title: $t('system.user.updateBy'),
+    },
+    {
+      field: 'updateTime',
+      minWidth: 180,
+      title: $t('system.user.updateTime'),
     },
     {
       align: 'center',

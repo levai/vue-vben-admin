@@ -93,8 +93,23 @@ export function useColumns(
       width: 100,
     },
     {
+      field: 'createByName',
+      title: $t('system.dept.createBy'),
+      width: 120,
+    },
+    {
       field: 'createTime',
       title: $t('system.dept.createTime'),
+      width: 180,
+    },
+    {
+      field: 'updateByName',
+      title: $t('system.dept.updateBy'),
+      width: 120,
+    },
+    {
+      field: 'updateTime',
+      title: $t('system.dept.updateTime'),
       width: 180,
     },
     {

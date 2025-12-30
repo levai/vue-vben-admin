@@ -42,10 +42,36 @@ public class DeptVO {
     private Integer status;
 
     /**
+     * 创建人ID
+     */
+    private String createBy;
+
+    /**
+     * 创建人名称
+     */
+    private String createByName;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime createTime;
+
+    /**
+     * 更新人ID
+     */
+    private String updateBy;
+
+    /**
+     * 更新人名称
+     */
+    private String updateByName;
+
+    /**
+     * 更新时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
+    private LocalDateTime updateTime;
 
     /**
      * 子部门
