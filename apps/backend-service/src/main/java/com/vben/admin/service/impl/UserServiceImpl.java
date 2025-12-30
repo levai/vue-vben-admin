@@ -118,6 +118,24 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("用户名已存在");
         }
 
+        // 检查手机号是否已存在
+        long phoneCount = userMapper.selectCount(
+                new LambdaQueryWrapper<SysUser>()
+                        .eq(SysUser::getPhone, userDTO.getPhone())
+        );
+        if (phoneCount > 0) {
+            throw new BusinessException("手机号已存在");
+        }
+
+        // 检查工号是否已存在
+        long employeeNoCount = userMapper.selectCount(
+                new LambdaQueryWrapper<SysUser>()
+                        .eq(SysUser::getEmployeeNo, userDTO.getEmployeeNo())
+        );
+        if (employeeNoCount > 0) {
+            throw new BusinessException("工号已存在");
+        }
+
         // 创建用户
         SysUser user = new SysUser();
         user.setUsername(userDTO.getUsername());
@@ -127,6 +145,10 @@ public class UserServiceImpl implements UserService {
                 : "88888888";
         user.setPassword(passwordEncoder.encode(password));
         user.setRealName(userDTO.getRealName());
+        user.setNickname(userDTO.getNickname());
+        user.setPhone(userDTO.getPhone());
+        user.setGender(userDTO.getGender());
+        user.setEmployeeNo(userDTO.getEmployeeNo());
         user.setDeptId(userDTO.getDeptId());
         if (userDTO.getStatus() == null) {
             user.setStatus(1); // 默认启用
@@ -170,15 +192,53 @@ public class UserServiceImpl implements UserService {
             user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
 
-        // 更新其他字段
+        // 更新真实姓名（必填）
         if (StringUtils.hasText(userDTO.getRealName())) {
             user.setRealName(userDTO.getRealName());
-        } else if (userDTO.getRealName() != null) {
-            // 允许清空真实姓名
-            user.setRealName(null);
         }
 
-        if (userDTO.getDeptId() != null) {
+        // 更新昵称（必填）
+        if (StringUtils.hasText(userDTO.getNickname())) {
+            user.setNickname(userDTO.getNickname());
+        }
+
+        // 更新手机号（必填，需要检查是否重复）
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            if (!userDTO.getPhone().equals(user.getPhone())) {
+                long phoneCount = userMapper.selectCount(
+                        new LambdaQueryWrapper<SysUser>()
+                                .eq(SysUser::getPhone, userDTO.getPhone())
+                                .ne(SysUser::getId, id)
+                );
+                if (phoneCount > 0) {
+                    throw new BusinessException("手机号已存在");
+                }
+            }
+            user.setPhone(userDTO.getPhone());
+        }
+
+        // 更新性别（必填）
+        if (userDTO.getGender() != null) {
+            user.setGender(userDTO.getGender());
+        }
+
+        // 更新工号（必填，需要检查是否重复）
+        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+            if (!userDTO.getEmployeeNo().equals(user.getEmployeeNo())) {
+                long employeeNoCount = userMapper.selectCount(
+                        new LambdaQueryWrapper<SysUser>()
+                                .eq(SysUser::getEmployeeNo, userDTO.getEmployeeNo())
+                                .ne(SysUser::getId, id)
+                );
+                if (employeeNoCount > 0) {
+                    throw new BusinessException("工号已存在");
+                }
+            }
+            user.setEmployeeNo(userDTO.getEmployeeNo());
+        }
+
+        // 更新部门ID（必填）
+        if (StringUtils.hasText(userDTO.getDeptId())) {
             user.setDeptId(userDTO.getDeptId());
         }
 

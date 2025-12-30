@@ -8,6 +8,10 @@ export namespace SystemUserApi {
     id: string;
     username: string;
     realName?: string;
+    nickname?: string;
+    phone?: string;
+    gender?: 0 | 1 | 2; // 0-未知，1-男，2-女
+    employeeNo?: string;
     deptId?: string;
     deptName?: string;
     roles?: string[];

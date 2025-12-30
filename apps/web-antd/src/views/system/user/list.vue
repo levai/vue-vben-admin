@@ -46,6 +46,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     columns: useColumns(onActionClick, onStatusChange),
     height: 'auto',
     keepSource: true,
+    scrollX: {
+      enabled: true,
+    },
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {

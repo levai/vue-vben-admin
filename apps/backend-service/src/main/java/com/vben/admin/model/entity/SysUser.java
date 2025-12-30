@@ -39,6 +39,26 @@ public class SysUser {
     private String realName;
 
     /**
+     * 昵称
+     */
+    private String nickname;
+
+    /**
+     * 手机号
+     */
+    private String phone;
+
+    /**
+     * 性别：0-未知，1-男，2-女
+     */
+    private Integer gender;
+
+    /**
+     * 工号
+     */
+    private String employeeNo;
+
+    /**
      * 部门ID
      */
     private String deptId;
