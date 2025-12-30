@@ -57,11 +57,6 @@ public class MenuDTO {
     private Map<String, Object> meta;
 
     /**
-     * 排序
-     */
-    private Integer order;
-
-    /**
      * 状态：0-禁用，1-启用
      */
     private Integer status;

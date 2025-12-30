@@ -78,20 +78,39 @@ public class MenuServiceImpl implements MenuService {
 
         SysMenu menu = new SysMenu();
         BeanUtils.copyProperties(menuDTO, menu);
+
+        // 处理排序字段：从 meta.order 读取，保存到实体的 rank（映射到数据库 sort_order）
+        Integer sortOrder = null;
         if (menuDTO.getMeta() != null) {
+            Object orderObj = menuDTO.getMeta().get("order");
+            if (orderObj != null) {
+                if (orderObj instanceof Number) {
+                    sortOrder = ((Number) orderObj).intValue();
+                } else if (orderObj instanceof String) {
+                    try {
+                        sortOrder = Integer.parseInt((String) orderObj);
+                    } catch (NumberFormatException e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
             try {
                 menu.setMeta(objectMapper.writeValueAsString(menuDTO.getMeta()));
             } catch (Exception e) {
                 throw new BusinessException("菜单元数据格式错误");
             }
         }
+
         if (menu.getPid() == null) {
             menu.setPid("0");
         }
         if (menu.getStatus() == null) {
             menu.setStatus(1);
         }
-        if (menu.getSortOrder() == null) {
+        // 设置排序值
+        if (sortOrder != null) {
+            menu.setSortOrder(sortOrder);
+        } else if (menu.getSortOrder() == null) {
             menu.setSortOrder(0);
         }
 
@@ -118,15 +137,35 @@ public class MenuServiceImpl implements MenuService {
         }
 
         BeanUtils.copyProperties(menuDTO, menu, "id");
+
+        // 处理排序字段：从 meta.order 读取，保存到实体的 rank（映射到数据库 sort_order）
+        Integer sortOrder = null;
         if (menuDTO.getMeta() != null) {
+            Object orderObj = menuDTO.getMeta().get("order");
+            if (orderObj != null) {
+                if (orderObj instanceof Number) {
+                    sortOrder = ((Number) orderObj).intValue();
+                } else if (orderObj instanceof String) {
+                    try {
+                        sortOrder = Integer.parseInt((String) orderObj);
+                    } catch (NumberFormatException e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
             try {
                 menu.setMeta(objectMapper.writeValueAsString(menuDTO.getMeta()));
             } catch (Exception e) {
                 throw new BusinessException("菜单元数据格式错误");
             }
         }
+
         if (menu.getPid() == null) {
             menu.setPid("0");
+        }
+        // 设置排序值
+        if (sortOrder != null) {
+            menu.setSortOrder(sortOrder);
         }
 
         menuMapper.updateById(menu);
@@ -179,6 +218,9 @@ public class MenuServiceImpl implements MenuService {
             }
         }
 
+        // 对根菜单和子菜单进行排序
+        sortMenuTree(rootMenus);
+
         return rootMenus;
     }
 
@@ -199,6 +241,11 @@ public class MenuServiceImpl implements MenuService {
             }
         }
 
+        // 将排序值放到 meta.order 中（从数据库 sort_order 字段读取）
+        if (menu.getSortOrder() != null) {
+            meta.put("order", menu.getSortOrder());
+        }
+
         vo.setMeta(meta);
 
         // 设置状态字段（前端需要）
@@ -206,8 +253,49 @@ public class MenuServiceImpl implements MenuService {
 
         // name 字段直接使用数据库中的值（路由名称，由前端提交）
         // meta.title 字段用于菜单显示名称（中文，由前端提交）
+        // meta.order 字段用于排序（从数据库 sort_order 字段读取，通过实体的 rank 字段）
         // 不需要转换，直接返回
 
         return vo;
+    }
+
+    /**
+     * 递归排序菜单树
+     */
+    private void sortMenuTree(List<MenuVO> menus) {
+        if (menus == null || menus.isEmpty()) {
+            return;
+        }
+        // 按 meta.order 排序（如果 meta 为 null 或 order 不存在，则默认为 0）
+        menus.sort((m1, m2) -> {
+            Integer order1 = getMenuOrder(m1);
+            Integer order2 = getMenuOrder(m2);
+            return Integer.compare(order1, order2);
+        });
+        // 递归排序子菜单
+        for (MenuVO menu : menus) {
+            if (menu.getChildren() != null && !menu.getChildren().isEmpty()) {
+                sortMenuTree(menu.getChildren());
+            }
+        }
+    }
+
+    /**
+     * 获取菜单排序值
+     */
+    private Integer getMenuOrder(MenuVO menu) {
+        if (menu.getMeta() != null && menu.getMeta().get("order") != null) {
+            Object orderObj = menu.getMeta().get("order");
+            if (orderObj instanceof Number) {
+                return ((Number) orderObj).intValue();
+            } else if (orderObj instanceof String) {
+                try {
+                    return Integer.parseInt((String) orderObj);
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        }
+        return 0;
     }
 }
