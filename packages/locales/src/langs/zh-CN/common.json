@@ -23,5 +23,7 @@
   "hideSearchPanel": "隐藏搜索面板",
   "expandAll": "展开全部",
   "collapseAll": "折叠全部",
-  "copySuccess": "复制成功"
+  "copySuccess": "复制成功",
+  "operation": "操作",
+  "view": "查看"
 }
