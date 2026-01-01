@@ -28,8 +28,7 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 });
 
 // 使用菜单列表 Composable
-const { tableData, loadData, refreshData, createGridEvents, setupTableData } =
-  useMenuList();
+const { tableData, loadData, refreshData, createGridEvents } = useMenuList();
 
 const [Grid, gridApi] = useVbenVxeGrid({
   // 启用树形表格展开/折叠功能
@@ -49,16 +48,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
       drag: true, // 启用行拖拽
     },
     rowDragConfig: {
-      // 允许跨层级拖拽（但实际只允许同级排序，通过其他配置限制）
-      // 注意：isCrossDrag: false 可能会阻止子级节点的拖拽
       isCrossDrag: false,
-      // 禁止拖拽成为子节点（保持同级）
       isToChildDrag: false,
-      // 禁止拖拽成为父节点（保持同级）
       isToParentDrag: false,
-      // 只允许同级拖拽
-      isPeerDrag: true,
-      // 拖拽触发方式：'row' 整行可拖拽
+      isPeerDrag: true, // 只允许同级拖拽
       trigger: 'row',
     },
     toolbarConfig: {
@@ -75,12 +68,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
   } as VxeTableGridOptions,
 });
 
-// 刷新函数（需要在 gridApi 定义后）
+// 刷新函数
 function onRefresh() {
   refreshData(gridApi);
 }
 
-// 创建表格事件处理器（需要在 gridApi 定义后）
+// 创建表格事件处理器
 const gridEvents = createGridEvents(gridApi, onRefresh);
 
 // 更新 gridEvents
@@ -88,6 +81,7 @@ gridApi.setState({
   gridEvents,
 });
 
+// 操作按钮点击处理
 function onActionClick({
   code,
   row,
@@ -114,22 +108,25 @@ function onActionClick({
 // 监听数据变化，更新表格数据
 watch(
   tableData,
-  async (newData) => {
-    setupTableData(gridApi, newData);
+  (newData) => {
+    gridApi.setState({
+      gridOptions: {
+        data: newData,
+      },
+    });
   },
   { immediate: true },
 );
 
-// 组件挂载时加载数据
-onMounted(() => {
-  loadData();
-});
+// CRUD 操作
 function onEdit(row: SystemMenuApi.SystemMenu) {
   formDrawerApi.setData(row).open();
 }
+
 function onCreate() {
   formDrawerApi.setData({}).open();
 }
+
 function onAppend(row: SystemMenuApi.SystemMenu) {
   formDrawerApi.setData({ pid: row.id }).open();
 }
@@ -152,7 +149,13 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
       hideLoading();
     });
 }
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadData();
+});
 </script>
+
 <template>
   <Page auto-content-height>
     <FormDrawer @success="onRefresh" />
@@ -182,7 +185,6 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
             />
           </div>
           <span class="flex-auto">{{ $t(row.meta?.title) }}</span>
-          <div class="items-center justify-end"></div>
         </div>
         <MenuBadge
           v-if="row.meta?.badgeType"
@@ -195,6 +197,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
     </Grid>
   </Page>
 </template>
+
 <style lang="scss" scoped>
 .menu-badge {
   top: 50%;
