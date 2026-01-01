@@ -2,104 +2,157 @@
 
 ## 📋 目录结构
 
-- `schema.sql` - 数据库和表结构创建脚本
-- `data.sql` - 初始数据插入脚本
-- `init.sh` - 一键初始化脚本（Docker MySQL）
+```
+apps/backend-service/src/main/resources/db/
+├── README.md                    # 数据库脚本说明文档（本文件）
+├── init.sql                     # 主入口文件（创建数据库、设置字符集）
+├── clean-all.sql                # 清理所有表的脚本
+├── modules/                     # 模块目录
+│   ├── user/                    # 用户模块
+│   │   ├── user-schema.sql     # 用户表结构
+│   │   └── user-data.sql       # 用户初始数据
+│   ├── role/                    # 角色模块
+│   │   ├── role-schema.sql     # 角色表结构
+│   │   └── role-data.sql       # 角色初始数据
+│   ├── menu/                    # 菜单模块
+│   │   ├── menu-schema.sql     # 菜单表结构
+│   │   └── menu-data.sql       # 菜单初始数据
+│   ├── dept/                    # 部门模块
+│   │   ├── dept-schema.sql     # 部门表结构
+│   │   └── dept-data.sql       # 部门初始数据
+│   ├── permission/              # 权限模块
+│   │   ├── permission-schema.sql    # 权限表结构
+│   │   └── permission-data.sql      # 权限初始数据
+│   ├── operation-log/           # 操作日志模块
+│   │   ├── operation-log-schema.sql # 操作日志表结构
+│   │   └── operation-log-data.sql   # 操作日志初始数据（可选）
+│   └── relation/                 # 关联关系模块
+│       ├── relation-schema.sql      # 关联表结构（user_role, role_menu, user_permission）
+│       └── relation-data.sql        # 关联关系初始数据
+└── scripts/                      # 工具脚本目录
+    └── init-all.sh               # 执行所有模块的初始化脚本（推荐使用）
+```
 
 ## 🚀 快速开始
 
-### 方式 1：使用 Docker MySQL（推荐）
+### 方式 1：使用模块化脚本（推荐）⭐
+
+**使用 Docker MySQL**：
 
 ```bash
 cd apps/backend-service
 
-# 查找 MySQL 容器名称
-docker ps | grep mysql
+# 使用默认配置
+./src/main/resources/db/scripts/init-all.sh
 
-# 执行一键初始化脚本
-./src/main/resources/db/init.sh
+# 或指定 Docker 容器名称
+./src/main/resources/db/scripts/init-all.sh -c mysql-vben
 
-# 或者手动执行
-MYSQL_CONTAINER="mysql-vben"  # 替换为实际容器名称
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot < src/main/resources/db/schema.sql
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/data.sql
+# 或使用环境变量
+MYSQL_CONTAINER=mysql-vben ./src/main/resources/db/scripts/init-all.sh
 ```
 
-### 方式 2：使用本地 MySQL
+**使用本地 MySQL**：
 
 ```bash
 cd apps/backend-service
 
-# 1. 创建数据库和表结构
-mysql -uroot -proot < src/main/resources/db/schema.sql
+# 使用本地 MySQL
+./src/main/resources/db/scripts/init-all.sh --no-docker -u root -p yourpassword
 
-# 2. 初始化数据（使用 UTF-8 编码）
-mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/data.sql
+# 或指定主机和端口
+./src/main/resources/db/scripts/init-all.sh --no-docker -h localhost -P 3306 -u root -p yourpassword
 ```
 
-### 方式 3：在 MySQL 客户端中执行
+### 方式 2：手动执行模块文件
 
-1. 连接到 MySQL 数据库
-2. 执行 `schema.sql` 创建表结构
-3. 执行 `data.sql` 初始化数据（确保客户端字符集为 UTF-8）
+如果需要单独执行某个模块：
 
-## 📝 脚本说明
+```bash
+# 1. 先执行 init.sql 创建数据库
+mysql -uroot -proot < src/main/resources/db/init.sql
 
-### schema.sql
+# 2. 按顺序执行各模块（注意依赖关系）
+# 基础模块
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/dept/dept-schema.sql
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/dept/dept-data.sql
 
-创建数据库和所有表结构，包括：
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/role/role-schema.sql
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/role/role-data.sql
 
-- `sys_user` - 用户表
-- `sys_role` - 角色表
-- `sys_menu` - 菜单表（使用 `sort_order` 字段，避免 MySQL 保留关键字冲突）
-- `sys_dept` - 部门表
-- `sys_user_role` - 用户角色关联表
-- `sys_role_menu` - 角色菜单关联表
-- `sys_permission` - 权限码表
-- `sys_user_permission` - 用户权限关联表
+# ... 其他模块
+```
 
-**特点**：
+## 📝 模块说明
 
-- 所有表使用 `utf8mb4` 字符集
-- 菜单表使用 `sort_order` 字段（非保留关键字）
-- 支持逻辑删除（`deleted` 字段）
-- 自动时间戳（`create_time`, `update_time`）
-- 创建人和更新人追踪（`create_by`, `update_by`）
+### 模块划分
 
-### data.sql
+1. **部门模块 (dept)**
+   - 表：`sys_dept`
+   - 初始数据：总公司
 
-插入初始数据，包括：
+2. **角色模块 (role)**
+   - 表：`sys_role`
+   - 初始数据：admin、user 角色
 
-- **部门**：总公司（用户需要关联部门）
-- **管理员用户**：`admin` / `admin123`
-  - 包含完整用户信息：真实姓名、昵称、手机号、性别、工号、部门等
-- **角色**：`admin`（超级管理员）、`user`（普通用户）
-- **菜单**：Dashboard、系统管理及其子菜单
-- **权限码**：各种权限码定义
+3. **菜单模块 (menu)**
+   - 表：`sys_menu`
+   - 初始数据：Dashboard、系统管理及其子菜单、按钮权限
 
-**特点**：
+4. **权限模块 (permission)**
+   - 表：`sys_permission`
+   - 初始数据：所有权限码定义
 
-- 脚本开头设置 `SET NAMES utf8mb4`，确保中文正确插入
-- 使用 `sort_order` 字段进行排序
-- 所有中文数据使用 UTF-8 编码
-- 部门数据在用户数据之前初始化（用户需要关联部门）
+5. **用户模块 (user)**
+   - 表：`sys_user`
+   - 初始数据：管理员用户
+   - **依赖**：部门模块
+
+6. **关联关系模块 (relation)**
+   - 表：`sys_user_role`、`sys_role_menu`、`sys_user_permission`
+   - 初始数据：用户角色关联、角色菜单关联、用户权限关联
+   - **依赖**：用户、角色、菜单、权限模块
+
+7. **操作日志模块 (operation-log)**
+   - 表：`sys_operation_log`
+   - 初始数据：通常不需要
+   - **依赖**：用户模块
+
+### 执行顺序
+
+由于存在依赖关系，必须按以下顺序执行：
+
+1. **基础模块**（无依赖）：
+   - dept（部门）
+   - role（角色）
+   - menu（菜单）
+   - permission（权限码）
+
+2. **业务模块**（依赖基础模块）：
+   - user（用户）- 依赖 dept
+
+3. **关联模块**（依赖所有基础模块）：
+   - relation（关联关系）- 依赖 user、role、menu、permission
+
+4. **日志模块**（独立）：
+   - operation-log（操作日志）- 依赖 user
 
 ## ⚙️ 配置说明
 
 ### 字符编码
 
-**重要**：执行 `data.sql` 时必须使用 UTF-8 编码，否则中文会乱码。
+**重要**：执行所有 SQL 文件时必须使用 UTF-8 编码，否则中文会乱码。
 
 **Docker MySQL**：
 
 ```bash
-docker exec -i <容器名称> mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < data.sql
+docker exec -i <容器名称> mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < <文件路径>
 ```
 
 **本地 MySQL**：
 
 ```bash
-mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < data.sql
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < <文件路径>
 ```
 
 **MySQL 客户端**：确保客户端字符集设置为 UTF-8，或在执行前运行：
@@ -126,13 +179,12 @@ spring:
 -- 检查表结构
 SHOW TABLES;
 
--- 检查菜单表字段（确认 sort_order 存在）
-SHOW COLUMNS FROM sys_menu WHERE Field = 'sort_order';
-
--- 检查数据
-SELECT COUNT(*) FROM sys_user;  -- 应返回 1
-SELECT COUNT(*) FROM sys_role;  -- 应返回 2
-SELECT COUNT(*) FROM sys_menu; -- 应返回 6
+-- 检查各模块表
+SELECT COUNT(*) FROM sys_user;      -- 应返回 1
+SELECT COUNT(*) FROM sys_role;      -- 应返回 2
+SELECT COUNT(*) FROM sys_menu;      -- 应返回多个
+SELECT COUNT(*) FROM sys_dept;      -- 应返回 1
+SELECT COUNT(*) FROM sys_permission; -- 应返回多个
 
 -- 检查中文数据是否正确
 SELECT id, name FROM sys_menu WHERE name LIKE '%管理%';
@@ -154,11 +206,13 @@ SELECT id, name, remark FROM sys_role;
 
 ## ⚠️ 注意事项
 
-1. **字符编码**：执行 `data.sql` 时必须使用 UTF-8 编码，否则中文会乱码
+1. **字符编码**：执行所有 SQL 文件时必须使用 UTF-8 编码，否则中文会乱码
 2. **保留关键字**：菜单表使用 `sort_order` 而不是 `order`，避免 MySQL 保留关键字冲突
 3. **逻辑删除**：所有表都支持逻辑删除，删除操作不会真正删除数据，只是标记 `deleted = 1`
 4. **时间戳**：`create_time` 和 `update_time` 会自动填充，无需手动设置
 5. **创建人和更新人**：`create_by` 和 `update_by` 字段会在插入和更新时自动填充当前登录用户ID
+6. **执行顺序**：必须按照依赖关系顺序执行各模块
+7. **幂等性**：所有 SQL 文件使用 `CREATE TABLE IF NOT EXISTS` 和 `INSERT ... ON DUPLICATE KEY UPDATE`，支持重复执行
 
 ## 🔄 重新初始化
 
@@ -167,30 +221,37 @@ SELECT id, name, remark FROM sys_role;
 ```bash
 cd apps/backend-service
 
-# 方式 1：使用 init.sh 脚本（推荐）
-REINIT=true ./src/main/resources/db/init.sh
+# 方式 1：使用模块化脚本（推荐）
+MYSQL_CONTAINER=mysql-vben ./src/main/resources/db/scripts/init-all.sh
 
-# 方式 2：手动执行
-MYSQL_CONTAINER="mysql-vben"
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot vben_admin <<EOF
-SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS sys_user_permission;
-DROP TABLE IF EXISTS sys_permission;
-DROP TABLE IF EXISTS sys_role_menu;
-DROP TABLE IF EXISTS sys_user_role;
-DROP TABLE IF EXISTS sys_menu;
-DROP TABLE IF EXISTS sys_dept;
-DROP TABLE IF EXISTS sys_role;
-DROP TABLE IF EXISTS sys_user;
-SET FOREIGN_KEY_CHECKS = 1;
-EOF
+# 方式 2：使用清理脚本后重新执行
+# 先清理数据库
+./src/main/resources/db/scripts/clean-all.sh --no-docker -u root -p root
 
-# 然后重新执行 schema.sql 和 data.sql
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot < src/main/resources/db/schema.sql
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/data.sql
+# 然后重新执行初始化脚本
+./src/main/resources/db/scripts/init-all.sh --no-docker -u root -p root
+```
+
+## 📚 模块化优势
+
+1. **模块化**：每个模块独立，便于维护
+2. **可扩展**：新增模块只需添加新目录和文件
+3. **清晰**：模块职责明确，依赖关系清晰
+4. **灵活**：可以单独执行某个模块的初始化
+5. **版本控制**：便于跟踪各模块的变更历史
+
+## 🔧 单独执行某个模块
+
+如果需要单独执行某个模块（例如只更新菜单数据）：
+
+```bash
+# 只执行菜单模块
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/menu/menu-schema.sql
+mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resources/db/modules/menu/menu-data.sql
 ```
 
 ## 📚 相关文档
 
 - [数据库设计文档](../../README.md)
 - [应用配置说明](../../src/main/resources/application.yml)
+- [后端开发规范](../../../../.cursor/rules/backend-development.mdc)

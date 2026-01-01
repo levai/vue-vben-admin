@@ -46,4 +46,12 @@ public interface MenuMapper extends BaseMapper<SysMenu> {
      * @return 菜单列表
      */
     List<SysMenu> selectMenusByUserId(@Param("userId") String userId);
+
+    /**
+     * 根据路径查询菜单
+     *
+     * @param path 菜单路径
+     * @return 菜单实体
+     */
+    SysMenu selectByPath(@Param("path") String path);
 }

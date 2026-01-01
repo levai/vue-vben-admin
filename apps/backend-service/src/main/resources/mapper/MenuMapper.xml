@@ -40,4 +40,13 @@
         ORDER BY m.sort_order ASC
     </select>
 
+    <select id="selectByPath" resultType="com.vben.admin.model.entity.SysMenu">
+        SELECT *
+        FROM sys_menu
+        WHERE path = #{path}
+        AND deleted = 0
+        AND status = 1
+        LIMIT 1
+    </select>
+
 </mapper>

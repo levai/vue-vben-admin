@@ -6,7 +6,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useVbenDrawer } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
-import { getRoleList } from '#/api/system/role';
+import { getRoleOptions } from '#/api/system/role';
 import { createUser, updateUser } from '#/api/system/user';
 import { $t } from '#/locales';
 
@@ -108,14 +108,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
 async function loadRoles() {
   loadingRoles.value = true;
   try {
-    const res = await getRoleList({ status: 1 });
-    // 处理返回格式：可能是数组或 PageResult
-    let roles: any[] = [];
-    if (Array.isArray(res)) {
-      roles = res;
-    } else if (res && typeof res === 'object' && 'items' in res) {
-      roles = (res as any).items || [];
-    }
+    const res = await getRoleOptions({ status: 1 });
+    const roles = res.items || [];
     roleOptions.value = roles.map((role: any) => ({
       label: role.name,
       value: role.id,

@@ -10,6 +10,10 @@ export namespace SystemRoleApi {
     permissions: string[];
     remark?: string;
     status: 0 | 1;
+    /** 显示标签（用于下拉选项显示） */
+    label?: string;
+    /** 选项值（用于下拉选项值） */
+    value?: string;
   }
 }
 
@@ -17,10 +21,9 @@ export namespace SystemRoleApi {
  * 获取角色列表数据
  */
 async function getRoleList(params: Recordable<any>) {
-  return requestClient.get<Array<SystemRoleApi.SystemRole>>(
-    '/system/role/list',
-    { params },
-  );
+  return requestClient.get<Array<SystemRoleApi.SystemRole>>('/system/role', {
+    params,
+  });
 }
 
 /**
@@ -52,4 +55,26 @@ async function deleteRole(id: string) {
   return requestClient.delete(`/system/role/${id}`);
 }
 
-export { createRole, deleteRole, getRoleList, updateRole };
+/**
+ * 获取角色选项列表（用于下拉选项，支持 limit 限制）
+ * @param params 查询参数（支持条件查询和 limit 限制）
+ */
+async function getRoleOptions(params?: {
+  endTime?: string;
+  id?: string;
+  limit?: number;
+  name?: string;
+  remark?: string;
+  search?: string;
+  startTime?: string;
+  status?: number;
+}) {
+  return requestClient.get<{
+    items: SystemRoleApi.SystemRole[];
+    total: number;
+  }>('/system/role/options', {
+    params,
+  });
+}
+
+export { createRole, deleteRole, getRoleList, getRoleOptions, updateRole };

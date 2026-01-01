@@ -1,0 +1,33 @@
+package com.vben.admin.model.vo;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+/**
+ * 树形选项VO（用于下拉选择，支持树形结构）
+ *
+ * @author vben
+ */
+@Data
+@NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class TreeOptionVO {
+
+    /**
+     * 显示标签
+     */
+    private String label;
+
+    /**
+     * 选项值
+     */
+    private String value;
+
+    /**
+     * 子选项（用于树形结构）
+     */
+    private List<TreeOptionVO> children;
+}

@@ -33,7 +33,7 @@ async function getUserList(params: Recordable<any>) {
   return requestClient.get<{
     items: SystemUserApi.SystemUser[];
     total: number;
-  }>('/system/user/list', { params });
+  }>('/system/user', { params });
 }
 
 /**
@@ -95,11 +95,44 @@ async function resetUserPassword(id: string, password: string) {
   return requestClient.put(`/system/user/${id}/password`, { password });
 }
 
+/**
+ * 用户选项（包含所有用户字段 + label 和 value）
+ */
+export interface UserOption extends SystemUserApi.SystemUser {
+  /** 显示标签（用于下拉选项显示） */
+  label: string;
+  /** 选项值（用于下拉选项值） */
+  value: string;
+}
+
+/**
+ * 获取用户选项列表（用于下拉选项，支持 limit 限制）
+ * @param params 查询参数（支持条件查询和 limit 限制）
+ */
+async function getUserOptions(params?: {
+  deptId?: string;
+  endTime?: string;
+  search?: string;
+  limit?: number;
+  realName?: string;
+  startTime?: string;
+  status?: number;
+  username?: string;
+}) {
+  return requestClient.get<{
+    items: UserOption[];
+    total: number;
+  }>('/system/user/options', {
+    params,
+  });
+}
+
 export {
   createUser,
   deleteUser,
   getUserById,
   getUserList,
+  getUserOptions,
   resetUserPassword,
   updateUser,
   updateUserStatus,

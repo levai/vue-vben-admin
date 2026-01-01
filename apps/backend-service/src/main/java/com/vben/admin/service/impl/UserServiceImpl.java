@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.utils.QueryHelper;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.RoleMapper;
 import com.vben.admin.mapper.UserMapper;
 import com.vben.admin.mapper.UserRoleMapper;
 import com.vben.admin.model.dto.UserDTO;
+import com.vben.admin.model.dto.UserOptionQueryDTO;
 import com.vben.admin.model.entity.SysDept;
 import com.vben.admin.model.entity.SysRole;
 import com.vben.admin.model.entity.SysUser;
@@ -23,10 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,15 +44,25 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
+    public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
         // 构建查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
-        if (StringUtils.hasText(username)) {
-            queryWrapper.like(SysUser::getUsername, username);
-        }
-        if (StringUtils.hasText(realName)) {
-            queryWrapper.like(SysUser::getRealName, realName);
+        // 搜索关键词（优先级高于 username/realName）
+        if (StringUtils.hasText(search)) {
+            queryWrapper.and(wrapper -> wrapper
+                    .like(SysUser::getUsername, search)
+                    .or()
+                    .like(SysUser::getRealName, search)
+            );
+        } else {
+            // 如果没有 search，使用 username 和 realName
+            if (StringUtils.hasText(username)) {
+                queryWrapper.like(SysUser::getUsername, username);
+            }
+            if (StringUtils.hasText(realName)) {
+                queryWrapper.like(SysUser::getRealName, realName);
+            }
         }
         if (StringUtils.hasText(deptId)) {
             queryWrapper.eq(SysUser::getDeptId, deptId);
@@ -64,24 +72,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 时间范围查询
-        if (StringUtils.hasText(startTime)) {
-            try {
-                LocalDate startDate = LocalDate.parse(startTime, DateTimeFormatter.ISO_LOCAL_DATE);
-                LocalDateTime startDateTime = startDate.atStartOfDay();
-                queryWrapper.ge(SysUser::getCreateTime, startDateTime);
-            } catch (DateTimeParseException e) {
-                // 忽略无效的日期格式
-            }
-        }
-        if (StringUtils.hasText(endTime)) {
-            try {
-                LocalDate endDate = LocalDate.parse(endTime, DateTimeFormatter.ISO_LOCAL_DATE);
-                LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
-                queryWrapper.le(SysUser::getCreateTime, endDateTime);
-            } catch (DateTimeParseException e) {
-                // 忽略无效的日期格式
-            }
-        }
+        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
 
         queryWrapper.orderByDesc(SysUser::getCreateTime);
 
@@ -369,5 +360,58 @@ public class UserServiceImpl implements UserService {
         }
 
         return vo;
+    }
+
+    @Override
+    public PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO) {
+        // 构建查询条件（查询所有字段）
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SysUser::getDeleted, 0);
+
+        // 搜索关键词（优先级高于 username/realName）
+        if (StringUtils.hasText(queryDTO.getSearch())) {
+            queryWrapper.and(wrapper -> wrapper
+                    .like(SysUser::getUsername, queryDTO.getSearch())
+                    .or()
+                    .like(SysUser::getRealName, queryDTO.getSearch())
+            );
+        } else {
+            // 如果没有 search，使用 username 和 realName
+            if (StringUtils.hasText(queryDTO.getUsername())) {
+                queryWrapper.like(SysUser::getUsername, queryDTO.getUsername());
+            }
+            if (StringUtils.hasText(queryDTO.getRealName())) {
+                queryWrapper.like(SysUser::getRealName, queryDTO.getRealName());
+            }
+        }
+
+        // 部门筛选
+        if (StringUtils.hasText(queryDTO.getDeptId())) {
+            queryWrapper.eq(SysUser::getDeptId, queryDTO.getDeptId());
+        }
+
+        // 状态筛选
+        if (queryDTO.getStatus() != null) {
+            queryWrapper.eq(SysUser::getStatus, queryDTO.getStatus());
+        }
+
+        // 时间范围查询
+        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysUser::getCreateTime);
+
+        queryWrapper.orderByAsc(SysUser::getUsername);
+
+        // 查询数据（应用 limit 限制）
+        List<SysUser> users = userMapper.selectList(queryWrapper);
+        long total = users.size();
+
+        // 应用 limit 限制（防止数据量过大）
+        users = QueryHelper.applyLimit(users, queryDTO.getLimit());
+
+        List<UserVO> options = users.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
+
+        // total 表示实际总数（可能 > items.length，如果被 limit 截断）
+        return new PageResult<>(options, total);
     }
 }

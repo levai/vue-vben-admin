@@ -15,6 +15,16 @@ import java.util.List;
 public class UserVO {
 
     /**
+     * 显示标签（用于下拉选项显示，可选）
+     */
+    private String label;
+
+    /**
+     * 选项值（用于下拉选项值，可选）
+     */
+    private String value;
+
+    /**
      * 用户ID
      */
     private String id;

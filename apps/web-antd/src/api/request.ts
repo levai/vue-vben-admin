@@ -84,6 +84,15 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
+
+      // 添加当前页面URL到请求头（用于操作日志记录）
+      if (typeof window !== 'undefined') {
+        const pageUrl = window.location.pathname;
+        if (pageUrl) {
+          config.headers['X-Page-Url'] = pageUrl;
+        }
+      }
+
       return config;
     },
   });

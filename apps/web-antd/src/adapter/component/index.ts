@@ -409,7 +409,9 @@ async function initComponentAdapter() {
       inputComponent: Input,
       modelValueProp: 'value',
     }),
-    Input: withDefaultPlaceholder(Input, 'input'),
+    Input: withDefaultPlaceholder(Input, 'input', {
+      allowClear: true,
+    }),
     InputNumber: withDefaultPlaceholder(InputNumber, 'input'),
     InputPassword: withDefaultPlaceholder(InputPassword, 'input'),
     Mentions: withDefaultPlaceholder(Mentions, 'input'),

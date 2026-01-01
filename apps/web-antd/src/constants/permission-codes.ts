@@ -36,6 +36,11 @@ export const SYSTEM_PERMISSION_CODES = {
     EDIT: 'ac:system:dept:edit',
     DELETE: 'ac:system:dept:delete',
   },
+  // 操作日志管理
+  OPERATION_LOG: {
+    VIEW: 'ac:system:operation-log:view',
+    DELETE: 'ac:system:operation-log:delete',
+  },
 } as const;
 
 /**

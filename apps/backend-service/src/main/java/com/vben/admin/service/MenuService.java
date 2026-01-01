@@ -74,4 +74,13 @@ public interface MenuService {
      * @param menus 菜单列表（包含 id、meta.order 和 pid）
      */
     void batchUpdateMenuOrder(List<MenuOrderDTO> menus);
+
+    /**
+     * 根据路径获取菜单名称链（父菜单 - 子菜单）
+     * 例如：/system/operation-log -> "系统管理 - 操作日志"
+     *
+     * @param path 菜单路径
+     * @return 菜单名称链，如果找不到菜单则返回 null
+     */
+    String getMenuNameChainByPath(String path);
 }

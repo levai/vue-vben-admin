@@ -26,7 +26,7 @@ public class SystemDeptController {
     private final DeptService deptService;
 
     @Operation(summary = "获取部门列表", description = "获取部门列表（树形结构）")
-    @GetMapping("/list")
+    @GetMapping
     public BaseResult<List<DeptVO>> getList() {
         List<DeptVO> depts = deptService.getDeptList();
         return new BaseResult<>(depts);

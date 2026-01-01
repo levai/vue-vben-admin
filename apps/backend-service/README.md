@@ -98,37 +98,50 @@ echo $! > target/app.pid
 ### 用户相关 (`/user/*`, `/system/user/*`)
 
 - `GET /user/info` - 获取当前登录用户信息
-- `GET /system/user/list` - 获取用户列表（支持分页和搜索）
+- `GET /system/user` - 获取用户列表（支持分页和搜索）
 - `GET /system/user/{id}` - 获取用户详细信息
 - `POST /system/user` - 创建用户
 - `PUT /system/user/{id}` - 更新用户信息
 - `DELETE /system/user/{id}` - 删除用户（逻辑删除）
 - `PUT /system/user/{id}/status` - 启用/禁用用户
 - `PUT /system/user/{id}/password` - 重置用户密码
+- `GET /system/user/options` - 获取用户选项列表（用于下拉选项）
 
 ### 菜单相关 (`/menu/*`, `/system/menu/*`)
 
 - `GET /menu/all` - 获取所有菜单（用于路由）
-- `GET /system/menu/list` - 获取菜单列表
+- `GET /system/menu` - 获取菜单列表（树形结构）
+- `GET /system/menu/{id}` - 获取菜单详细信息
 - `GET /system/menu/name-exists` - 检查菜单名称是否存在
 - `GET /system/menu/path-exists` - 检查菜单路径是否存在
 - `POST /system/menu` - 创建菜单
 - `PUT /system/menu/{id}` - 更新菜单
 - `DELETE /system/menu/{id}` - 删除菜单
+- `PUT /system/menu/batch-order` - 批量更新菜单排序
 
 ### 角色相关 (`/system/role/*`)
 
-- `GET /system/role/list` - 获取角色列表（支持分页）
+- `GET /system/role` - 获取角色列表（支持分页）
 - `POST /system/role` - 创建角色
 - `PUT /system/role/{id}` - 更新角色
 - `DELETE /system/role/{id}` - 删除角色
 
 ### 部门相关 (`/system/dept/*`)
 
-- `GET /system/dept/list` - 获取部门列表
+- `GET /system/dept` - 获取部门列表（树形结构）
+- `GET /system/dept/{id}` - 获取部门详细信息
 - `POST /system/dept` - 创建部门
 - `PUT /system/dept/{id}` - 更新部门
 - `DELETE /system/dept/{id}` - 删除部门
+
+### 操作日志相关 (`/system/operation-log/*`)
+
+- `GET /system/operation-log` - 获取操作日志列表（支持分页和筛选）
+- `GET /system/operation-log/{id}` - 获取操作日志详细信息
+- `DELETE /system/operation-log/{id}` - 删除操作日志
+- `DELETE /system/operation-log/batch` - 批量删除操作日志
+- `GET /system/operation-log/types` - 获取操作类型列表（用于下拉选项）
+- `GET /system/operation-log/modules` - 获取操作模块列表（用于下拉选项）
 
 ## 🏗️ 项目结构
 

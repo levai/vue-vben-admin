@@ -3,6 +3,7 @@ package com.vben.admin.controller;
 import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.model.dto.UserDTO;
+import com.vben.admin.model.dto.UserOptionQueryDTO;
 import com.vben.admin.model.vo.UserVO;
 import com.vben.admin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,8 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 系统用户管理控制器
@@ -30,17 +33,18 @@ public class SystemUserController {
     private final UserService userService;
 
     @Operation(summary = "获取用户列表", description = "获取用户列表（支持分页和搜索）")
-    @GetMapping("/list")
+    @GetMapping
     public BaseResult<PageResult<UserVO>> getList(
             @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String realName,
             @RequestParam(required = false) String deptId,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
-        PageResult<UserVO> result = userService.getUserList(page, pageSize, username, realName, deptId, status, startTime, endTime);
+        PageResult<UserVO> result = userService.getUserList(page, pageSize, search, username, realName, deptId, status, startTime, endTime);
         return new BaseResult<>(result);
     }
 
@@ -88,6 +92,13 @@ public class SystemUserController {
             @Valid @RequestBody ResetPasswordDTO passwordDTO) {
         userService.resetPassword(id, passwordDTO.getPassword());
         return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "获取用户选项列表", description = "获取用户选项列表（用于下拉选项，支持 limit 限制，支持条件查询，返回完整用户信息，前端自行处理 label 和 value）")
+    @GetMapping("/options")
+    public BaseResult<PageResult<UserVO>> getOptions(UserOptionQueryDTO queryDTO) {
+        PageResult<UserVO> result = userService.getUserOptions(queryDTO);
+        return new BaseResult<>(result);
     }
 
     /**

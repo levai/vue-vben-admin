@@ -27,7 +27,7 @@ public class SystemMenuController {
     private final MenuService menuService;
 
     @Operation(summary = "获取菜单列表", description = "获取菜单列表")
-    @GetMapping("/list")
+    @GetMapping
     public BaseResult<List<MenuVO>> getList() {
         List<MenuVO> menus = menuService.getMenuList();
         return new BaseResult<>(menus);

@@ -94,9 +94,7 @@ export namespace SystemMenuApi {
  * 获取菜单数据列表
  */
 async function getMenuList() {
-  return requestClient.get<Array<SystemMenuApi.SystemMenu>>(
-    '/system/menu/list',
-  );
+  return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu');
 }
 
 async function isMenuNameExists(

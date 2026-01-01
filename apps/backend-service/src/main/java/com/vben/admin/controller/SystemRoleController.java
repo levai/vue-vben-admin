@@ -3,6 +3,7 @@ package com.vben.admin.controller;
 import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.model.dto.RoleDTO;
+import com.vben.admin.model.dto.RoleOptionQueryDTO;
 import com.vben.admin.model.vo.RoleVO;
 import com.vben.admin.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,17 +29,18 @@ public class SystemRoleController {
     private final RoleService roleService;
 
     @Operation(summary = "获取角色列表", description = "获取角色列表（支持分页）")
-    @GetMapping("/list")
+    @GetMapping
     public BaseResult<PageResult<RoleVO>> getList(
             @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String id,
             @RequestParam(required = false) String remark,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
-        PageResult<RoleVO> result = roleService.getRoleList(page, pageSize, name, id, remark, status, startTime, endTime);
+        PageResult<RoleVO> result = roleService.getRoleList(page, pageSize, search, name, id, remark, status, startTime, endTime);
         return new BaseResult<>(result);
     }
 
@@ -61,5 +63,12 @@ public class SystemRoleController {
     public BaseResult<Boolean> delete(@PathVariable String id) {
         roleService.deleteRole(id);
         return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "获取角色选项列表", description = "获取角色选项列表（用于下拉选项，支持 limit 限制，支持条件查询，返回完整角色信息，前端自行处理 label 和 value）")
+    @GetMapping("/options")
+    public BaseResult<PageResult<RoleVO>> getOptions(RoleOptionQueryDTO queryDTO) {
+        PageResult<RoleVO> result = roleService.getRoleOptions(queryDTO);
+        return new BaseResult<>(result);
     }
 }

@@ -581,4 +581,61 @@ public class MenuServiceImpl implements MenuService {
         }
         return 0;
     }
+
+    @Override
+    public String getMenuNameChainByPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return null;
+        }
+
+        // 根据路径查询菜单
+        SysMenu menu = menuMapper.selectByPath(path);
+        if (menu == null) {
+            return null;
+        }
+
+        // 获取菜单名称（优先使用 meta.title，否则使用 name）
+        String menuName = getMenuDisplayName(menu);
+
+        // 递归获取父菜单名称链
+        List<String> nameChain = new ArrayList<>();
+        nameChain.add(menuName);
+
+        String pid = menu.getPid();
+        while (pid != null && !"0".equals(pid)) {
+            SysMenu parentMenu = menuMapper.selectById(pid);
+            if (parentMenu == null || parentMenu.getDeleted() == 1 || parentMenu.getStatus() == 0) {
+                break;
+            }
+            nameChain.add(0, getMenuDisplayName(parentMenu));
+            pid = parentMenu.getPid();
+        }
+
+        // 组合成 "父菜单 - 子菜单" 格式
+        return String.join(" - ", nameChain);
+    }
+
+    /**
+     * 获取菜单显示名称（优先使用 meta.title，否则使用 name）
+     */
+    private String getMenuDisplayName(SysMenu menu) {
+        if (menu == null) {
+            return "";
+        }
+
+        // 尝试从 meta.title 获取
+        if (StringUtils.hasText(menu.getMeta())) {
+            try {
+                Map<String, Object> meta = objectMapper.readValue(menu.getMeta(), new TypeReference<Map<String, Object>>() {});
+                if (meta != null && meta.get("title") != null) {
+                    return meta.get("title").toString();
+                }
+            } catch (Exception e) {
+                // 忽略解析错误
+            }
+        }
+
+        // 降级使用 name 字段
+        return menu.getName() != null ? menu.getName() : "";
+    }
 }
