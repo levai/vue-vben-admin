@@ -1,6 +1,7 @@
 package com.vben.admin.service;
 
 import com.vben.admin.model.dto.MenuDTO;
+import com.vben.admin.model.dto.MenuOrderDTO;
 import com.vben.admin.model.vo.MenuVO;
 
 import java.util.List;
@@ -66,4 +67,11 @@ public interface MenuService {
      * @param id 菜单ID
      */
     void deleteMenu(String id);
+
+    /**
+     * 批量更新菜单排序
+     *
+     * @param menus 菜单列表（包含 id、meta.order 和 pid）
+     */
+    void batchUpdateMenuOrder(List<MenuOrderDTO> menus);
 }

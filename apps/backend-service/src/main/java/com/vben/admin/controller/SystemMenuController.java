@@ -1,6 +1,7 @@
 package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.model.dto.BatchMenuOrderDTO;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.service.MenuService;
@@ -66,6 +67,13 @@ public class SystemMenuController {
     @DeleteMapping("/{id}")
     public BaseResult<Boolean> delete(@PathVariable String id) {
         menuService.deleteMenu(id);
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "批量更新菜单排序", description = "批量更新菜单的排序和父级关系（用于拖拽排序）")
+    @PutMapping("/batch-order")
+    public BaseResult<Boolean> batchUpdateOrder(@Valid @RequestBody BatchMenuOrderDTO request) {
+        menuService.batchUpdateMenuOrder(request.getMenus());
         return new BaseResult<>(true);
     }
 }

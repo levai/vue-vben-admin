@@ -8,6 +8,7 @@ import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.utils.SecurityUtils;
 import com.vben.admin.mapper.MenuMapper;
 import com.vben.admin.model.dto.MenuDTO;
+import com.vben.admin.model.dto.MenuOrderDTO;
 import com.vben.admin.model.entity.SysMenu;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.service.MenuService;
@@ -229,6 +230,106 @@ public class MenuServiceImpl implements MenuService {
         }
 
         menuMapper.deleteById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpdateMenuOrder(List<MenuOrderDTO> menus) {
+        // 参数校验
+        if (menus == null || menus.isEmpty()) {
+            throw new BusinessException("菜单列表不能为空");
+        }
+
+        // 检查是否有重复的菜单ID
+        long distinctCount = menus.stream()
+                .filter(menu -> menu.getId() != null)
+                .map(MenuOrderDTO::getId)
+                .distinct()
+                .count();
+        if (distinctCount != menus.size()) {
+            throw new BusinessException("菜单列表中存在重复的菜单ID");
+        }
+
+        for (MenuOrderDTO menuOrderDTO : menus) {
+            // 参数校验
+            if (menuOrderDTO.getId() == null || menuOrderDTO.getId().trim().isEmpty()) {
+                throw new BusinessException("菜单ID不能为空");
+            }
+
+            if (menuOrderDTO.getMeta() == null) {
+                throw new BusinessException("菜单元数据不能为空，菜单ID: " + menuOrderDTO.getId());
+            }
+
+            // 检查菜单是否存在
+            SysMenu menu = menuMapper.selectById(menuOrderDTO.getId());
+            if (menu == null) {
+                throw new BusinessException("菜单不存在，ID: " + menuOrderDTO.getId());
+            }
+
+            // 处理父级ID
+            String pid = menuOrderDTO.getPid();
+            if (pid == null || pid.isEmpty() || "null".equalsIgnoreCase(pid)) {
+                pid = "0";
+            }
+
+            // 校验：防止菜单成为自己的父级（循环引用）
+            if (menuOrderDTO.getId().equals(pid)) {
+                throw new BusinessException("菜单不能成为自己的父级，菜单ID: " + menuOrderDTO.getId());
+            }
+
+            // 校验：如果 pid 不是 "0"，检查父菜单是否存在
+            if (!"0".equals(pid)) {
+                SysMenu parentMenu = menuMapper.selectById(pid);
+                if (parentMenu == null) {
+                    throw new BusinessException("父菜单不存在，父菜单ID: " + pid + "，菜单ID: " + menuOrderDTO.getId());
+                }
+            }
+
+            // 处理排序字段：从 meta.order 读取
+            Integer sortOrder = null;
+            Object orderObj = menuOrderDTO.getMeta().get("order");
+            if (orderObj != null) {
+                if (orderObj instanceof Number) {
+                    sortOrder = ((Number) orderObj).intValue();
+                } else if (orderObj instanceof String) {
+                    try {
+                        sortOrder = Integer.parseInt((String) orderObj);
+                    } catch (NumberFormatException e) {
+                        throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuOrderDTO.getId());
+                    }
+                } else {
+                    throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuOrderDTO.getId());
+                }
+
+                // 校验排序值范围（可选，根据业务需求调整）
+                if (sortOrder < 0) {
+                    throw new BusinessException("排序值不能小于0，菜单ID: " + menuOrderDTO.getId());
+                }
+            } else {
+                throw new BusinessException("排序值不能为空，菜单ID: " + menuOrderDTO.getId());
+            }
+
+            // 更新父级ID
+            menu.setPid(pid);
+
+            // 更新 meta 字段（保留原有的 meta 数据，只更新 order）
+            try {
+                Map<String, Object> existingMeta = new HashMap<>();
+                if (menu.getMeta() != null && !menu.getMeta().isEmpty()) {
+                    existingMeta = objectMapper.readValue(menu.getMeta(), new TypeReference<Map<String, Object>>() {});
+                }
+                // 合并新的 meta 数据
+                existingMeta.putAll(menuOrderDTO.getMeta());
+                menu.setMeta(objectMapper.writeValueAsString(existingMeta));
+            } catch (Exception e) {
+                throw new BusinessException("菜单元数据格式错误，菜单ID: " + menuOrderDTO.getId() + "，错误: " + e.getMessage());
+            }
+
+            // 设置排序值
+            menu.setSortOrder(sortOrder);
+
+            menuMapper.updateById(menu);
+        }
     }
 
     /**
