@@ -106,6 +106,10 @@ export function useColumns(
           {
             code: 'append',
             text: '新增下级',
+            // 按钮类型不允许新增下级
+            disabled: (row: SystemMenuApi.SystemMenu) => {
+              return row.type === 'button';
+            },
           },
           'edit', // 默认的编辑按钮
           'delete', // 默认的删除按钮
