@@ -45,6 +45,7 @@ public class OperationLogAspect {
     private final OperationLogService operationLogService;
     private final UserMapper userMapper;
     private final MenuService menuService;
+    private final com.vben.admin.core.utils.MenuModuleResolver menuModuleResolver;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -133,26 +134,35 @@ public class OperationLogAspect {
         String userAgent = request.getHeader("User-Agent");
         BrowserInfoParser.BrowserInfo browserInfo = BrowserInfoParser.parseUserAgent(userAgent);
 
-        // 获取前端页面URL（优先从自定义Header获取，否则从Referer获取）
-        String pageUrl = request.getHeader("X-Page-Url");
-        if (pageUrl == null || pageUrl.isEmpty()) {
-            String referer = request.getHeader("Referer");
-            if (referer != null && !referer.isEmpty()) {
-                // 从Referer中提取路径部分（去掉协议、域名等）
-                try {
-                    java.net.URL url = new java.net.URL(referer);
-                    pageUrl = url.getPath();
-                    // 去掉查询参数和锚点
-                    if (pageUrl.contains("?")) {
-                        pageUrl = pageUrl.substring(0, pageUrl.indexOf("?"));
-                    }
-                    if (pageUrl.contains("#")) {
-                        pageUrl = pageUrl.substring(0, pageUrl.indexOf("#"));
-                    }
-                } catch (Exception e) {
-                    log.debug("解析Referer失败: {}", e.getMessage());
+        // 获取前端页面URL（优先从Referer获取，后端自动解析，无需前端发送Header）
+        // 如果Referer不可用，再尝试从自定义Header获取（作为降级方案）
+        String pageUrl = null;
+
+        // 1. 优先从Referer获取（浏览器自动发送，更可靠）
+        String referer = request.getHeader("Referer");
+        if (referer != null && !referer.isEmpty()) {
+            try {
+                java.net.URL url = new java.net.URL(referer);
+                pageUrl = url.getPath();
+                // 去掉查询参数和锚点
+                if (pageUrl.contains("?")) {
+                    pageUrl = pageUrl.substring(0, pageUrl.indexOf("?"));
                 }
+                if (pageUrl.contains("#")) {
+                    pageUrl = pageUrl.substring(0, pageUrl.indexOf("#"));
+                }
+                // 确保路径以 / 开头
+                if (pageUrl != null && !pageUrl.isEmpty() && !pageUrl.startsWith("/")) {
+                    pageUrl = "/" + pageUrl;
+                }
+            } catch (Exception e) {
+                log.debug("解析Referer失败: {}", e.getMessage());
             }
+        }
+
+        // 2. 如果Referer不可用，降级使用自定义Header（前端可能已发送）
+        if (pageUrl == null || pageUrl.isEmpty()) {
+            pageUrl = request.getHeader("X-Page-Url");
         }
 
         // 记录开始时间
@@ -206,8 +216,9 @@ public class OperationLogAspect {
             // 计算耗时
             long duration = System.currentTimeMillis() - startTime;
 
-            // 解析操作信息（从URL和方法推断）
-            OperationInfoParser.OperationInfo operationInfo = OperationInfoParser.parseOperationInfo(requestUrl, requestMethod, pageUrl);
+            // 解析操作信息（从URL和方法推断，使用菜单模块解析器）
+            OperationInfoParser.OperationInfo operationInfo = OperationInfoParser.parseOperationInfo(
+                    requestUrl, requestMethod, pageUrl, menuModuleResolver);
 
             // 根据页面路径查询菜单名称链（格式：父菜单 - 子菜单）
             String menuNameChain = null;
@@ -226,6 +237,7 @@ public class OperationLogAspect {
                     log.debug("查询菜单名称链失败: {}", e.getMessage());
                 }
             }
+
 
             // 构建操作日志实体
             SysOperationLog operationLog = new SysOperationLog();
@@ -279,6 +291,7 @@ public class OperationLogAspect {
 
         return result;
     }
+
 
     /**
      * 判断是否应该排除

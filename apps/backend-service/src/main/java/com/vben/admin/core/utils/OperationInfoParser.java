@@ -1,6 +1,5 @@
 package com.vben.admin.core.utils;
 
-import com.vben.admin.core.enums.OperationModule;
 import com.vben.admin.core.enums.OperationType;
 import lombok.Data;
 import org.springframework.util.StringUtils;
@@ -32,14 +31,16 @@ public class OperationInfoParser {
     }
 
     /**
-     * 根据URL和方法解析操作信息
+     * 根据URL和方法解析操作信息（使用菜单模块解析器，动态从菜单树获取）
      *
-     * @param requestUrl    请求URL（后端API路径）
-     * @param requestMethod 请求方法
-     * @param pageUrl       前端页面URL（从Header获取，可为null）
+     * @param requestUrl        请求URL（后端API路径）
+     * @param requestMethod     请求方法
+     * @param pageUrl           前端页面URL（从Header获取，可为null）
+     * @param menuModuleResolver 菜单模块解析器（必须提供，用于动态获取模块信息）
      * @return 操作信息
      */
-    public static OperationInfo parseOperationInfo(String requestUrl, String requestMethod, String pageUrl) {
+    public static OperationInfo parseOperationInfo(String requestUrl, String requestMethod, String pageUrl,
+                                                   MenuModuleResolver menuModuleResolver) {
         OperationInfo info = new OperationInfo();
 
         if (requestUrl == null) {
@@ -56,27 +57,25 @@ public class OperationInfoParser {
             info.setOperationPage(finalPageUrl);
         }
 
-        // 解析操作模块：从前端页面URL推断（而不是从后端API URL），返回英文值
-        // 从路径的最后一部分提取模块名（如 /system/operation-log -> operation-log）
-        if (finalPageUrl != null && !finalPageUrl.isEmpty()) {
-            String[] pathParts = finalPageUrl.split("/");
-            if (pathParts.length > 0) {
-                // 取最后一部分作为模块名
-                String module = pathParts[pathParts.length - 1];
-                if (module != null && !module.isEmpty()) {
-                    info.setOperationModule(convertModuleToEnglish(module));
-                }
+        // 解析操作模块：从前端页面URL推断（而不是从后端API URL），直接使用菜单名称
+        // 优先根据页面路径匹配菜单，如果找到菜单，直接使用菜单的 title 作为操作模块
+        // 如果找不到菜单，使用页面路径作为模块名（降级方案）
+        // 例如：
+        // - /dashboard/analytics -> 匹配菜单 path="/analytics" -> 使用菜单 title "数据分析"
+        // - /system/user -> 匹配菜单 path="/system/user" -> 使用菜单 title "用户管理"
+        String moduleName = null;
+        if (menuModuleResolver != null) {
+            if (finalPageUrl != null && !finalPageUrl.isEmpty()) {
+                moduleName = menuModuleResolver.extractModuleFromPath(finalPageUrl);
+            } else {
+                // 如果没有前端页面URL，降级使用后端API URL推断
+                moduleName = menuModuleResolver.extractModuleFromPath(requestUrl);
             }
-        } else {
-            // 如果没有前端页面URL，降级使用后端API URL推断
-            String[] pathParts = requestUrl.split("/");
-            if (pathParts.length > 0) {
-                // 取最后一部分作为模块名
-                String module = pathParts[pathParts.length - 1];
-                if (module != null && !module.isEmpty()) {
-                    info.setOperationModule(convertModuleToEnglish(module));
-                }
-            }
+        }
+
+        if (moduleName != null && !moduleName.isEmpty()) {
+            // 直接使用菜单名称作为操作模块（不再需要标准化）
+            info.setOperationModule(moduleName);
         }
 
         // 根据请求方法和URL推断操作类型
@@ -155,44 +154,6 @@ public class OperationInfoParser {
                 return OperationType.DELETE.name().toLowerCase();
             default:
                 return OperationType.VIEW.name().toLowerCase();
-        }
-    }
-
-
-
-    /**
-     * 将模块名称转换为英文枚举值（小写，下划线转横线）
-     */
-    private static String convertModuleToEnglish(String moduleName) {
-        if (moduleName == null || moduleName.isEmpty()) {
-            return "";
-        }
-
-        String lowerName = moduleName.toLowerCase();
-        switch (lowerName) {
-            case "system":
-                return OperationModule.SYSTEM.name().toLowerCase().replace("_", "-");
-            case "user":
-            case "users":
-                return OperationModule.USER.name().toLowerCase().replace("_", "-");
-            case "role":
-            case "roles":
-                return OperationModule.ROLE.name().toLowerCase().replace("_", "-");
-            case "menu":
-            case "menus":
-                return OperationModule.MENU.name().toLowerCase().replace("_", "-");
-            case "dept":
-            case "depts":
-                return OperationModule.DEPT.name().toLowerCase().replace("_", "-");
-            case "permission":
-            case "permissions":
-                return OperationModule.PERMISSION.name().toLowerCase().replace("_", "-");
-            case "operation-log":
-            case "operationlog":
-                return OperationModule.OPERATION_LOG.name().toLowerCase().replace("_", "-");
-            default:
-                // 如果找不到映射，返回原名称（小写，下划线转横线）
-                return moduleName.toLowerCase().replace("_", "-");
         }
     }
 }

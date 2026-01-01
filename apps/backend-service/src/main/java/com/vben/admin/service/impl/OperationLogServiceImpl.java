@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.enums.OperationType;
+import com.vben.admin.core.utils.OperationInfoParser;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.model.vo.TreeOptionVO;
@@ -44,6 +45,7 @@ public class OperationLogServiceImpl implements OperationLogService {
 
     private final OperationLogMapper operationLogMapper;
     private final MenuService menuService;
+    private final com.vben.admin.core.utils.MenuModuleResolver menuModuleResolver;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -164,6 +166,17 @@ public class OperationLogServiceImpl implements OperationLogService {
         // 转换为 TreeOptionVO 树形结构
         List<TreeOptionVO> optionTree = convertMenuTreeToOptionTree(menuTree, search);
 
+        // 添加固定的"个人中心"选项（不在菜单树中）
+        TreeOptionVO profileOption = new TreeOptionVO();
+        profileOption.setLabel("个人中心");
+        profileOption.setValue("profile");
+
+        // 如果搜索关键词匹配"个人中心"或"profile"，则添加
+        if (!StringUtils.hasText(search) ||
+            matchesSearch(profileOption, search)) {
+            optionTree.add(profileOption);
+        }
+
         return new PageResult<>(optionTree, (long) countOptions(optionTree));
     }
 
@@ -186,29 +199,33 @@ public class OperationLogServiceImpl implements OperationLogService {
                 continue;
             }
 
-            TreeOptionVO option = new TreeOptionVO();
-
-            // label: 从 meta.title 获取，如果没有则使用 name
-            String title = extractMenuTitle(menu);
-            option.setLabel(title);
-
             // value: 从 path 提取模块名（如 /system/user -> user）
             // catalog 类型可能没有 path，value 为 null（作为父级，不可选择）
             String value = extractModuleFromPath(menu.getPath());
-            option.setValue(value);
 
             // 递归处理子菜单
+            List<TreeOptionVO> children = new ArrayList<>();
             if (menu.getChildren() != null && !menu.getChildren().isEmpty()) {
-                List<TreeOptionVO> children = convertMenuTreeToOptionTree(menu.getChildren(), search);
-                if (!children.isEmpty() || matchesSearch(option, search)) {
-                    option.setChildren(children);
+                children = convertMenuTreeToOptionTree(menu.getChildren(), search);
+            }
+
+            // 如果当前菜单有 value（有 path），则创建选项
+            if (value != null && !value.isEmpty()) {
+                TreeOptionVO option = new TreeOptionVO();
+                // label: 从 meta.title 获取，如果没有则使用 name
+                String title = extractMenuTitle(menu);
+                option.setLabel(title);
+                option.setValue(value);
+
+                // 搜索过滤：如果匹配搜索条件，则保留
+                if (matchesSearch(option, search)) {
+                    result.add(option);
                 }
             }
 
-            // 搜索过滤：如果匹配搜索条件，或者有匹配的子节点，则保留
-            if (matchesSearch(option, search) ||
-                (option.getChildren() != null && !option.getChildren().isEmpty())) {
-                result.add(option);
+            // 如果有子菜单且匹配搜索条件，则添加子菜单选项
+            if (!children.isEmpty()) {
+                result.addAll(children);
             }
         }
 
@@ -240,9 +257,10 @@ public class OperationLogServiceImpl implements OperationLogService {
     }
 
     /**
-     * 从路径中提取模块名
+     * 从路径中提取模块名，并转换为与存储格式一致的格式
      * 例如：/system/user -> user
      *      /system/operation-log -> operation-log
+     * 注意：返回的格式需要与 MenuModuleResolver.normalizeModulePath 转换后的格式一致
      */
     private String extractModuleFromPath(String path) {
         if (!StringUtils.hasText(path)) {
@@ -252,7 +270,14 @@ public class OperationLogServiceImpl implements OperationLogService {
         String cleanPath = path.startsWith("/") ? path.substring(1) : path;
         // 如果路径包含多个部分，取最后一部分
         String[] parts = cleanPath.split("/");
-        return parts.length > 0 ? parts[parts.length - 1] : cleanPath;
+        String moduleName = parts.length > 0 ? parts[parts.length - 1] : cleanPath;
+
+        if (moduleName == null || moduleName.isEmpty()) {
+            return null;
+        }
+
+        // 转换为小写，下划线转横线（与 MenuModuleResolver.normalizeModulePath 的默认处理一致）
+        return moduleName.toLowerCase().replace("_", "-");
     }
 
     /**
@@ -303,6 +328,17 @@ public class OperationLogServiceImpl implements OperationLogService {
     private OperationLogVO convertToVO(SysOperationLog operationLog) {
         OperationLogVO vo = new OperationLogVO();
         BeanUtils.copyProperties(operationLog, vo);
+
+        // 操作模块已经存储为菜单名称，直接使用，无需转换
+        // 如果 operationModule 为空，尝试从 operationPage 重新获取菜单名称
+        if ((vo.getOperationModule() == null || vo.getOperationModule().isEmpty())
+                && vo.getOperationPage() != null && !vo.getOperationPage().isEmpty()) {
+            String moduleName = menuModuleResolver.extractModuleFromPath(vo.getOperationPage());
+            if (moduleName != null && !moduleName.isEmpty()) {
+                vo.setOperationModule(moduleName);
+            }
+        }
+
         return vo;
     }
 }

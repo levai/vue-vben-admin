@@ -59,22 +59,6 @@ function getOperationTypeColor(type: string) {
 }
 
 /**
- * 将操作模块英文值转换为中文
- */
-function getOperationModuleLabel(module: string): string {
-  const labelMap: Record<string, string> = {
-    system: '系统管理',
-    user: '用户管理',
-    role: '角色管理',
-    menu: '菜单管理',
-    dept: '部门管理',
-    permission: '权限管理',
-    'operation-log': '操作日志',
-  };
-  return labelMap[module] || module;
-}
-
-/**
  * 格式化状态标签
  */
 function getStatusTag(status: number) {
@@ -135,11 +119,7 @@ function getRawJson(jsonStr?: string) {
       <Descriptions.Item
         :label="$t('system.operationLog.operationModule.title')"
       >
-        {{
-          logData.operationModule
-            ? getOperationModuleLabel(logData.operationModule)
-            : '-'
-        }}
+        {{ logData.operationModule || '-' }}
       </Descriptions.Item>
       <Descriptions.Item :label="$t('system.operationLog.operationPage')">
         {{ logData.operationPage || '-' }}
