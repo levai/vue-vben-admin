@@ -28,7 +28,7 @@ export function useColumns(
     {
       align: 'center',
       fixed: 'left',
-      dragSort: true, // 启用列拖拽排序
+      dragSort: true,
       title: '',
       width: 50,
     },
