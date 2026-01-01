@@ -79,8 +79,15 @@ public class OperationLogServiceImpl implements OperationLogService {
             queryWrapper.eq(SysOperationLog::getOperationType, queryDTO.getOperationType());
         }
         if (StringUtils.hasText(queryDTO.getOperationModule())) {
-            // 直接使用英文值查询（数据库中存储的是横线格式，如 "operation-log"）
-            queryWrapper.eq(SysOperationLog::getOperationModule, queryDTO.getOperationModule());
+            // 将英文值（如 "menu"）转换为中文菜单名称（如 "菜单管理"）进行查询
+            // 因为数据库中存储的是中文菜单名称
+            String moduleLabel = convertModuleValueToLabel(queryDTO.getOperationModule());
+            if (moduleLabel != null) {
+                queryWrapper.eq(SysOperationLog::getOperationModule, moduleLabel);
+            } else {
+                // 如果转换失败，尝试直接使用原值查询（可能是中文名称直接传入）
+                queryWrapper.eq(SysOperationLog::getOperationModule, queryDTO.getOperationModule());
+            }
         }
         if (queryDTO.getStatus() != null) {
             queryWrapper.eq(SysOperationLog::getStatus, queryDTO.getStatus());
@@ -217,19 +224,46 @@ public class OperationLogServiceImpl implements OperationLogService {
                 option.setLabel(title);
                 option.setValue(value);
 
-                // 搜索过滤：如果匹配搜索条件，则保留
-                if (matchesSearch(option, search)) {
+                // 设置子菜单（保持树形结构）
+                if (!children.isEmpty()) {
+                    option.setChildren(children);
+                }
+
+                // 判断是否应该包含此选项：
+                // 1. 如果没有搜索条件，包含所有选项
+                // 2. 如果当前选项匹配搜索条件，包含
+                // 3. 如果有子选项匹配搜索条件，包含（即使当前选项不匹配）
+                boolean shouldInclude = !StringUtils.hasText(search) ||
+                        matchesSearch(option, search) ||
+                        hasMatchingChildren(children, search);
+
+                if (shouldInclude) {
                     result.add(option);
                 }
-            }
-
-            // 如果有子菜单且匹配搜索条件，则添加子菜单选项
-            if (!children.isEmpty()) {
-                result.addAll(children);
+            } else {
+                // 如果当前菜单没有 value（可能是 catalog 类型），但有子菜单，则直接添加子菜单
+                if (!children.isEmpty()) {
+                    result.addAll(children);
+                }
             }
         }
 
         return result;
+    }
+
+    /**
+     * 检查子选项中是否有匹配搜索条件的
+     */
+    private boolean hasMatchingChildren(List<TreeOptionVO> children, String search) {
+        if (children == null || children.isEmpty() || !StringUtils.hasText(search)) {
+            return false;
+        }
+        for (TreeOptionVO child : children) {
+            if (matchesSearch(child, search) || hasMatchingChildren(child.getChildren(), search)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -278,6 +312,81 @@ public class OperationLogServiceImpl implements OperationLogService {
 
         // 转换为小写，下划线转横线（与 MenuModuleResolver.normalizeModulePath 的默认处理一致）
         return moduleName.toLowerCase().replace("_", "-");
+    }
+
+    /**
+     * 将英文模块值（如 "menu"）转换为中文菜单名称（如 "菜单管理"）
+     * 用于查询时匹配数据库中存储的中文名称
+     *
+     * @param moduleValue 英文模块值（如 "menu", "user", "operation-log"）
+     * @return 中文菜单名称，如果找不到则返回 null
+     */
+    private String convertModuleValueToLabel(String moduleValue) {
+        if (!StringUtils.hasText(moduleValue)) {
+            return null;
+        }
+
+        // 特殊处理 "profile"
+        if ("profile".equals(moduleValue)) {
+            return "个人中心";
+        }
+
+        // 获取菜单树
+        List<MenuVO> menuTree = menuService.getMenuList();
+
+        // 递归查找匹配的菜单
+        MenuVO matchedMenu = findMenuByModuleValue(menuTree, moduleValue);
+        if (matchedMenu != null) {
+            return extractMenuTitle(matchedMenu);
+        }
+
+        // 如果找不到，尝试使用 MenuModuleResolver
+        try {
+            String label = menuModuleResolver.getModuleLabel(moduleValue);
+            if (label != null && !label.equals(moduleValue)) {
+                return label;
+            }
+        } catch (Exception e) {
+            log.debug("使用 MenuModuleResolver 转换失败: {}", e.getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * 在菜单树中查找匹配的菜单（根据 path 提取的模块值）
+     *
+     * @param menuTree   菜单树
+     * @param moduleValue 模块值（如 "menu", "user"）
+     * @return 匹配的菜单，如果找不到则返回 null
+     */
+    private MenuVO findMenuByModuleValue(List<MenuVO> menuTree, String moduleValue) {
+        if (menuTree == null || menuTree.isEmpty()) {
+            return null;
+        }
+
+        for (MenuVO menu : menuTree) {
+            // 排除 button 类型
+            if ("button".equals(menu.getType())) {
+                continue;
+            }
+
+            // 提取当前菜单的模块值
+            String menuModuleValue = extractModuleFromPath(menu.getPath());
+            if (moduleValue.equals(menuModuleValue)) {
+                return menu;
+            }
+
+            // 递归查找子菜单
+            if (menu.getChildren() != null && !menu.getChildren().isEmpty()) {
+                MenuVO childMenu = findMenuByModuleValue(menu.getChildren(), moduleValue);
+                if (childMenu != null) {
+                    return childMenu;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

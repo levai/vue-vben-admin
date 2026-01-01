@@ -47,7 +47,7 @@ export function useSearchSchema(): VbenFormSchema[] {
         api: getOperationModuleList,
         resultField: 'items',
         labelField: 'label',
-        valueField: 'value',
+        valueField: 'label',
         childrenField: 'children',
         showSearch: true,
         treeDefaultExpandAll: false,

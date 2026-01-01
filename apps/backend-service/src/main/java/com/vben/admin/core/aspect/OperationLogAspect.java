@@ -1,7 +1,9 @@
 package com.vben.admin.core.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.BrowserInfoParser;
 import com.vben.admin.core.utils.OperationInfoParser;
 import com.vben.admin.core.utils.SensitiveDataFilter;
@@ -46,7 +48,13 @@ public class OperationLogAspect {
     private final UserMapper userMapper;
     private final MenuService menuService;
     private final com.vben.admin.core.utils.MenuModuleResolver menuModuleResolver;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // 配置 ObjectMapper，确保能正确序列化所有对象
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule()) // 注册 Java 8 时间类型支持
+            .configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+            .configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
     /**
      * 需要排除的URL路径（登录和登出需要记录，所以不排除）
@@ -308,66 +316,80 @@ public class OperationLogAspect {
      */
     private String getRequestParams(ProceedingJoinPoint joinPoint, HttpServletRequest request) {
         try {
+            String requestMethod = request.getMethod();
             Map<String, Object> paramsMap = new HashMap<>();
 
-            // 1. 获取查询参数（GET 请求的 URL 参数）
-            String queryString = request.getQueryString();
-            if (queryString != null && !queryString.isEmpty()) {
-                // 解析查询参数
-                String[] pairs = queryString.split("&");
-                for (String pair : pairs) {
-                    String[] keyValue = pair.split("=", 2);
-                    if (keyValue.length == 2) {
-                        try {
-                            paramsMap.put(keyValue[0], java.net.URLDecoder.decode(keyValue[1], "UTF-8"));
-                        } catch (Exception e) {
-                            paramsMap.put(keyValue[0], keyValue[1]);
+            // GET 请求：只记录查询参数，不记录 DTO 对象（避免重复）
+            if ("GET".equals(requestMethod)) {
+                String queryString = request.getQueryString();
+                if (queryString != null && !queryString.isEmpty()) {
+                    // 解析查询参数
+                    String[] pairs = queryString.split("&");
+                    for (String pair : pairs) {
+                        String[] keyValue = pair.split("=", 2);
+                        if (keyValue.length == 2) {
+                            try {
+                                paramsMap.put(keyValue[0], java.net.URLDecoder.decode(keyValue[1], "UTF-8"));
+                            } catch (Exception e) {
+                                paramsMap.put(keyValue[0], keyValue[1]);
+                            }
+                        } else if (keyValue.length == 1) {
+                            // 只有 key，没有 value
+                            paramsMap.put(keyValue[0], "");
                         }
                     }
                 }
-            }
+            } else {
+                // POST/PUT/DELETE 请求：记录 RequestBody 或 PathVariable
+                Object[] args = joinPoint.getArgs();
+                if (args != null && args.length > 0) {
+                    // 过滤掉HttpServletRequest和HttpServletResponse等框架对象
+                    List<Object> filteredArgs = Arrays.stream(args)
+                            .filter(arg -> !(arg instanceof HttpServletRequest))
+                            .filter(arg -> !(arg instanceof HttpServletResponse))
+                            .filter(arg -> arg != null)
+                            .collect(Collectors.toList());
 
-            // 2. 获取方法参数（POST/PUT/DELETE 请求的 RequestBody 或 PathVariable）
-            Object[] args = joinPoint.getArgs();
-            if (args != null && args.length > 0) {
-                // 过滤掉HttpServletRequest和HttpServletResponse等框架对象
-                List<Object> filteredArgs = Arrays.stream(args)
-                        .filter(arg -> !(arg instanceof HttpServletRequest))
-                        .filter(arg -> !(arg instanceof HttpServletResponse))
-                        .filter(arg -> arg != null)
-                        .collect(Collectors.toList());
-
-                if (!filteredArgs.isEmpty()) {
-                    if (filteredArgs.size() == 1) {
-                        // 如果只有一个参数
-                        Object arg = filteredArgs.get(0);
-                        if (arg instanceof Map) {
-                            // Map 类型，直接合并
-                            paramsMap.putAll((Map<String, Object>) arg);
-                        } else if (isSimpleType(arg)) {
-                            // 简单类型（String、Number、Boolean等），直接存储值
-                            paramsMap.put("body", arg);
+                    if (!filteredArgs.isEmpty()) {
+                        if (filteredArgs.size() == 1) {
+                            // 如果只有一个参数
+                            Object arg = filteredArgs.get(0);
+                            if (arg instanceof Map) {
+                                // Map 类型，直接合并
+                                paramsMap.putAll((Map<String, Object>) arg);
+                            } else if (isSimpleType(arg)) {
+                                // 简单类型（String、Number、Boolean等），直接存储值
+                                paramsMap.put("body", arg);
+                            } else {
+                                // 复杂对象，序列化为 JSON
+                                paramsMap.putAll(objectMapper.convertValue(arg, Map.class));
+                            }
                         } else {
-                            // 复杂对象，序列化为 JSON 字符串
-                            String jsonStr = objectMapper.writeValueAsString(arg);
-                            paramsMap.put("body", jsonStr);
-                        }
-                    } else {
-                        // 多个参数，检查是否都是简单类型
-                        boolean allSimple = filteredArgs.stream().allMatch(this::isSimpleType);
-                        if (allSimple) {
-                            // 都是简单类型，直接存储为数组
-                            paramsMap.put("body", filteredArgs);
-                        } else {
-                            // 包含复杂对象，序列化为 JSON 字符串
+                            // 多个参数，序列化为 JSON
                             String jsonStr = objectMapper.writeValueAsString(filteredArgs);
                             paramsMap.put("body", jsonStr);
                         }
                     }
                 }
+
+                // POST/PUT/DELETE 请求也记录查询参数（如果有）
+                String queryString = request.getQueryString();
+                if (queryString != null && !queryString.isEmpty()) {
+                    String[] pairs = queryString.split("&");
+                    for (String pair : pairs) {
+                        String[] keyValue = pair.split("=", 2);
+                        if (keyValue.length == 2) {
+                            try {
+                                paramsMap.put(keyValue[0], java.net.URLDecoder.decode(keyValue[1], "UTF-8"));
+                            } catch (Exception e) {
+                                paramsMap.put(keyValue[0], keyValue[1]);
+                            }
+                        }
+                    }
+                }
             }
 
-            // 3. 返回合并后的参数（统一序列化为 JSON 字符串）
+            // 返回合并后的参数（统一序列化为 JSON 字符串）
             if (paramsMap.isEmpty()) {
                 return null;
             }
@@ -399,18 +421,80 @@ public class OperationLogAspect {
     /**
      * 获取响应数据
      * 统一序列化为 JSON 字符串格式
+     * 保持完整的 BaseResult 格式（包含 code、message、data）
+     * 确保始终返回 JSON 字符串，不使用 toString()
      */
     private String getResponseData(Object result) {
         if (result == null) {
             return null;
         }
         try {
-            // 统一序列化为 JSON 字符串
+            // 统一序列化为 JSON 字符串（保持 BaseResult 的完整格式）
             return objectMapper.writeValueAsString(result);
         } catch (Exception e) {
-            log.debug("序列化响应数据失败: {}", e.getMessage());
-            // 降级处理：转换为字符串
-            return result.toString();
+            log.warn("序列化响应数据失败，尝试降级处理: {}", e.getMessage());
+            // 降级处理：如果序列化失败，尝试手动构建 JSON
+            try {
+                if (result instanceof BaseResult) {
+                    BaseResult<?> baseResult = (BaseResult<?>) result;
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("code", baseResult.getCode());
+                    map.put("message", baseResult.getMessage());
+                    // 处理 data 字段，确保可以序列化
+                    Object data = baseResult.getData();
+                    if (data != null) {
+                        try {
+                            // 特殊处理 PageResult 类型
+                            if (data instanceof PageResult) {
+                                PageResult<?> pageResult = (PageResult<?>) data;
+                                Map<String, Object> pageResultMap = new HashMap<>();
+                                pageResultMap.put("items", pageResult.getItems());
+                                pageResultMap.put("total", pageResult.getTotal());
+                                map.put("data", pageResultMap);
+                            } else {
+                                // 其他类型，尝试序列化为 JSON 字符串再解析为 Map
+                                String dataJson = objectMapper.writeValueAsString(data);
+                                map.put("data", objectMapper.readValue(dataJson, Map.class));
+                            }
+                        } catch (Exception e3) {
+                            // 如果序列化失败，尝试转换为 Map
+                            try {
+                                map.put("data", objectMapper.convertValue(data, Map.class));
+                            } catch (Exception e4) {
+                                // 最后降级：尝试直接序列化整个 data 对象
+                                try {
+                                    String dataJson = objectMapper.writeValueAsString(data);
+                                    // 如果序列化成功，解析为 Object（可能是 Map 或 List）
+                                    map.put("data", objectMapper.readValue(dataJson, Object.class));
+                                } catch (Exception e5) {
+                                    // 最后降级：使用类型名称
+                                    log.warn("无法序列化 data 字段: {}, 类型: {}", e5.getMessage(), data.getClass().getName());
+                                    map.put("data", "无法序列化: " + data.getClass().getSimpleName());
+                                }
+                            }
+                        }
+                    } else {
+                        map.put("data", null);
+                    }
+                    return objectMapper.writeValueAsString(map);
+                }
+                // 其他类型，尝试转换为 Map 再序列化
+                Map<String, Object> map = objectMapper.convertValue(result, Map.class);
+                return objectMapper.writeValueAsString(map);
+            } catch (Exception e2) {
+                log.error("降级序列化也失败: {}", e2.getMessage());
+                // 最后降级：返回错误信息的 JSON 字符串，而不是 toString()
+                try {
+                    Map<String, Object> errorMap = new HashMap<>();
+                    errorMap.put("error", "序列化失败");
+                    errorMap.put("type", result.getClass().getName());
+                    errorMap.put("message", e2.getMessage());
+                    return objectMapper.writeValueAsString(errorMap);
+                } catch (Exception e3) {
+                    // 如果连错误信息都无法序列化，返回最简单的 JSON
+                    return "{\"error\":\"序列化失败\"}";
+                }
+            }
         }
     }
 
