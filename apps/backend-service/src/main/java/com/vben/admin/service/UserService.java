@@ -84,6 +84,13 @@ public interface UserService {
     void changePassword(String oldPassword, String newPassword);
 
     /**
+     * 更新当前用户基础信息
+     *
+     * @param userDTO 用户信息（只更新基础信息：真实姓名、用户名）
+     */
+    void updateCurrentUserInfo(UserDTO userDTO);
+
+    /**
      * 获取用户选项列表（用于下拉选项，支持 limit 限制）
      *
      * @param queryDTO 查询条件

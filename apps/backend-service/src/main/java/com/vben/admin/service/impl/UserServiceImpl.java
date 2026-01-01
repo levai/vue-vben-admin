@@ -334,6 +334,54 @@ public class UserServiceImpl implements UserService {
         userMapper.updateById(user);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateCurrentUserInfo(UserDTO userDTO) {
+        // 获取当前用户ID
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new BusinessException("未登录");
+        }
+
+        // 查询用户
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 更新真实姓名（如果提供了）
+        if (StringUtils.hasText(userDTO.getRealName())) {
+            user.setRealName(userDTO.getRealName());
+        }
+
+        // 更新昵称（如果提供了）
+        if (StringUtils.hasText(userDTO.getNickname())) {
+            user.setNickname(userDTO.getNickname());
+        }
+
+        // 更新手机号（如果提供了，需要检查是否重复）
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            if (!userDTO.getPhone().equals(user.getPhone())) {
+                long phoneCount = userMapper.selectCount(
+                        new LambdaQueryWrapper<SysUser>()
+                                .eq(SysUser::getPhone, userDTO.getPhone())
+                                .ne(SysUser::getId, userId)
+                );
+                if (phoneCount > 0) {
+                    throw new BusinessException("手机号已存在");
+                }
+            }
+            user.setPhone(userDTO.getPhone());
+        }
+
+        // 更新性别（如果提供了）
+        if (userDTO.getGender() != null) {
+            user.setGender(userDTO.getGender());
+        }
+
+        userMapper.updateById(user);
+    }
+
     /**
      * 保存用户角色关联
      */

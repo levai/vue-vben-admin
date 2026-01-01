@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 /**
@@ -42,6 +43,18 @@ public class UserController {
         return new BaseResult<>(true);
     }
 
+    @Operation(summary = "更新用户基础信息", description = "更新当前登录用户的基础信息（真实姓名、昵称、手机号、性别）")
+    @PutMapping("/info")
+    public BaseResult<Boolean> updateInfo(@Valid @RequestBody UpdateUserInfoDTO infoDTO) {
+        com.vben.admin.model.dto.UserDTO userDTO = new com.vben.admin.model.dto.UserDTO();
+        userDTO.setRealName(infoDTO.getRealName());
+        userDTO.setNickname(infoDTO.getNickname());
+        userDTO.setPhone(infoDTO.getPhone());
+        userDTO.setGender(infoDTO.getGender());
+        userService.updateCurrentUserInfo(userDTO);
+        return new BaseResult<>(true);
+    }
+
     /**
      * 修改密码DTO
      */
@@ -53,5 +66,22 @@ public class UserController {
         @NotBlank(message = "新密码不能为空")
         @Size(min = 6, max = 50, message = "新密码长度必须在6-50之间")
         private String newPassword;
+    }
+
+    /**
+     * 更新用户基础信息DTO
+     */
+    @Data
+    public static class UpdateUserInfoDTO {
+        @Size(max = 50, message = "真实姓名长度不能超过50")
+        private String realName;
+
+        @Size(max = 50, message = "昵称长度不能超过50")
+        private String nickname;
+
+        @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+        private String phone;
+
+        private Integer gender;
     }
 }
