@@ -112,9 +112,9 @@ export interface UserOption extends SystemUserApi.SystemUser {
 async function getUserOptions(params?: {
   deptId?: string;
   endTime?: string;
-  search?: string;
   limit?: number;
   realName?: string;
+  search?: string;
   startTime?: string;
   status?: number;
   username?: string;
