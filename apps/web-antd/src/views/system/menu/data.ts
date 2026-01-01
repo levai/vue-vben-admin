@@ -1,6 +1,8 @@
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemMenuApi } from '#/api/system/menu';
 
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
+import { usePermissions } from '#/hooks/use-permissions';
 import { $t } from '#/locales';
 
 export function getMenuTypeOptions() {
@@ -24,6 +26,48 @@ export function getMenuTypeOptions() {
 export function useColumns(
   onActionClick: OnActionClickFn<SystemMenuApi.SystemMenu>,
 ): VxeTableGridOptions<SystemMenuApi.SystemMenu>['columns'] {
+  const { hasPermission } = usePermissions(SYSTEM_PERMISSION_CODES.MENU);
+
+  // 定义操作按钮配置及对应的权限检查方法
+  const operationButtons = [
+    {
+      code: 'append',
+      text: '新增下级',
+      // 新增下级使用新增权限
+      hasAccess: hasPermission.ADD,
+      // 按钮类型不允许新增下级
+      disabled: (row: SystemMenuApi.SystemMenu) => {
+        return row.type === 'button';
+      },
+    },
+    {
+      code: 'edit',
+      text: $t('common.edit'),
+      hasAccess: hasPermission.EDIT,
+    },
+    {
+      code: 'delete',
+      text: $t('common.delete'),
+      hasAccess: hasPermission.DELETE,
+    },
+  ];
+
+  // 根据权限过滤操作按钮
+  const filteredOperations = operationButtons
+    .filter((btn) => {
+      // 如果没有配置权限检查方法，则默认显示
+      if (!btn.hasAccess) {
+        return true;
+      }
+      // 检查是否有对应权限
+      return btn.hasAccess();
+    })
+    .map((btn) => {
+      // 移除 hasAccess，只保留需要的属性
+      const { hasAccess: _hasAccess, ...rest } = btn;
+      return rest;
+    });
+
   return [
     {
       align: 'center',
@@ -102,18 +146,7 @@ export function useColumns(
           onClick: onActionClick,
         },
         name: 'CellOperation',
-        options: [
-          {
-            code: 'append',
-            text: '新增下级',
-            // 按钮类型不允许新增下级
-            disabled: (row: SystemMenuApi.SystemMenu) => {
-              return row.type === 'button';
-            },
-          },
-          'edit', // 默认的编辑按钮
-          'delete', // 默认的删除按钮
-        ],
+        options: filteredOperations,
       },
       field: 'operation',
       fixed: 'right',

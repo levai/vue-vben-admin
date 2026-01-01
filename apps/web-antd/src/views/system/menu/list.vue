@@ -16,6 +16,7 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteMenu, SystemMenuApi } from '#/api/system/menu';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 
 import { useMenuList } from './composables/use-menu-list';
 import { useColumns } from './data';
@@ -157,7 +158,11 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
     <FormDrawer @success="onRefresh" />
     <Grid>
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button
+          v-access:code="SYSTEM_PERMISSION_CODES.MENU.ADD"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.menu.name')]) }}
         </Button>
