@@ -14,7 +14,15 @@ import {
 import { get, isFunction, isString } from '@vben/utils';
 
 import { objectOmit } from '@vueuse/core';
-import { Button, Image, Popconfirm, Switch, Tag } from 'ant-design-vue';
+import {
+  Button,
+  Image,
+  message,
+  Popconfirm,
+  Switch,
+  Tag,
+  Typography,
+} from 'ant-design-vue';
 
 import { $t } from '#/locales';
 
@@ -101,6 +109,7 @@ setupVbenVxeTable({
       },
     });
 
+    // 表格配置项可以用 cellRender: { name: 'CellSwitch' },
     vxeUI.renderer.add('CellSwitch', {
       renderTableDefault({ attrs, props }, { column, row }) {
         const loadingKey = `__loading_${column.field}`;
@@ -129,8 +138,32 @@ setupVbenVxeTable({
       },
     });
 
+    // 表格配置项可以用 cellRender: { name: 'CellCopy' },
+    vxeUI.renderer.add('CellCopy', {
+      renderTableDefault({ props }, { column, row }) {
+        const value = get(row, column.field);
+        if (!value) {
+          return h('span', { class: 'text-gray-400' }, '-');
+        }
+        return h(
+          Typography.Text,
+          {
+            copyable: {
+              text: value,
+              onCopy: () => {
+                message.success($t('common.copySuccess') || '复制成功');
+              },
+            },
+            class: 'flex-1 truncate',
+            ...props,
+          },
+          () => value,
+        );
+      },
+    });
+
     /**
-     * 注册表格的操作按钮渲染器
+     * 注册表格的操作按钮渲染器 cellRender: { name: 'CellOperation' }
      */
     vxeUI.renderer.add('CellOperation', {
       renderTableDefault({ attrs, options, props }, { column, row }) {

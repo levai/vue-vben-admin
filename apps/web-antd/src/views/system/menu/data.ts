@@ -96,6 +96,7 @@ export function useColumns(
       field: 'authCode',
       title: $t('system.menu.authCode'),
       width: 200,
+      cellRender: { name: 'CellCopy' },
     },
     {
       align: 'left',
