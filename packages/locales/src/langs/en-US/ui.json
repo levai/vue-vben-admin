@@ -19,6 +19,7 @@
     "deleteConfirm": "Are you sure to delete {0}?",
     "deleting": "Deleting {0} ...",
     "deleteSuccess": "{0} deleted successfully",
+    "operating": "Operating...",
     "operationSuccess": "Operation succeeded",
     "operationFailed": "Operation failed"
   },
