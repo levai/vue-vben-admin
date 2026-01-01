@@ -3,60 +3,22 @@ import type { useVbenVxeGrid, VxeGridListeners } from '#/adapter/vxe-table';
 import { ref } from 'vue';
 
 import { $t } from '@vben/locales';
-import { flattenTree } from '@vben/utils';
 
 import { message } from 'ant-design-vue';
 
-import {
-  batchUpdateMenuOrder,
-  getMenuList,
-  SystemMenuApi,
-} from '#/api/system/menu';
+import { batchUpdateMenuOrder, SystemMenuApi } from '#/api/system/menu';
 
 // 从 useVbenVxeGrid 的返回类型中提取 gridApi 的类型
 type VxeGridApiType = ReturnType<typeof useVbenVxeGrid>[1];
 
 /**
  * 菜单列表 Composable
- * 封装菜单列表的数据加载、拖拽排序功能
- * 简化版本：移除展开状态保存/恢复，减少性能开销
+ * 封装菜单列表的拖拽排序功能
+ * 数据加载已由 proxyConfig 处理
  */
 export function useMenuList() {
-  // 使用 ref 存储扁平化的数据
-  const tableData = ref<SystemMenuApi.SystemMenu[]>([]);
-
   // 存储拖拽开始时的源行信息
   const dragSourceRow = ref<null | SystemMenuApi.SystemMenu>(null);
-
-  /**
-   * 将嵌套的树形数据转换为扁平数据（用于 transform: true）
-   */
-  function flattenTreeData(
-    treeData: SystemMenuApi.SystemMenu[],
-  ): SystemMenuApi.SystemMenu[] {
-    return flattenTree<SystemMenuApi.SystemMenu>(treeData, {
-      childProps: 'children',
-      parentIdField: 'pid',
-      idField: 'id',
-      initialParentId: null,
-    });
-  }
-
-  /**
-   * 加载数据
-   */
-  async function loadData() {
-    try {
-      const data = await getMenuList();
-      if (Array.isArray(data)) {
-        // transform: true 时需要扁平数据，将嵌套结构转换为扁平结构
-        tableData.value = flattenTreeData(data);
-      }
-    } catch (error) {
-      console.error('[Menu List] 加载数据失败:', error);
-      tableData.value = [];
-    }
-  }
 
   /**
    * 拖拽开始事件，保存源行信息
@@ -211,17 +173,7 @@ export function useMenuList() {
     } as VxeGridListeners<SystemMenuApi.SystemMenu>;
   }
 
-  /**
-   * 刷新数据
-   */
-  function refreshData(_gridApi: VxeGridApiType) {
-    loadData();
-  }
-
   return {
-    tableData,
-    loadData,
-    refreshData,
     createGridEvents,
   };
 }

@@ -4,18 +4,17 @@ import type {
   VxeTableGridOptions,
 } from '#/adapter/vxe-table';
 
-import { onMounted, watch } from 'vue';
-
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
 import { $t } from '@vben/locales';
+import { flattenTree } from '@vben/utils';
 
 import { MenuBadge } from '@vben-core/menu-ui';
 
 import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteMenu, SystemMenuApi } from '#/api/system/menu';
+import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
 import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 
 import { useMenuList } from './composables/use-menu-list';
@@ -27,21 +26,67 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
   destroyOnClose: true,
 });
 
-// 使用菜单列表 Composable
-const { tableData, loadData, refreshData, createGridEvents } = useMenuList();
+// 使用菜单列表 Composable（仅用于拖拽功能）
+const { createGridEvents } = useMenuList();
+
+// 操作按钮点击处理（需要在 useColumns 之前定义）
+function onActionClick({
+  code,
+  row,
+}: OnActionClickParams<SystemMenuApi.SystemMenu>) {
+  switch (code) {
+    case 'append': {
+      onAppend(row);
+      break;
+    }
+    case 'delete': {
+      onDelete(row);
+      break;
+    }
+    case 'edit': {
+      onEdit(row);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
 
 const [Grid, gridApi] = useVbenVxeGrid({
   // 启用树形表格展开/折叠功能
   enableTreeExpandToggle: true,
-  defaultTreeExpanded: true,
+  defaultTreeExpanded: false,
   gridEvents: {},
   gridOptions: {
     columns: useColumns(onActionClick),
     height: 'auto',
     keepSource: true,
-    data: [], // 初始为空数组，通过 watch 更新
     pagerConfig: {
       enabled: false,
+    },
+    proxyConfig: {
+      ajax: {
+        query: async () => {
+          try {
+            // 获取树形数据
+            const treeData = await getMenuList();
+            if (!Array.isArray(treeData)) {
+              return [];
+            }
+            // transform: true 时需要扁平数据，将嵌套结构转换为扁平结构
+            const flatData = flattenTree<SystemMenuApi.SystemMenu>(treeData, {
+              childProps: 'children',
+              parentIdField: 'pid',
+              idField: 'id',
+              initialParentId: null,
+            });
+            return flatData;
+          } catch {
+            return [];
+          }
+        },
+      },
     },
     rowConfig: {
       keyField: 'id',
@@ -70,7 +115,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
 // 刷新函数
 function onRefresh() {
-  refreshData(gridApi);
+  gridApi.query();
 }
 
 // 创建表格事件处理器
@@ -80,43 +125,6 @@ const gridEvents = createGridEvents(gridApi, onRefresh);
 gridApi.setState({
   gridEvents,
 });
-
-// 操作按钮点击处理
-function onActionClick({
-  code,
-  row,
-}: OnActionClickParams<SystemMenuApi.SystemMenu>) {
-  switch (code) {
-    case 'append': {
-      onAppend(row);
-      break;
-    }
-    case 'delete': {
-      onDelete(row);
-      break;
-    }
-    case 'edit': {
-      onEdit(row);
-      break;
-    }
-    default: {
-      break;
-    }
-  }
-}
-
-// 监听数据变化，更新表格数据
-watch(
-  tableData,
-  (newData) => {
-    gridApi.setState({
-      gridOptions: {
-        data: newData,
-      },
-    });
-  },
-  { immediate: true },
-);
 
 // CRUD 操作
 function onEdit(row: SystemMenuApi.SystemMenu) {
@@ -149,11 +157,6 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
       hideLoading();
     });
 }
-
-// 组件挂载时加载数据
-onMounted(() => {
-  loadData();
-});
 </script>
 
 <template>
