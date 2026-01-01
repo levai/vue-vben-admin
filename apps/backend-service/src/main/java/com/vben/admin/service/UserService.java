@@ -76,6 +76,14 @@ public interface UserService {
     void resetPassword(String id, String password);
 
     /**
+     * 修改当前用户密码
+     *
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     */
+    void changePassword(String oldPassword, String newPassword);
+
+    /**
      * 获取用户选项列表（用于下拉选项，支持 limit 限制）
      *
      * @param queryDTO 查询条件

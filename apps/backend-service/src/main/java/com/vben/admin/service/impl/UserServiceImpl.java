@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
+import com.vben.admin.core.utils.SecurityUtils;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.RoleMapper;
 import com.vben.admin.mapper.UserMapper;
@@ -295,6 +296,41 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setPassword(passwordEncoder.encode(password));
+        userMapper.updateById(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(String oldPassword, String newPassword) {
+        // 获取当前用户ID
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new BusinessException("未登录");
+        }
+
+        // 查询用户
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 验证旧密码
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException("旧密码错误");
+        }
+
+        // 验证新密码
+        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) {
+            throw new BusinessException("新密码长度不能少于6位");
+        }
+
+        // 检查新旧密码是否相同
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException("新密码不能与旧密码相同");
+        }
+
+        // 更新密码
+        user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
     }
 
