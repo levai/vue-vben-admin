@@ -15,6 +15,6 @@ export * from './unique';
 export * from './update-css-variables';
 export * from './util';
 export * from './window';
-export { get, isEqual, set } from 'es-toolkit/compat';
+export { filter, get, isEqual, isNil, pickBy, set } from 'es-toolkit/compat';
 // export { cloneDeep } from 'es-toolkit/object';
 export { default as cloneDeep } from 'lodash.clonedeep';
