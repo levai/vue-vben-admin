@@ -26,6 +26,13 @@ export function useColumns(
 ): VxeTableGridOptions<SystemMenuApi.SystemMenu>['columns'] {
   return [
     {
+      align: 'center',
+      fixed: 'left',
+      dragSort: true, // 启用列拖拽排序
+      title: '',
+      width: 50,
+    },
+    {
       align: 'left',
       field: 'meta.title',
       fixed: 'left',

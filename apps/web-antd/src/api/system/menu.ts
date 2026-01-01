@@ -148,7 +148,26 @@ async function deleteMenu(id: string) {
   return requestClient.delete(`/system/menu/${id}`);
 }
 
+/**
+ * 批量更新菜单排序
+ * @param menus 菜单列表（包含 id、meta.order 和 pid）
+ * @description 用于拖拽排序场景，批量更新菜单的排序和父级关系
+ * @example
+ * ```typescript
+ * batchUpdateMenuOrder([
+ *   { id: '1', meta: { order: 1 }, pid: null },
+ *   { id: '2', meta: { order: 2 }, pid: null },
+ * ])
+ * ```
+ */
+async function batchUpdateMenuOrder(
+  menus: Array<{ id: string; meta?: { order?: number }; pid?: null | string }>,
+) {
+  return requestClient.put('/system/menu/batch-order', { menus });
+}
+
 export {
+  batchUpdateMenuOrder,
   createMenu,
   deleteMenu,
   getMenuList,
