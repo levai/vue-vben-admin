@@ -122,4 +122,71 @@ function sortTree<T extends Record<string, any>>(
   });
 }
 
-export { filterTree, mapTree, sortTree, traverseTreeValues };
+/**
+ * 将树形结构数据扁平化为数组（用于 vxe-table transform: true 等场景）
+ * @param tree 树形结构数组
+ * @param options 配置选项
+ * @returns 扁平化的数据数组
+ */
+interface FlattenTreeOptions extends TreeConfigOptions {
+  /**
+   * ID字段名，默认为 'id'
+   */
+  idField?: string;
+  /**
+   * 初始父级ID，默认为 null
+   */
+  initialParentId?: null | number | string;
+  /**
+   * 父级ID字段名，默认为 'pid'
+   */
+  parentIdField?: string;
+}
+
+/**
+ * 将树形结构数据扁平化为数组（用于 vxe-table transform: true 等场景）
+ * @param tree 树形结构数组
+ * @param options 配置选项
+ * @returns 扁平化的数据数组
+ */
+function flattenTree<T extends Record<string, any>>(
+  tree: T[],
+  options?: FlattenTreeOptions,
+): T[] {
+  const {
+    childProps = 'children',
+    idField = 'id',
+    initialParentId = null,
+    parentIdField = 'pid',
+  } = options || {};
+
+  const result: T[] = [];
+
+  const flatten = (
+    nodes: T[],
+    parentId: null | number | string = initialParentId,
+  ) => {
+    nodes.forEach((node) => {
+      const { [childProps]: children, ...restNode } = node;
+      const nodeId = (node as Record<string, any>)[idField];
+
+      // 创建扁平化节点
+      const flatNode = {
+        ...restNode,
+        [parentIdField]: parentId,
+      } as T;
+
+      result.push(flatNode);
+
+      // 递归处理子节点
+      if (children && Array.isArray(children) && children.length > 0) {
+        flatten(children, nodeId);
+      }
+    });
+  };
+
+  flatten(tree);
+  return result;
+}
+
+export { filterTree, flattenTree, mapTree, sortTree, traverseTreeValues };
