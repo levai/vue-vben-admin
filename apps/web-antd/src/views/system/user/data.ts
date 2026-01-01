@@ -3,6 +3,8 @@ import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { z } from '#/adapter/form';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
+import { usePermissions } from '#/hooks/use-permissions';
 import { $t } from '#/locales';
 
 export function useFormSchema(isEdit = false): VbenFormSchema[] {
@@ -170,6 +172,43 @@ export function useColumns<T = SystemUserApi.SystemUser>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
 ): VxeTableGridOptions['columns'] {
+  const { hasPermission } = usePermissions(SYSTEM_PERMISSION_CODES.USER);
+
+  // 定义操作按钮配置及对应的权限检查方法
+  const operationButtons = [
+    {
+      code: 'edit',
+      text: $t('common.edit'),
+      hasAccess: hasPermission.EDIT,
+    },
+    {
+      code: 'resetPassword',
+      text: $t('system.user.resetPassword'),
+      hasAccess: hasPermission.EDIT, // 重置密码使用编辑权限
+    },
+    {
+      code: 'delete',
+      text: $t('common.delete'),
+      hasAccess: hasPermission.DELETE,
+    },
+  ];
+
+  // 根据权限过滤操作按钮
+  const filteredOperations = operationButtons
+    .filter((btn) => {
+      // 如果没有配置权限检查方法，则默认显示
+      if (!btn.hasAccess) {
+        return true;
+      }
+      // 检查是否有对应权限
+      return btn.hasAccess();
+    })
+    .map((btn) => {
+      // 移除 hasAccess，只保留需要的属性
+      const { hasAccess: _hasAccess, ...rest } = btn;
+      return rest;
+    });
+
   return [
     {
       field: 'username',
@@ -247,14 +286,7 @@ export function useColumns<T = SystemUserApi.SystemUser>(
           onClick: onActionClick,
         },
         name: 'CellOperation',
-        options: [
-          'edit',
-          {
-            code: 'resetPassword',
-            text: $t('system.user.resetPassword'),
-          },
-          'delete',
-        ],
+        options: filteredOperations,
       },
       field: 'operation',
       fixed: 'right',

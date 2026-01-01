@@ -21,6 +21,7 @@ import {
   resetUserPassword,
   updateUserStatus,
 } from '#/api/system/user';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -235,7 +236,11 @@ async function handleResetPassword() {
     </ResetPasswordModal>
     <Grid :table-title="$t('system.user.list')">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button
+          v-access:code="SYSTEM_PERMISSION_CODES.USER.ADD"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.user.name')]) }}
         </Button>

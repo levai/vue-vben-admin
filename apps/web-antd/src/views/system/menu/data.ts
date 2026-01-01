@@ -126,12 +126,6 @@ export function useColumns(
       title: $t('system.menu.component'),
     },
     {
-      align: 'center',
-      field: 'meta.order',
-      title: $t('system.menu.order'),
-      width: 100,
-    },
-    {
       cellRender: { name: 'CellTag' },
       field: 'status',
       title: $t('system.menu.status'),

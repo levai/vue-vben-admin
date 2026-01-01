@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS `sys_role` (
 CREATE TABLE IF NOT EXISTS `sys_menu` (
     `id` VARCHAR(64) NOT NULL COMMENT '菜单ID',
     `name` VARCHAR(50) NOT NULL COMMENT '菜单名称',
-    `path` VARCHAR(255) NOT NULL COMMENT '路由路径',
+    `path` VARCHAR(255) DEFAULT NULL COMMENT '路由路径',
     `pid` VARCHAR(64) DEFAULT NULL COMMENT '父级ID',
     `type` VARCHAR(20) NOT NULL COMMENT '菜单类型：catalog-目录，menu-菜单，embedded-内嵌，link-外链，button-按钮',
     `component` VARCHAR(255) DEFAULT NULL COMMENT '组件路径',

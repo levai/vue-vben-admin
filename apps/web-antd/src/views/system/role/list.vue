@@ -14,6 +14,7 @@ import { Button, message, Modal } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteRole, getRoleList, updateRole } from '#/api';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 import { $t } from '#/locales';
 
 import { useColumns, useGridFormSchema } from './data';
@@ -154,7 +155,11 @@ function onCreate() {
     <FormDrawer @success="onRefresh" />
     <Grid :table-title="$t('system.role.list')">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button
+          v-access:code="SYSTEM_PERMISSION_CODES.ROLE.ADD"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.role.name')]) }}
         </Button>

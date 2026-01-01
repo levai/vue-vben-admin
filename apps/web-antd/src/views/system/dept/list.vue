@@ -12,6 +12,7 @@ import { Button, message } from 'ant-design-vue';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteDept, getDeptList } from '#/api/system/dept';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 import { $t } from '#/locales';
 
 import { useColumns } from './data';
@@ -136,7 +137,11 @@ function refreshGrid() {
     <FormModal @success="refreshGrid" />
     <Grid table-title="部门列表">
       <template #toolbar-tools>
-        <Button type="primary" @click="onCreate">
+        <Button
+          v-access:code="SYSTEM_PERMISSION_CODES.DEPT.ADD"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.dept.name')]) }}
         </Button>

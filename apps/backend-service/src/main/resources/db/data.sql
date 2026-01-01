@@ -50,7 +50,23 @@ INSERT INTO `sys_menu` (`id`, `name`, `path`, `pid`, `type`, `component`, `redir
 ('4', 'SystemRole', '/system/role', '2', 'menu', 'system/role/list', NULL, 'ac:system:role:view', '{"icon":"lucide:shield","title":"角色管理"}', 2, 1, 0),
 ('5', 'SystemMenu', '/system/menu', '2', 'menu', 'system/menu/list', NULL, 'ac:system:menu:view', '{"icon":"lucide:menu","title":"菜单管理"}', 3, 1, 0),
 ('6', 'SystemDept', '/system/dept', '2', 'menu', 'system/dept/list', NULL, 'ac:system:dept:view', '{"icon":"lucide:building","title":"部门管理"}', 4, 1, 0),
-('7', 'Profile', '/profile', NULL, 'menu', '_core/profile/index', NULL, NULL, '{"icon":"lucide:user","title":"个人中心","hideInMenu":true}', 3, 1, 0);
+('7', 'Profile', '/profile', NULL, 'menu', '_core/profile/index', NULL, NULL, '{"icon":"lucide:user","title":"个人中心","hideInMenu":true}', 3, 1, 0),
+-- 用户管理按钮权限（按钮类型 path 为 NULL）
+('20', 'UserAdd', NULL, '3', 'button', NULL, NULL, 'ac:system:user:add', '{"title":"新增"}', 1, 1, 0),
+('21', 'UserEdit', NULL, '3', 'button', NULL, NULL, 'ac:system:user:edit', '{"title":"编辑"}', 2, 1, 0),
+('22', 'UserDelete', NULL, '3', 'button', NULL, NULL, 'ac:system:user:delete', '{"title":"删除"}', 3, 1, 0),
+-- 角色管理按钮权限
+('23', 'RoleAdd', NULL, '4', 'button', NULL, NULL, 'ac:system:role:add', '{"title":"新增"}', 1, 1, 0),
+('24', 'RoleEdit', NULL, '4', 'button', NULL, NULL, 'ac:system:role:edit', '{"title":"编辑"}', 2, 1, 0),
+('25', 'RoleDelete', NULL, '4', 'button', NULL, NULL, 'ac:system:role:delete', '{"title":"删除"}', 3, 1, 0),
+-- 菜单管理按钮权限
+('26', 'MenuAdd', NULL, '5', 'button', NULL, NULL, 'ac:system:menu:add', '{"title":"新增"}', 1, 1, 0),
+('27', 'MenuEdit', NULL, '5', 'button', NULL, NULL, 'ac:system:menu:edit', '{"title":"编辑"}', 2, 1, 0),
+('28', 'MenuDelete', NULL, '5', 'button', NULL, NULL, 'ac:system:menu:delete', '{"title":"删除"}', 3, 1, 0),
+-- 部门管理按钮权限
+('29', 'DeptAdd', NULL, '6', 'button', NULL, NULL, 'ac:system:dept:add', '{"title":"新增"}', 1, 1, 0),
+('30', 'DeptEdit', NULL, '6', 'button', NULL, NULL, 'ac:system:dept:edit', '{"title":"编辑"}', 2, 1, 0),
+('31', 'DeptDelete', NULL, '6', 'button', NULL, NULL, 'ac:system:dept:delete', '{"title":"删除"}', 3, 1, 0);
 
 -- =============================================
 -- 初始化角色菜单关联（admin角色拥有所有菜单权限）
@@ -63,7 +79,23 @@ INSERT INTO `sys_role_menu` (`id`, `role_id`, `menu_id`) VALUES
 ('3', '1', '3'),
 ('4', '1', '4'),
 ('5', '1', '5'),
-('6', '1', '6');
+('6', '1', '6'),
+-- 用户管理按钮权限
+('20', '1', '20'),
+('21', '1', '21'),
+('22', '1', '22'),
+-- 角色管理按钮权限
+('23', '1', '23'),
+('24', '1', '24'),
+('25', '1', '25'),
+-- 菜单管理按钮权限
+('26', '1', '26'),
+('27', '1', '27'),
+('28', '1', '28'),
+-- 部门管理按钮权限
+('29', '1', '29'),
+('30', '1', '30'),
+('31', '1', '31');
 
 -- =============================================
 -- 初始化权限码

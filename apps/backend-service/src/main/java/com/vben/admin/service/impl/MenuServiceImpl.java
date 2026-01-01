@@ -63,7 +63,10 @@ public class MenuServiceImpl implements MenuService {
         }
 
         // 转换为列表并构建树形结构
-        List<SysMenu> allMenus = new ArrayList<>(menuMap.values());
+        // 过滤掉按钮类型的菜单（按钮类型不应该显示在左侧菜单中）
+        List<SysMenu> allMenus = menuMap.values().stream()
+                .filter(menu -> !"button".equals(menu.getType()))
+                .collect(Collectors.toList());
         return buildMenuTree(allMenus);
     }
 

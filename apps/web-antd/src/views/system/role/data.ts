@@ -2,6 +2,8 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
+import { usePermissions } from '#/hooks/use-permissions';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -78,6 +80,38 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
   onActionClick: OnActionClickFn<T>,
   onStatusChange?: (newStatus: any, row: T) => PromiseLike<boolean | undefined>,
 ): VxeTableGridOptions['columns'] {
+  const { hasPermission } = usePermissions(SYSTEM_PERMISSION_CODES.ROLE);
+
+  // 定义操作按钮配置及对应的权限检查方法
+  const operationButtons = [
+    {
+      code: 'edit',
+      text: $t('common.edit'),
+      hasAccess: hasPermission.EDIT,
+    },
+    {
+      code: 'delete',
+      text: $t('common.delete'),
+      hasAccess: hasPermission.DELETE,
+    },
+  ];
+
+  // 根据权限过滤操作按钮
+  const filteredOperations = operationButtons
+    .filter((btn) => {
+      // 如果没有配置权限检查方法，则默认显示
+      if (!btn.hasAccess) {
+        return true;
+      }
+      // 检查是否有对应权限
+      return btn.hasAccess();
+    })
+    .map((btn) => {
+      // 移除 hasAccess，只保留需要的属性
+      const { hasAccess: _hasAccess, ...rest } = btn;
+      return rest;
+    });
+
   return [
     {
       field: 'name',
@@ -117,6 +151,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
           onClick: onActionClick,
         },
         name: 'CellOperation',
+        options: filteredOperations,
       },
       field: 'operation',
       fixed: 'right',

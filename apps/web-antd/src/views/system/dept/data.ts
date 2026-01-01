@@ -6,6 +6,8 @@ import type { SystemDeptApi } from '#/api/system/dept';
 
 import { z } from '#/adapter/form';
 import { getDeptList } from '#/api/system/dept';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
+import { usePermissions } from '#/hooks/use-permissions';
 import { $t } from '#/locales';
 
 /**
@@ -77,6 +79,48 @@ export function useSchema(): VbenFormSchema[] {
 export function useColumns(
   onActionClick?: OnActionClickFn<SystemDeptApi.SystemDept>,
 ): VxeTableGridOptions<SystemDeptApi.SystemDept>['columns'] {
+  const { hasPermission } = usePermissions(SYSTEM_PERMISSION_CODES.DEPT);
+
+  // 定义操作按钮配置及对应的权限检查方法
+  const operationButtons = [
+    {
+      code: 'append',
+      text: '新增下级',
+      // 新增下级使用新增权限
+      hasAccess: hasPermission.ADD,
+    },
+    {
+      code: 'edit',
+      text: $t('common.edit'),
+      hasAccess: hasPermission.EDIT,
+    },
+    {
+      code: 'delete',
+      text: $t('common.delete'),
+      hasAccess: hasPermission.DELETE,
+      // 有子部门的不能删除
+      disabled: (row: SystemDeptApi.SystemDept) => {
+        return !!(row.children && row.children.length > 0);
+      },
+    },
+  ];
+
+  // 根据权限过滤操作按钮
+  const filteredOperations = operationButtons
+    .filter((btn) => {
+      // 如果没有配置权限检查方法，则默认显示
+      if (!btn.hasAccess) {
+        return true;
+      }
+      // 检查是否有对应权限
+      return btn.hasAccess();
+    })
+    .map((btn) => {
+      // 移除 hasAccess，只保留需要的属性
+      const { hasAccess: _hasAccess, ...rest } = btn;
+      return rest;
+    });
+
   return [
     {
       align: 'left',
@@ -125,19 +169,7 @@ export function useColumns(
           onClick: onActionClick,
         },
         name: 'CellOperation',
-        options: [
-          {
-            code: 'append',
-            text: '新增下级',
-          },
-          'edit', // 默认的编辑按钮
-          {
-            code: 'delete', // 默认的删除按钮
-            disabled: (row: SystemDeptApi.SystemDept) => {
-              return !!(row.children && row.children.length > 0);
-            },
-          },
-        ],
+        options: filteredOperations,
       },
       field: 'operation',
       fixed: 'right',
