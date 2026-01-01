@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.admin.core.exception.BusinessException;
+import com.vben.admin.core.utils.SecurityUtils;
 import com.vben.admin.mapper.MenuMapper;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.entity.SysMenu;
@@ -36,12 +37,54 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuVO> getAllMenus() {
-        List<SysMenu> menus = menuMapper.selectList(
-                new QueryWrapper<SysMenu>()
-                        .eq("status", 1)
-                        .orderByAsc("sort_order")
-        );
-        return buildMenuTree(menus);
+        // 获取当前登录用户ID
+        String userId = SecurityUtils.getCurrentUserId();
+
+        // 如果未登录，返回空列表
+        if (userId == null) {
+            return new ArrayList<>();
+        }
+
+        // 根据用户ID查询该用户有权限访问的菜单（通过角色关联）
+        List<SysMenu> userMenus = menuMapper.selectMenusByUserId(userId);
+
+        // 如果用户没有任何菜单权限，返回空列表
+        if (userMenus.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 收集所有需要包含的菜单ID（包括父菜单）
+        Map<String, SysMenu> menuMap = new HashMap<>();
+        for (SysMenu menu : userMenus) {
+            menuMap.put(menu.getId(), menu);
+            // 递归添加所有父菜单
+            addParentMenus(menu.getPid(), menuMap);
+        }
+
+        // 转换为列表并构建树形结构
+        List<SysMenu> allMenus = new ArrayList<>(menuMap.values());
+        return buildMenuTree(allMenus);
+    }
+
+    /**
+     * 递归添加父菜单
+     *
+     * @param pid     父菜单ID
+     * @param menuMap 菜单映射表
+     */
+    private void addParentMenus(String pid, Map<String, SysMenu> menuMap) {
+        // 如果父ID为空或者是根节点，则停止递归
+        if (pid == null || "0".equals(pid) || menuMap.containsKey(pid)) {
+            return;
+        }
+
+        // 查询父菜单
+        SysMenu parentMenu = menuMapper.selectById(pid);
+        if (parentMenu != null && parentMenu.getStatus() == 1 && parentMenu.getDeleted() == 0) {
+            menuMap.put(parentMenu.getId(), parentMenu);
+            // 继续递归添加父菜单的父菜单
+            addParentMenus(parentMenu.getPid(), menuMap);
+        }
     }
 
     @Override

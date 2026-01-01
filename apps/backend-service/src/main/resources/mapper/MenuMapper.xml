@@ -29,4 +29,15 @@
         AND deleted = 0
     </select>
 
+    <select id="selectMenusByUserId" resultType="com.vben.admin.model.entity.SysMenu">
+        SELECT DISTINCT m.*
+        FROM sys_menu m
+        INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+        INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+        WHERE ur.user_id = #{userId}
+        AND m.status = 1
+        AND m.deleted = 0
+        ORDER BY m.sort_order ASC
+    </select>
+
 </mapper>

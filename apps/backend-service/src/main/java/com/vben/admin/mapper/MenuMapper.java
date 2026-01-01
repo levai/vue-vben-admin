@@ -38,4 +38,12 @@ public interface MenuMapper extends BaseMapper<SysMenu> {
      * @return 子菜单数量
      */
     int countByPid(@Param("pid") String pid);
+
+    /**
+     * 根据用户ID查询菜单列表（通过角色关联）
+     *
+     * @param userId 用户ID
+     * @return 菜单列表
+     */
+    List<SysMenu> selectMenusByUserId(@Param("userId") String userId);
 }
