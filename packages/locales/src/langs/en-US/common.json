@@ -22,5 +22,6 @@
   "showSearchPanel": "Show search panel",
   "hideSearchPanel": "Hide search panel",
   "expandAll": "Expand All",
-  "collapseAll": "Collapse All"
+  "collapseAll": "Collapse All",
+  "copySuccess": "Copy successful"
 }
