@@ -39,16 +39,17 @@ INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`) VALUES
 
 -- =============================================
 -- 初始化菜单
+-- 使用 ac:module:resource:action 格式的权限码
 -- =============================================
 INSERT INTO `sys_menu` (`id`, `name`, `path`, `pid`, `type`, `component`, `redirect`, `auth_code`, `meta`, `sort_order`, `status`, `deleted`) VALUES
 ('1', 'Dashboard', '/dashboard', NULL, 'catalog', NULL, '/analytics', NULL, '{"icon":"lucide:layout-dashboard","title":"仪表盘"}', 1, 1, 0),
-('8', 'Analytics', '/analytics', '1', 'menu', 'dashboard/analytics/index', NULL, 'dashboard:analytics:view', '{"icon":"lucide:area-chart","title":"数据分析","affixTab":true}', 1, 1, 0),
-('9', 'Workspace', '/workspace', '1', 'menu', 'dashboard/workspace/index', NULL, 'dashboard:workspace:view', '{"icon":"carbon:workspace","title":"工作台"}', 2, 1, 0),
+('8', 'Analytics', '/analytics', '1', 'menu', 'dashboard/analytics/index', NULL, 'ac:dashboard:analytics:view', '{"icon":"lucide:area-chart","title":"数据分析","affixTab":true}', 1, 1, 0),
+('9', 'Workspace', '/workspace', '1', 'menu', 'dashboard/workspace/index', NULL, 'ac:dashboard:workspace:view', '{"icon":"carbon:workspace","title":"工作台"}', 2, 1, 0),
 ('2', 'System', '/system', NULL, 'catalog', NULL, NULL, NULL, '{"icon":"lucide:settings","title":"系统管理"}', 2, 1, 0),
-('3', 'SystemUser', '/system/user', '2', 'menu', 'system/user/index', NULL, 'system:user:view', '{"icon":"lucide:users","title":"用户管理"}', 1, 1, 0),
-('4', 'SystemRole', '/system/role', '2', 'menu', 'system/role/list', NULL, 'system:role:view', '{"icon":"lucide:shield","title":"角色管理"}', 2, 1, 0),
-('5', 'SystemMenu', '/system/menu', '2', 'menu', 'system/menu/list', NULL, 'system:menu:view', '{"icon":"lucide:menu","title":"菜单管理"}', 3, 1, 0),
-('6', 'SystemDept', '/system/dept', '2', 'menu', 'system/dept/list', NULL, 'system:dept:view', '{"icon":"lucide:building","title":"部门管理"}', 4, 1, 0),
+('3', 'SystemUser', '/system/user', '2', 'menu', 'system/user/index', NULL, 'ac:system:user:view', '{"icon":"lucide:users","title":"用户管理"}', 1, 1, 0),
+('4', 'SystemRole', '/system/role', '2', 'menu', 'system/role/list', NULL, 'ac:system:role:view', '{"icon":"lucide:shield","title":"角色管理"}', 2, 1, 0),
+('5', 'SystemMenu', '/system/menu', '2', 'menu', 'system/menu/list', NULL, 'ac:system:menu:view', '{"icon":"lucide:menu","title":"菜单管理"}', 3, 1, 0),
+('6', 'SystemDept', '/system/dept', '2', 'menu', 'system/dept/list', NULL, 'ac:system:dept:view', '{"icon":"lucide:building","title":"部门管理"}', 4, 1, 0),
 ('7', 'Profile', '/profile', NULL, 'menu', '_core/profile/index', NULL, NULL, '{"icon":"lucide:user","title":"个人中心","hideInMenu":true}', 3, 1, 0);
 
 -- =============================================
