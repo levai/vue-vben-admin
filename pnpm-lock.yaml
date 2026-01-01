@@ -154,6 +154,8 @@ importers:
         specifier: 'catalog:'
         version: 1.15.4
 
+  apps/backend-service: {}
+
   apps/web-antd:
     dependencies:
       '@vben-core/menu-ui':
