@@ -110,14 +110,82 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createMenu(MenuDTO menuDTO) {
+        // 校验菜单名称
+        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
+            throw new BusinessException("菜单名称不能为空");
+        }
+        if (menuDTO.getName().length() < 2 || menuDTO.getName().length() > 30) {
+            throw new BusinessException("菜单名称长度必须在2-30之间");
+        }
         // 检查名称是否已存在
         if (isNameExists(menuDTO.getName(), null)) {
             throw new BusinessException("菜单名称已存在");
         }
 
-        // 检查路径是否已存在
-        if (isPathExists(menuDTO.getPath(), null)) {
-            throw new BusinessException("菜单路径已存在");
+        // 校验菜单类型
+        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
+            throw new BusinessException("菜单类型不能为空");
+        }
+        String menuType = menuDTO.getType();
+
+        // 根据菜单类型进行不同的校验
+        switch (menuType) {
+            case "catalog":
+            case "embedded":
+            case "menu":
+                // 这些类型需要 path
+                if (menuDTO.getPath() == null || menuDTO.getPath().trim().isEmpty()) {
+                    throw new BusinessException("路由路径不能为空");
+                }
+                if (menuDTO.getPath().length() < 2 || menuDTO.getPath().length() > 100) {
+                    throw new BusinessException("路由路径长度必须在2-100之间");
+                }
+                if (!menuDTO.getPath().startsWith("/")) {
+                    throw new BusinessException("路由路径必须以'/'开头");
+                }
+                // 检查路径是否已存在
+                if (isPathExists(menuDTO.getPath(), null)) {
+                    throw new BusinessException("菜单路径已存在");
+                }
+                break;
+            case "button":
+                // button 类型不需要 path，但需要 authCode
+                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
+                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
+                }
+                break;
+            case "link":
+                // link 类型不需要 path，但需要 link（在 meta.link 中）
+                if (menuDTO.getMeta() == null || menuDTO.getMeta().get("link") == null) {
+                    throw new BusinessException("外链类型菜单的链接地址不能为空");
+                }
+                break;
+            default:
+                throw new BusinessException("不支持的菜单类型: " + menuType);
+        }
+
+        // menu 类型需要 component
+        if ("menu".equals(menuType)) {
+            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
+                throw new BusinessException("菜单类型必须指定组件路径");
+            }
+        }
+
+        // embedded 和 link 类型需要 linkSrc（在 meta 中）
+        if ("embedded".equals(menuType) || "link".equals(menuType)) {
+            if (menuDTO.getMeta() == null) {
+                throw new BusinessException("菜单元数据不能为空");
+            }
+            String linkSrc = "embedded".equals(menuType)
+                ? (String) menuDTO.getMeta().get("iframeSrc")
+                : (String) menuDTO.getMeta().get("link");
+            if (linkSrc == null || linkSrc.trim().isEmpty()) {
+                throw new BusinessException("链接地址不能为空");
+            }
+            // 可以添加 URL 格式校验
+            if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {
+                throw new BusinessException("链接地址格式不正确，必须以 http:// 或 https:// 开头");
+            }
         }
 
         SysMenu menu = new SysMenu();
@@ -170,14 +238,82 @@ public class MenuServiceImpl implements MenuService {
             throw new BusinessException("菜单不存在");
         }
 
+        // 校验菜单名称
+        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
+            throw new BusinessException("菜单名称不能为空");
+        }
+        if (menuDTO.getName().length() < 2 || menuDTO.getName().length() > 30) {
+            throw new BusinessException("菜单名称长度必须在2-30之间");
+        }
         // 检查名称是否已存在（排除自己）
         if (isNameExists(menuDTO.getName(), id)) {
             throw new BusinessException("菜单名称已存在");
         }
 
-        // 检查路径是否已存在（排除自己）
-        if (isPathExists(menuDTO.getPath(), id)) {
-            throw new BusinessException("菜单路径已存在");
+        // 校验菜单类型
+        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
+            throw new BusinessException("菜单类型不能为空");
+        }
+        String menuType = menuDTO.getType();
+
+        // 根据菜单类型进行不同的校验
+        switch (menuType) {
+            case "catalog":
+            case "embedded":
+            case "menu":
+                // 这些类型需要 path
+                if (menuDTO.getPath() == null || menuDTO.getPath().trim().isEmpty()) {
+                    throw new BusinessException("路由路径不能为空");
+                }
+                if (menuDTO.getPath().length() < 2 || menuDTO.getPath().length() > 100) {
+                    throw new BusinessException("路由路径长度必须在2-100之间");
+                }
+                if (!menuDTO.getPath().startsWith("/")) {
+                    throw new BusinessException("路由路径必须以'/'开头");
+                }
+                // 检查路径是否已存在（排除自己）
+                if (isPathExists(menuDTO.getPath(), id)) {
+                    throw new BusinessException("菜单路径已存在");
+                }
+                break;
+            case "button":
+                // button 类型不需要 path，但需要 authCode
+                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
+                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
+                }
+                break;
+            case "link":
+                // link 类型不需要 path，但需要 link（在 meta.link 中）
+                if (menuDTO.getMeta() == null || menuDTO.getMeta().get("link") == null) {
+                    throw new BusinessException("外链类型菜单的链接地址不能为空");
+                }
+                break;
+            default:
+                throw new BusinessException("不支持的菜单类型: " + menuType);
+        }
+
+        // menu 类型需要 component
+        if ("menu".equals(menuType)) {
+            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
+                throw new BusinessException("菜单类型必须指定组件路径");
+            }
+        }
+
+        // embedded 和 link 类型需要 linkSrc（在 meta 中）
+        if ("embedded".equals(menuType) || "link".equals(menuType)) {
+            if (menuDTO.getMeta() == null) {
+                throw new BusinessException("菜单元数据不能为空");
+            }
+            String linkSrc = "embedded".equals(menuType)
+                ? (String) menuDTO.getMeta().get("iframeSrc")
+                : (String) menuDTO.getMeta().get("link");
+            if (linkSrc == null || linkSrc.trim().isEmpty()) {
+                throw new BusinessException("链接地址不能为空");
+            }
+            // 可以添加 URL 格式校验
+            if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {
+                throw new BusinessException("链接地址格式不正确，必须以 http:// 或 https:// 开头");
+            }
         }
 
         BeanUtils.copyProperties(menuDTO, menu, "id");

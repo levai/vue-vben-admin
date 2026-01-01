@@ -21,8 +21,8 @@ public class MenuDTO {
 
     /**
      * 路由路径
+     * 注意：button 类型不需要 path
      */
-    @NotBlank(message = "路由路径不能为空")
     private String path;
 
     /**
