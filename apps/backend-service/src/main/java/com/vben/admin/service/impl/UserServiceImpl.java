@@ -87,63 +87,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserVO getUserById(String id) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        SysUser user = getUserByIdOrThrow(id);
         return convertToVO(user);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createUser(UserDTO userDTO) {
-        // 检查用户名是否已存在
-        long count = userMapper.selectCount(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getUsername, userDTO.getUsername())
-        );
-        if (count > 0) {
-            throw new BusinessException("用户名已存在");
-        }
+        // 验证用户唯一性
+        validateUserUniqueness(userDTO, null);
 
-        // 检查手机号是否已存在
-        long phoneCount = userMapper.selectCount(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getPhone, userDTO.getPhone())
-        );
-        if (phoneCount > 0) {
-            throw new BusinessException("手机号已存在");
-        }
-
-        // 检查工号是否已存在
-        long employeeNoCount = userMapper.selectCount(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getEmployeeNo, userDTO.getEmployeeNo())
-        );
-        if (employeeNoCount > 0) {
-            throw new BusinessException("工号已存在");
-        }
-
-        // 创建用户
-        SysUser user = new SysUser();
-        user.setUsername(userDTO.getUsername());
-        // 密码处理：如果未提供密码，则使用默认密码88888888
-        String password = StringUtils.hasText(userDTO.getPassword())
-                ? userDTO.getPassword()
-                : "88888888";
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRealName(userDTO.getRealName());
-        user.setNickname(userDTO.getNickname());
-        user.setPhone(userDTO.getPhone());
-        user.setGender(userDTO.getGender());
-        user.setEmployeeNo(userDTO.getEmployeeNo());
-        user.setDeptId(userDTO.getDeptId());
-        if (userDTO.getStatus() == null) {
-            user.setStatus(1); // 默认启用
-        } else {
-            user.setStatus(userDTO.getStatus());
-        }
-
+        // 创建用户实体
+        SysUser user = buildUserEntity(userDTO, null);
         userMapper.insert(user);
 
         // 保存用户角色关联
@@ -157,104 +112,25 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(String id, UserDTO userDTO) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        // 查询用户
+        SysUser user = getUserByIdOrThrow(id);
 
-        // 如果更新用户名，检查是否重复
-        if (StringUtils.hasText(userDTO.getUsername()) && !userDTO.getUsername().equals(user.getUsername())) {
-            long count = userMapper.selectCount(
-                    new LambdaQueryWrapper<SysUser>()
-                            .eq(SysUser::getUsername, userDTO.getUsername())
-                            .ne(SysUser::getId, id)
-            );
-            if (count > 0) {
-                throw new BusinessException("用户名已存在");
-            }
-            user.setUsername(userDTO.getUsername());
-        }
+        // 验证用户唯一性（只验证变更的字段）
+        validateUserUniquenessForUpdate(user, userDTO, id);
 
-        // 更新密码（如果提供了新密码）
-        if (StringUtils.hasText(userDTO.getPassword())) {
-            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        }
-
-        // 更新真实姓名（必填）
-        if (StringUtils.hasText(userDTO.getRealName())) {
-            user.setRealName(userDTO.getRealName());
-        }
-
-        // 更新昵称（必填）
-        if (StringUtils.hasText(userDTO.getNickname())) {
-            user.setNickname(userDTO.getNickname());
-        }
-
-        // 更新手机号（必填，需要检查是否重复）
-        if (StringUtils.hasText(userDTO.getPhone())) {
-            if (!userDTO.getPhone().equals(user.getPhone())) {
-                long phoneCount = userMapper.selectCount(
-                        new LambdaQueryWrapper<SysUser>()
-                                .eq(SysUser::getPhone, userDTO.getPhone())
-                                .ne(SysUser::getId, id)
-                );
-                if (phoneCount > 0) {
-                    throw new BusinessException("手机号已存在");
-                }
-            }
-            user.setPhone(userDTO.getPhone());
-        }
-
-        // 更新性别（必填）
-        if (userDTO.getGender() != null) {
-            user.setGender(userDTO.getGender());
-        }
-
-        // 更新工号（必填，需要检查是否重复）
-        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
-            if (!userDTO.getEmployeeNo().equals(user.getEmployeeNo())) {
-                long employeeNoCount = userMapper.selectCount(
-                        new LambdaQueryWrapper<SysUser>()
-                                .eq(SysUser::getEmployeeNo, userDTO.getEmployeeNo())
-                                .ne(SysUser::getId, id)
-                );
-                if (employeeNoCount > 0) {
-                    throw new BusinessException("工号已存在");
-                }
-            }
-            user.setEmployeeNo(userDTO.getEmployeeNo());
-        }
-
-        // 更新部门ID（必填）
-        if (StringUtils.hasText(userDTO.getDeptId())) {
-            user.setDeptId(userDTO.getDeptId());
-        }
-
-        if (userDTO.getStatus() != null) {
-            user.setStatus(userDTO.getStatus());
-        }
-
+        // 更新用户基本信息
+        updateUserBasicInfo(user, userDTO);
         userMapper.updateById(user);
 
-        // 处理角色关联：如果传了 roleIds，则更新；如果传了空数组，则清空；如果不传，则保持原样
-        if (userDTO.getRoleIds() != null) {
-            // 删除原有关联
-            userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
-
-            // 保存新的关联（如果角色列表不为空）
-            if (!userDTO.getRoleIds().isEmpty()) {
-                saveUserRoles(id, userDTO.getRoleIds());
-            }
-        }
+        // 更新用户角色关联
+        updateUserRoles(id, userDTO.getRoleIds());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(String id) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        // 查询用户（验证存在性）
+        getUserByIdOrThrow(id);
 
         // 删除用户角色关联
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
@@ -266,15 +142,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUserStatus(String id, Integer status) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        // 查询用户
+        SysUser user = getUserByIdOrThrow(id);
 
+        // 验证状态值
         if (status == null || (status != 0 && status != 1)) {
             throw new BusinessException("状态值无效，必须为0或1");
         }
 
+        // 更新状态
         user.setStatus(status);
         userMapper.updateById(user);
     }
@@ -282,15 +158,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void resetPassword(String id, String password) {
-        SysUser user = userMapper.selectById(id);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        // 查询用户
+        SysUser user = getUserByIdOrThrow(id);
 
-        if (!StringUtils.hasText(password) || password.length() < 6) {
-            throw new BusinessException("密码长度不能少于6位");
-        }
+        // 验证密码
+        validatePassword(password);
 
+        // 更新密码
         user.setPassword(passwordEncoder.encode(password));
         userMapper.updateById(user);
     }
@@ -298,17 +172,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(String oldPassword, String newPassword) {
-        // 获取当前用户ID
-        String userId = SecurityUtils.getCurrentUserId();
-        if (userId == null) {
-            throw new BusinessException("未登录");
-        }
-
-        // 查询用户
-        SysUser user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
+        // 获取当前用户
+        String userId = getCurrentUserIdOrThrow();
+        SysUser user = getUserByIdOrThrow(userId);
 
         // 验证旧密码
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
@@ -316,9 +182,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // 验证新密码
-        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) {
-            throw new BusinessException("新密码长度不能少于6位");
-        }
+        validatePassword(newPassword);
 
         // 检查新旧密码是否相同
         if (passwordEncoder.matches(newPassword, user.getPassword())) {
@@ -333,53 +197,291 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateCurrentUserInfo(UserDTO userDTO) {
-        // 获取当前用户ID
-        String userId = SecurityUtils.getCurrentUserId();
-        if (userId == null) {
-            throw new BusinessException("未登录");
-        }
+        // 获取当前用户
+        String userId = getCurrentUserIdOrThrow();
+        SysUser user = getUserByIdOrThrow(userId);
 
-        // 查询用户
-        SysUser user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-
-        // 更新真实姓名（如果提供了）
-        if (StringUtils.hasText(userDTO.getRealName())) {
-            user.setRealName(userDTO.getRealName());
-        }
-
-        // 更新昵称（如果提供了）
-        if (StringUtils.hasText(userDTO.getNickname())) {
-            user.setNickname(userDTO.getNickname());
-        }
-
-        // 更新手机号（如果提供了，需要检查是否重复）
-        if (StringUtils.hasText(userDTO.getPhone())) {
-            if (!userDTO.getPhone().equals(user.getPhone())) {
-                long phoneCount = userMapper.selectCount(
-                        new LambdaQueryWrapper<SysUser>()
-                                .eq(SysUser::getPhone, userDTO.getPhone())
-                                .ne(SysUser::getId, userId)
-                );
-                if (phoneCount > 0) {
-                    throw new BusinessException("手机号已存在");
-                }
-            }
-            user.setPhone(userDTO.getPhone());
-        }
-
-        // 更新性别（如果提供了）
-        if (userDTO.getGender() != null) {
-            user.setGender(userDTO.getGender());
-        }
-
+        // 更新用户基本信息（只允许更新部分字段）
+        updateCurrentUserBasicInfo(user, userDTO);
         userMapper.updateById(user);
     }
 
     /**
+     * 根据ID获取用户，如果不存在则抛出异常
+     *
+     * @param id 用户ID
+     * @return 用户实体
+     * @throws BusinessException 如果用户不存在
+     */
+    private SysUser getUserByIdOrThrow(String id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        return user;
+    }
+
+    /**
+     * 获取当前用户ID，如果未登录则抛出异常
+     *
+     * @return 用户ID
+     * @throws BusinessException 如果未登录
+     */
+    private String getCurrentUserIdOrThrow() {
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new BusinessException("未登录");
+        }
+        return userId;
+    }
+
+    /**
+     * 验证用户唯一性（创建时）
+     *
+     * @param userDTO 用户DTO
+     * @param id      用户ID（创建时传入null）
+     * @throws BusinessException 如果用户名、手机号或工号已存在
+     */
+    private void validateUserUniqueness(UserDTO userDTO, String id) {
+        // 检查用户名
+        if (StringUtils.hasText(userDTO.getUsername())) {
+            checkUsernameNotExists(userDTO.getUsername(), id);
+        }
+        // 检查手机号
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            checkPhoneNotExists(userDTO.getPhone(), id);
+        }
+        // 检查工号
+        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+            checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
+        }
+    }
+
+    /**
+     * 验证用户唯一性（更新时，只验证变更的字段）
+     *
+     * @param user    当前用户实体
+     * @param userDTO 用户DTO
+     * @param id      用户ID
+     * @throws BusinessException 如果用户名、手机号或工号已存在
+     */
+    private void validateUserUniquenessForUpdate(SysUser user, UserDTO userDTO, String id) {
+        // 检查用户名（如果变更了）
+        if (StringUtils.hasText(userDTO.getUsername()) && !userDTO.getUsername().equals(user.getUsername())) {
+            checkUsernameNotExists(userDTO.getUsername(), id);
+        }
+        // 检查手机号（如果变更了）
+        if (StringUtils.hasText(userDTO.getPhone()) && !userDTO.getPhone().equals(user.getPhone())) {
+            checkPhoneNotExists(userDTO.getPhone(), id);
+        }
+        // 检查工号（如果变更了）
+        if (StringUtils.hasText(userDTO.getEmployeeNo()) && !userDTO.getEmployeeNo().equals(user.getEmployeeNo())) {
+            checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
+        }
+    }
+
+    /**
+     * 检查用户名不存在
+     *
+     * @param username 用户名
+     * @param id       用户ID（更新时传入，创建时传入null）
+     * @throws BusinessException 如果用户名已存在
+     */
+    private void checkUsernameNotExists(String username, String id) {
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username);
+        if (id != null) {
+            queryWrapper.ne(SysUser::getId, id);
+        }
+        long count = userMapper.selectCount(queryWrapper);
+        if (count > 0) {
+            throw new BusinessException("用户名已存在");
+        }
+    }
+
+    /**
+     * 检查手机号不存在
+     *
+     * @param phone 手机号
+     * @param id    用户ID（更新时传入，创建时传入null）
+     * @throws BusinessException 如果手机号已存在
+     */
+    private void checkPhoneNotExists(String phone, String id) {
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getPhone, phone);
+        if (id != null) {
+            queryWrapper.ne(SysUser::getId, id);
+        }
+        long count = userMapper.selectCount(queryWrapper);
+        if (count > 0) {
+            throw new BusinessException("手机号已存在");
+        }
+    }
+
+    /**
+     * 检查工号不存在
+     *
+     * @param employeeNo 工号
+     * @param id         用户ID（更新时传入，创建时传入null）
+     * @throws BusinessException 如果工号已存在
+     */
+    private void checkEmployeeNoNotExists(String employeeNo, String id) {
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getEmployeeNo, employeeNo);
+        if (id != null) {
+            queryWrapper.ne(SysUser::getId, id);
+        }
+        long count = userMapper.selectCount(queryWrapper);
+        if (count > 0) {
+            throw new BusinessException("工号已存在");
+        }
+    }
+
+    /**
+     * 验证密码格式
+     *
+     * @param password 密码
+     * @throws BusinessException 如果密码格式不正确
+     */
+    private void validatePassword(String password) {
+        if (!StringUtils.hasText(password) || password.length() < 6) {
+            throw new BusinessException("密码长度不能少于6位");
+        }
+    }
+
+    /**
+     * 构建用户实体
+     *
+     * @param userDTO 用户DTO
+     * @param id      用户ID（更新时传入，创建时传入null）
+     * @return 用户实体
+     */
+    private SysUser buildUserEntity(UserDTO userDTO, String id) {
+        SysUser user = new SysUser();
+        user.setUsername(userDTO.getUsername());
+        // 密码处理：如果未提供密码，则使用默认密码88888888
+        String password = StringUtils.hasText(userDTO.getPassword())
+                ? userDTO.getPassword()
+                : "88888888";
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRealName(userDTO.getRealName());
+        user.setNickname(userDTO.getNickname());
+        user.setPhone(userDTO.getPhone());
+        user.setGender(userDTO.getGender());
+        user.setEmployeeNo(userDTO.getEmployeeNo());
+        user.setDeptId(userDTO.getDeptId());
+        user.setStatus(userDTO.getStatus() != null ? userDTO.getStatus() : 1); // 默认启用
+        return user;
+    }
+
+    /**
+     * 更新用户基本信息
+     *
+     * @param user    用户实体
+     * @param userDTO 用户DTO
+     */
+    private void updateUserBasicInfo(SysUser user, UserDTO userDTO) {
+        // 更新用户名
+        if (StringUtils.hasText(userDTO.getUsername())) {
+            user.setUsername(userDTO.getUsername());
+        }
+
+        // 更新密码（如果提供了新密码）
+        if (StringUtils.hasText(userDTO.getPassword())) {
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        }
+
+        // 更新真实姓名
+        if (StringUtils.hasText(userDTO.getRealName())) {
+            user.setRealName(userDTO.getRealName());
+        }
+
+        // 更新昵称
+        if (StringUtils.hasText(userDTO.getNickname())) {
+            user.setNickname(userDTO.getNickname());
+        }
+
+        // 更新手机号
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            user.setPhone(userDTO.getPhone());
+        }
+
+        // 更新性别
+        if (userDTO.getGender() != null) {
+            user.setGender(userDTO.getGender());
+        }
+
+        // 更新工号
+        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+            user.setEmployeeNo(userDTO.getEmployeeNo());
+        }
+
+        // 更新部门ID
+        if (StringUtils.hasText(userDTO.getDeptId())) {
+            user.setDeptId(userDTO.getDeptId());
+        }
+
+        // 更新状态
+        if (userDTO.getStatus() != null) {
+            user.setStatus(userDTO.getStatus());
+        }
+    }
+
+    /**
+     * 更新当前用户基本信息（只允许更新部分字段）
+     *
+     * @param user    用户实体
+     * @param userDTO 用户DTO
+     */
+    private void updateCurrentUserBasicInfo(SysUser user, UserDTO userDTO) {
+        // 更新真实姓名
+        if (StringUtils.hasText(userDTO.getRealName())) {
+            user.setRealName(userDTO.getRealName());
+        }
+
+        // 更新昵称
+        if (StringUtils.hasText(userDTO.getNickname())) {
+            user.setNickname(userDTO.getNickname());
+        }
+
+        // 更新手机号（需要检查是否重复）
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            if (!userDTO.getPhone().equals(user.getPhone())) {
+                checkPhoneNotExists(userDTO.getPhone(), user.getId());
+            }
+            user.setPhone(userDTO.getPhone());
+        }
+
+        // 更新性别
+        if (userDTO.getGender() != null) {
+            user.setGender(userDTO.getGender());
+        }
+    }
+
+    /**
+     * 更新用户角色关联
+     *
+     * @param userId   用户ID
+     * @param roleIds  角色ID列表
+     */
+    private void updateUserRoles(String userId, List<String> roleIds) {
+        // 如果传了 roleIds，则更新；如果传了空数组，则清空；如果不传，则保持原样
+        if (roleIds != null) {
+            // 删除原有关联
+            userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+
+            // 保存新的关联（如果角色列表不为空）
+            if (!roleIds.isEmpty()) {
+                saveUserRoles(userId, roleIds);
+            }
+        }
+    }
+
+    /**
      * 保存用户角色关联
+     *
+     * @param userId  用户ID
+     * @param roleIds 角色ID列表
      */
     private void saveUserRoles(String userId, List<String> roleIds) {
         for (String roleId : roleIds) {
@@ -425,18 +527,12 @@ public class UserServiceImpl implements UserService {
 
         // 查询创建人名称
         if (StringUtils.hasText(user.getCreateBy())) {
-            SysUser creator = userMapper.selectById(user.getCreateBy());
-            if (creator != null) {
-                vo.setCreateByName(creator.getRealName() != null ? creator.getRealName() : creator.getUsername());
-            }
+            vo.setCreateByName(getUserName(user.getCreateBy()));
         }
 
         // 查询更新人名称
         if (StringUtils.hasText(user.getUpdateBy())) {
-            SysUser updater = userMapper.selectById(user.getUpdateBy());
-            if (updater != null) {
-                vo.setUpdateByName(updater.getRealName() != null ? updater.getRealName() : updater.getUsername());
-            }
+            vo.setUpdateByName(getUserName(user.getUpdateBy()));
         }
 
         return vo;
@@ -484,5 +580,19 @@ public class UserServiceImpl implements UserService {
 
         // total 表示实际总数（可能 > items.length，如果被 limit 截断）
         return new PageResult<>(options, total);
+    }
+
+    /**
+     * 获取用户名称（优先使用真实姓名，否则使用用户名）
+     *
+     * @param userId 用户ID
+     * @return 用户名称
+     */
+    private String getUserName(String userId) {
+        SysUser user = userMapper.selectById(userId);
+        if (user != null) {
+            return user.getRealName() != null ? user.getRealName() : user.getUsername();
+        }
+        return null;
     }
 }

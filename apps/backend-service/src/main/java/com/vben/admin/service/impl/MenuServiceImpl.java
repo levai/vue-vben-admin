@@ -161,10 +161,8 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateMenu(String id, MenuDTO menuDTO) {
-        SysMenu menu = menuMapper.selectById(id);
-        if (menu == null) {
-            throw new BusinessException("菜单不存在");
-        }
+        // 查询菜单
+        SysMenu menu = getMenuByIdOrThrow(id);
 
         // 校验菜单基本信息
         validateMenuBasicInfo(menuDTO, id);
@@ -185,17 +183,13 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMenu(String id) {
-        SysMenu menu = menuMapper.selectById(id);
-        if (menu == null) {
-            throw new BusinessException("菜单不存在");
-        }
+        // 查询菜单（验证存在性）
+        getMenuByIdOrThrow(id);
 
         // 检查是否有子菜单
-        int childCount = menuMapper.countByPid(id);
-        if (childCount > 0) {
-            throw new BusinessException("存在子菜单，无法删除");
-        }
+        checkNoChildMenus(id);
 
+        // 删除菜单（逻辑删除）
         menuMapper.deleteById(id);
     }
 
@@ -228,10 +222,7 @@ public class MenuServiceImpl implements MenuService {
             }
 
             // 检查菜单是否存在
-            SysMenu menu = menuMapper.selectById(menuOrderDTO.getId());
-            if (menu == null) {
-                throw new BusinessException("菜单不存在，ID: " + menuOrderDTO.getId());
-            }
+            SysMenu menu = getMenuByIdOrThrow(menuOrderDTO.getId());
 
             // 处理父级ID
             String pid = menuOrderDTO.getPid();
@@ -246,10 +237,7 @@ public class MenuServiceImpl implements MenuService {
 
             // 校验：如果 pid 不是根节点，检查父菜单是否存在
             if (!TreeHelper.ROOT_ID.equals(pid)) {
-                SysMenu parentMenu = menuMapper.selectById(pid);
-                if (parentMenu == null) {
-                    throw new BusinessException("父菜单不存在，父菜单ID: " + pid + "，菜单ID: " + menuOrderDTO.getId());
-                }
+                getMenuByIdOrThrow(pid, "父菜单不存在，父菜单ID: " + pid + "，菜单ID: " + menuOrderDTO.getId());
             }
 
             // 处理排序字段：从 meta.order 读取
@@ -652,5 +640,45 @@ public class MenuServiceImpl implements MenuService {
         }
 
         return sortOrder;
+    }
+
+    /**
+     * 根据ID获取菜单，如果不存在则抛出异常
+     *
+     * @param id 菜单ID
+     * @return 菜单实体
+     * @throws BusinessException 如果菜单不存在
+     */
+    private SysMenu getMenuByIdOrThrow(String id) {
+        return getMenuByIdOrThrow(id, "菜单不存在");
+    }
+
+    /**
+     * 根据ID获取菜单，如果不存在则抛出异常
+     *
+     * @param id      菜单ID
+     * @param message 错误消息
+     * @return 菜单实体
+     * @throws BusinessException 如果菜单不存在
+     */
+    private SysMenu getMenuByIdOrThrow(String id, String message) {
+        SysMenu menu = menuMapper.selectById(id);
+        if (menu == null) {
+            throw new BusinessException(message);
+        }
+        return menu;
+    }
+
+    /**
+     * 检查菜单是否有子菜单
+     *
+     * @param id 菜单ID
+     * @throws BusinessException 如果存在子菜单
+     */
+    private void checkNoChildMenus(String id) {
+        int childCount = menuMapper.countByPid(id);
+        if (childCount > 0) {
+            throw new BusinessException("存在子菜单，无法删除");
+        }
     }
 }

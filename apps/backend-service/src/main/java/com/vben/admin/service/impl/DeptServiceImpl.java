@@ -40,19 +40,10 @@ public class DeptServiceImpl implements DeptService {
     @Transactional(rollbackFor = Exception.class)
     public String createDept(DeptDTO deptDTO) {
         // 检查名称是否已存在
-        if (isNameExists(deptDTO.getName(), null)) {
-            throw new BusinessException("部门名称已存在");
-        }
+        validateNameNotExists(deptDTO.getName(), null);
 
-        SysDept dept = new SysDept();
-        BeanUtils.copyProperties(deptDTO, dept);
-        if (dept.getPid() == null) {
-            dept.setPid(TreeHelper.ROOT_ID);
-        }
-        if (dept.getStatus() == null) {
-            dept.setStatus(1);
-        }
-
+        // 创建部门实体
+        SysDept dept = buildDeptEntity(deptDTO, null);
         deptMapper.insert(dept);
         return dept.getId();
     }
@@ -67,9 +58,7 @@ public class DeptServiceImpl implements DeptService {
 
         // 如果修改了名称，检查新名称是否已存在
         if (deptDTO.getName() != null && !deptDTO.getName().equals(dept.getName())) {
-            if (isNameExists(deptDTO.getName(), id)) {
-                throw new BusinessException("部门名称已存在");
-            }
+            validateNameNotExists(deptDTO.getName(), id);
         }
 
         BeanUtils.copyProperties(deptDTO, dept, "id");
@@ -83,17 +72,13 @@ public class DeptServiceImpl implements DeptService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteDept(String id) {
-        SysDept dept = deptMapper.selectById(id);
-        if (dept == null) {
-            throw new BusinessException("部门不存在");
-        }
+        // 查询部门
+        SysDept dept = getDeptByIdOrThrow(id);
 
         // 检查是否有子部门
-        int childCount = deptMapper.countByPid(id);
-        if (childCount > 0) {
-            throw new BusinessException("存在子部门，无法删除");
-        }
+        checkNoChildDepts(id);
 
+        // 删除部门（逻辑删除）
         deptMapper.deleteById(id);
     }
 
@@ -127,6 +112,69 @@ public class DeptServiceImpl implements DeptService {
     }
 
     /**
+     * 根据ID获取部门，如果不存在则抛出异常
+     *
+     * @param id 部门ID
+     * @return 部门实体
+     * @throws BusinessException 如果部门不存在
+     */
+    private SysDept getDeptByIdOrThrow(String id) {
+        SysDept dept = deptMapper.selectById(id);
+        if (dept == null) {
+            throw new BusinessException("部门不存在");
+        }
+        return dept;
+    }
+
+    /**
+     * 验证部门名称不存在
+     *
+     * @param name 部门名称
+     * @param id   部门ID（更新时传入，创建时传入null）
+     * @throws BusinessException 如果名称已存在
+     */
+    private void validateNameNotExists(String name, String id) {
+        if (isNameExists(name, id)) {
+            throw new BusinessException("部门名称已存在");
+        }
+    }
+
+    /**
+     * 检查部门是否有子部门
+     *
+     * @param id 部门ID
+     * @throws BusinessException 如果存在子部门
+     */
+    private void checkNoChildDepts(String id) {
+        int childCount = deptMapper.countByPid(id);
+        if (childCount > 0) {
+            throw new BusinessException("存在子部门，无法删除");
+        }
+    }
+
+    /**
+     * 构建部门实体
+     *
+     * @param deptDTO 部门DTO
+     * @param id      部门ID（更新时传入，创建时传入null）
+     * @return 部门实体
+     */
+    private SysDept buildDeptEntity(DeptDTO deptDTO, String id) {
+        SysDept dept = new SysDept();
+        BeanUtils.copyProperties(deptDTO, dept);
+        if (id != null) {
+            dept.setId(id);
+        }
+        if (dept.getPid() == null) {
+            dept.setPid(TreeHelper.ROOT_ID);
+        }
+        if (dept.getStatus() == null) {
+            dept.setStatus(1);
+        }
+        return dept;
+    }
+
+    /**
      * 转换为VO
      */
     private DeptVO convertToVO(SysDept dept) {
@@ -137,20 +185,28 @@ public class DeptServiceImpl implements DeptService {
 
         // 查询创建人名称
         if (StringUtils.hasText(dept.getCreateBy())) {
-            SysUser creator = userMapper.selectById(dept.getCreateBy());
-            if (creator != null) {
-                vo.setCreateByName(creator.getRealName() != null ? creator.getRealName() : creator.getUsername());
-            }
+            vo.setCreateByName(getUserName(dept.getCreateBy()));
         }
 
         // 查询更新人名称
         if (StringUtils.hasText(dept.getUpdateBy())) {
-            SysUser updater = userMapper.selectById(dept.getUpdateBy());
-            if (updater != null) {
-                vo.setUpdateByName(updater.getRealName() != null ? updater.getRealName() : updater.getUsername());
-            }
+            vo.setUpdateByName(getUserName(dept.getUpdateBy()));
         }
 
         return vo;
+    }
+
+    /**
+     * 获取用户名称（优先使用真实姓名，否则使用用户名）
+     *
+     * @param userId 用户ID
+     * @return 用户名称
+     */
+    private String getUserName(String userId) {
+        SysUser user = userMapper.selectById(userId);
+        if (user != null) {
+            return user.getRealName() != null ? user.getRealName() : user.getUsername();
+        }
+        return null;
     }
 }

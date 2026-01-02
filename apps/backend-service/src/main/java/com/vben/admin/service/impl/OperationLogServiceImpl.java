@@ -3,20 +3,19 @@ package com.vben.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.enums.OperationType;
-import com.vben.admin.core.utils.OperationInfoParser;
 import com.vben.admin.core.utils.QueryHelper;
 import com.vben.admin.core.utils.SearchQueryConfig;
 import com.vben.admin.core.model.PageResult;
-import com.vben.admin.model.vo.MenuVO;
-import com.vben.admin.model.vo.TreeOptionVO;
-
-import java.util.Arrays;
-import java.util.ArrayList;
 import com.vben.admin.mapper.OperationLogMapper;
 import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.entity.SysOperationLog;
+import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.model.vo.OperationLogVO;
+import com.vben.admin.model.vo.TreeOptionVO;
 import com.vben.admin.service.MenuService;
 import com.vben.admin.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +41,21 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OperationLogServiceImpl implements OperationLogService {
+
+    /**
+     * 菜单类型：按钮
+     */
+    private static final String MENU_TYPE_BUTTON = "button";
+
+    /**
+     * 个人中心模块值
+     */
+    private static final String MODULE_PROFILE = "profile";
+
+    /**
+     * 个人中心模块标签
+     */
+    private static final String MODULE_PROFILE_LABEL = "个人中心";
 
     private final OperationLogMapper operationLogMapper;
     private final MenuService menuService;
@@ -65,44 +80,7 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Override
     public PageResult<OperationLogVO> getOperationLogList(OperationLogQueryDTO queryDTO) {
         // 构建查询条件
-        LambdaQueryWrapper<SysOperationLog> queryWrapper = new LambdaQueryWrapper<>();
-
-        if (StringUtils.hasText(queryDTO.getUserId())) {
-            queryWrapper.eq(SysOperationLog::getUserId, queryDTO.getUserId());
-        }
-        if (StringUtils.hasText(queryDTO.getUsername())) {
-            queryWrapper.like(SysOperationLog::getUsername, queryDTO.getUsername());
-        }
-        if (StringUtils.hasText(queryDTO.getOperationType())) {
-            // 直接使用英文值查询
-            queryWrapper.eq(SysOperationLog::getOperationType, queryDTO.getOperationType());
-        }
-        if (StringUtils.hasText(queryDTO.getOperationModule())) {
-            // 将英文值（如 "menu"）转换为中文菜单名称（如 "菜单管理"）进行查询
-            // 因为数据库中存储的是中文菜单名称
-            String moduleLabel = convertModuleValueToLabel(queryDTO.getOperationModule());
-            if (moduleLabel != null) {
-                queryWrapper.eq(SysOperationLog::getOperationModule, moduleLabel);
-            } else {
-                // 如果转换失败，尝试直接使用原值查询（可能是中文名称直接传入）
-                queryWrapper.eq(SysOperationLog::getOperationModule, queryDTO.getOperationModule());
-            }
-        }
-        if (queryDTO.getStatus() != null) {
-            queryWrapper.eq(SysOperationLog::getStatus, queryDTO.getStatus());
-        }
-
-        // 时间范围查询
-        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysOperationLog::getCreateTime);
-
-        // 搜索关键词（请求URL）
-        QueryHelper.applySearch(
-                queryWrapper,
-                SearchQueryConfig.<SysOperationLog>of(queryDTO.getSearch())
-                        .searchField(SysOperationLog::getRequestUrl)
-        );
-
-        queryWrapper.orderByDesc(SysOperationLog::getCreateTime);
+        LambdaQueryWrapper<SysOperationLog> queryWrapper = buildQueryWrapper(queryDTO);
 
         // 分页查询
         Page<SysOperationLog> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getPageSize());
@@ -119,10 +97,7 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Override
     public OperationLogVO getOperationLogDetail(String id) {
         SysOperationLog operationLog = operationLogMapper.selectById(id);
-        if (operationLog == null) {
-            return null;
-        }
-        return convertToVO(operationLog);
+        return operationLog != null ? convertToVO(operationLog) : null;
     }
 
     @Override
@@ -136,6 +111,74 @@ public class OperationLogServiceImpl implements OperationLogService {
     public void batchDeleteOperationLog(List<String> ids) {
         if (ids != null && !ids.isEmpty()) {
             operationLogMapper.deleteBatchIds(ids);
+        }
+    }
+
+    /**
+     * 构建查询条件
+     *
+     * @param queryDTO 查询DTO
+     * @return 查询包装器
+     */
+    private LambdaQueryWrapper<SysOperationLog> buildQueryWrapper(OperationLogQueryDTO queryDTO) {
+        LambdaQueryWrapper<SysOperationLog> queryWrapper = new LambdaQueryWrapper<>();
+
+        // 用户ID精确查询
+        if (StringUtils.hasText(queryDTO.getUserId())) {
+            queryWrapper.eq(SysOperationLog::getUserId, queryDTO.getUserId());
+        }
+
+        // 用户名模糊查询
+        if (StringUtils.hasText(queryDTO.getUsername())) {
+            queryWrapper.like(SysOperationLog::getUsername, queryDTO.getUsername());
+        }
+
+        // 操作类型精确查询
+        if (StringUtils.hasText(queryDTO.getOperationType())) {
+            queryWrapper.eq(SysOperationLog::getOperationType, queryDTO.getOperationType());
+        }
+
+        // 操作模块查询（需要转换为中文名称）
+        if (StringUtils.hasText(queryDTO.getOperationModule())) {
+            applyOperationModuleQuery(queryWrapper, queryDTO.getOperationModule());
+        }
+
+        // 状态查询
+        if (queryDTO.getStatus() != null) {
+            queryWrapper.eq(SysOperationLog::getStatus, queryDTO.getStatus());
+        }
+
+        // 时间范围查询
+        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysOperationLog::getCreateTime);
+
+        // 搜索关键词（请求URL）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysOperationLog>of(queryDTO.getSearch())
+                        .searchField(SysOperationLog::getRequestUrl)
+        );
+
+        // 按创建时间倒序
+        queryWrapper.orderByDesc(SysOperationLog::getCreateTime);
+
+        return queryWrapper;
+    }
+
+    /**
+     * 应用操作模块查询条件
+     *
+     * @param queryWrapper 查询包装器
+     * @param moduleValue  模块值（可能是英文值或中文名称）
+     */
+    private void applyOperationModuleQuery(LambdaQueryWrapper<SysOperationLog> queryWrapper, String moduleValue) {
+        // 将英文值（如 "menu"）转换为中文菜单名称（如 "菜单管理"）进行查询
+        // 因为数据库中存储的是中文菜单名称
+        String moduleLabel = convertModuleValueToLabel(moduleValue);
+        if (moduleLabel != null) {
+            queryWrapper.eq(SysOperationLog::getOperationModule, moduleLabel);
+        } else {
+            // 如果转换失败，尝试直接使用原值查询（可能是中文名称直接传入）
+            queryWrapper.eq(SysOperationLog::getOperationModule, moduleValue);
         }
     }
 
@@ -158,13 +201,8 @@ public class OperationLogServiceImpl implements OperationLogService {
         List<TreeOptionVO> optionTree = convertMenuTreeToOptionTree(menuTree, search);
 
         // 添加固定的"个人中心"选项（不在菜单树中）
-        TreeOptionVO profileOption = new TreeOptionVO();
-        profileOption.setLabel("个人中心");
-        profileOption.setValue("profile");
-
-        // 如果搜索关键词匹配"个人中心"或"profile"，则添加
-        if (!StringUtils.hasText(search) ||
-            matchesSearch(profileOption, search)) {
+        TreeOptionVO profileOption = createProfileOption();
+        if (shouldIncludeOption(profileOption, search)) {
             optionTree.add(profileOption);
         }
 
@@ -186,7 +224,7 @@ public class OperationLogServiceImpl implements OperationLogService {
         List<TreeOptionVO> result = new ArrayList<>();
         for (MenuVO menu : menuTree) {
             // 排除 button 类型
-            if ("button".equals(menu.getType())) {
+            if (MENU_TYPE_BUTTON.equals(menu.getType())) {
                 continue;
             }
 
@@ -213,15 +251,8 @@ public class OperationLogServiceImpl implements OperationLogService {
                     option.setChildren(children);
                 }
 
-                // 判断是否应该包含此选项：
-                // 1. 如果没有搜索条件，包含所有选项
-                // 2. 如果当前选项匹配搜索条件，包含
-                // 3. 如果有子选项匹配搜索条件，包含（即使当前选项不匹配）
-                boolean shouldInclude = !StringUtils.hasText(search) ||
-                        matchesSearch(option, search) ||
-                        hasMatchingChildren(children, search);
-
-                if (shouldInclude) {
+                // 判断是否应该包含此选项
+                if (shouldIncludeOption(option, search, children)) {
                     result.add(option);
                 }
             } else {
@@ -236,7 +267,46 @@ public class OperationLogServiceImpl implements OperationLogService {
     }
 
     /**
+     * 判断是否应该包含选项
+     *
+     * @param option  选项
+     * @param search  搜索关键词
+     * @param children 子选项列表（可选）
+     * @return 是否应该包含
+     */
+    private boolean shouldIncludeOption(TreeOptionVO option, String search, List<TreeOptionVO> children) {
+        // 如果没有搜索条件，包含所有选项
+        if (!StringUtils.hasText(search)) {
+            return true;
+        }
+        // 如果当前选项匹配搜索条件，包含
+        if (matchesSearch(option, search)) {
+            return true;
+        }
+        // 如果有子选项匹配搜索条件，包含（即使当前选项不匹配）
+        if (children != null && !children.isEmpty() && hasMatchingChildren(children, search)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 判断是否应该包含选项（无子选项版本）
+     *
+     * @param option 选项
+     * @param search 搜索关键词
+     * @return 是否应该包含
+     */
+    private boolean shouldIncludeOption(TreeOptionVO option, String search) {
+        return shouldIncludeOption(option, search, null);
+    }
+
+    /**
      * 检查子选项中是否有匹配搜索条件的
+     *
+     * @param children 子选项列表
+     * @param search   搜索关键词
+     * @return 是否有匹配的子选项
      */
     private boolean hasMatchingChildren(List<TreeOptionVO> children, String search) {
         if (children == null || children.isEmpty() || !StringUtils.hasText(search)) {
@@ -252,6 +322,10 @@ public class OperationLogServiceImpl implements OperationLogService {
 
     /**
      * 检查选项是否匹配搜索条件
+     *
+     * @param option 选项
+     * @param search 搜索关键词
+     * @return 是否匹配
      */
     private boolean matchesSearch(TreeOptionVO option, String search) {
         if (!StringUtils.hasText(search)) {
@@ -260,6 +334,18 @@ public class OperationLogServiceImpl implements OperationLogService {
         String lowerSearch = search.toLowerCase();
         return option.getLabel().contains(search) ||
                (option.getValue() != null && option.getValue().toLowerCase().contains(lowerSearch));
+    }
+
+    /**
+     * 创建个人中心选项
+     *
+     * @return 个人中心选项
+     */
+    private TreeOptionVO createProfileOption() {
+        TreeOptionVO profileOption = new TreeOptionVO();
+        profileOption.setLabel(MODULE_PROFILE_LABEL);
+        profileOption.setValue(MODULE_PROFILE);
+        return profileOption;
     }
 
     /**
@@ -311,8 +397,8 @@ public class OperationLogServiceImpl implements OperationLogService {
         }
 
         // 特殊处理 "profile"
-        if ("profile".equals(moduleValue)) {
-            return "个人中心";
+        if (MODULE_PROFILE.equals(moduleValue)) {
+            return MODULE_PROFILE_LABEL;
         }
 
         // 获取菜单树
@@ -351,7 +437,7 @@ public class OperationLogServiceImpl implements OperationLogService {
 
         for (MenuVO menu : menuTree) {
             // 排除 button 类型
-            if ("button".equals(menu.getType())) {
+            if (MENU_TYPE_BUTTON.equals(menu.getType())) {
                 continue;
             }
 
@@ -394,25 +480,44 @@ public class OperationLogServiceImpl implements OperationLogService {
     public PageResult<TreeOptionVO> getOperationTypeList(String search) {
         // 从枚举中获取所有操作类型，转换为选项格式（label: 中文, value: 英文小写）
         List<TreeOptionVO> allOptions = Arrays.stream(OperationType.values())
-                .map(type -> {
-                    TreeOptionVO option = new TreeOptionVO();
-                    option.setLabel(type.getLabel());
-                    option.setValue(type.name().toLowerCase());
-                    return option;
-                })
+                .map(this::convertOperationTypeToOption)
                 .sorted((a, b) -> a.getLabel().compareTo(b.getLabel()))
                 .collect(Collectors.toList());
 
         // 搜索关键词过滤
         if (StringUtils.hasText(search)) {
-            String lowerSearch = search.toLowerCase();
-            allOptions = allOptions.stream()
-                    .filter(option -> option.getLabel().contains(search)
-                            || option.getValue().toLowerCase().contains(lowerSearch))
-                    .collect(Collectors.toList());
+            allOptions = filterOptionsBySearch(allOptions, search);
         }
 
         return new PageResult<>(allOptions, (long) allOptions.size());
+    }
+
+    /**
+     * 将操作类型转换为选项
+     *
+     * @param type 操作类型
+     * @return 选项
+     */
+    private TreeOptionVO convertOperationTypeToOption(OperationType type) {
+        TreeOptionVO option = new TreeOptionVO();
+        option.setLabel(type.getLabel());
+        option.setValue(type.name().toLowerCase());
+        return option;
+    }
+
+    /**
+     * 根据搜索关键词过滤选项
+     *
+     * @param options 选项列表
+     * @param search  搜索关键词
+     * @return 过滤后的选项列表
+     */
+    private List<TreeOptionVO> filterOptionsBySearch(List<TreeOptionVO> options, String search) {
+        String lowerSearch = search.toLowerCase();
+        return options.stream()
+                .filter(option -> option.getLabel().contains(search)
+                        || (option.getValue() != null && option.getValue().toLowerCase().contains(lowerSearch)))
+                .collect(Collectors.toList());
     }
 
     /**

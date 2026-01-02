@@ -39,11 +39,6 @@ public class RoleServiceImpl implements RoleService {
      */
     private static final String ADMIN_ROLE_ID = "1";
 
-    /**
-     * 超级管理员角色名称
-     */
-    private static final String ADMIN_ROLE_NAME = "超级管理员";
-
     private final RoleMapper roleMapper;
     private final RoleMenuMapper roleMenuMapper;
     private final UserRoleMapper userRoleMapper;
@@ -109,80 +104,38 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateRole(String id, RoleDTO roleDTO) {
-        // 先查询数据库获取角色信息
-        SysRole role = roleMapper.selectById(id);
-        if (role == null) {
-            throw new BusinessException("角色不存在");
-        }
+        // 查询角色信息
+        SysRole role = getRoleByIdOrThrow(id);
+        boolean isAdminRole = isAdminRole(role.getId());
 
-        // 基于数据库查询到的实际角色ID判断是否是超级管理员
-        boolean isAdminRole = ADMIN_ROLE_ID.equals(role.getId());
-
-        // 只更新非空字段
-        if (StringUtils.hasText(roleDTO.getName())) {
-            // 超级管理员角色不允许修改名称
-            if (isAdminRole) {
-                throw new BusinessException("超级管理员角色名称不能修改");
-            }
-            role.setName(roleDTO.getName());
-        }
-        if (roleDTO.getStatus() != null) {
-            // 超级管理员角色不允许禁用
-            if (isAdminRole && roleDTO.getStatus() == 0) {
-                throw new BusinessException("超级管理员角色不能禁用");
-            }
-            role.setStatus(roleDTO.getStatus());
-        }
-        if (StringUtils.hasText(roleDTO.getRemark())) {
-            role.setRemark(roleDTO.getRemark());
-        } else if (roleDTO.getRemark() != null) {
-            // 允许清空备注
-            role.setRemark(null);
-        }
-
+        // 更新角色基本信息
+        updateRoleBasicInfo(role, roleDTO, isAdminRole);
         roleMapper.updateById(role);
 
-        // 处理权限关联：如果传了 permissions，则更新；如果传了空数组，则清空；如果不传，则保持原样
-        if (roleDTO.getPermissions() != null) {
-            // 删除原有关联
-            roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, id));
-
-            // 保存新的关联（如果权限列表不为空）
-            if (!roleDTO.getPermissions().isEmpty()) {
-                saveRoleMenus(id, roleDTO.getPermissions());
-            }
-        }
+        // 更新权限关联
+        updateRolePermissions(id, roleDTO.getPermissions());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRole(String id) {
         // 参数校验
-        if (id == null || id.trim().isEmpty()) {
+        if (!StringUtils.hasText(id)) {
             throw new BusinessException("角色ID不能为空");
         }
 
         String trimmedId = id.trim();
 
-        // 先查询数据库获取角色信息
-        SysRole role = roleMapper.selectById(trimmedId);
-        if (role == null) {
-            throw new BusinessException("角色不存在");
-        }
+        // 查询角色信息
+        SysRole role = getRoleByIdOrThrow(trimmedId);
 
-        // 基于数据库查询到的实际角色ID判断是否是超级管理员（不允许删除）
-        if (ADMIN_ROLE_ID.equals(role.getId())) {
+        // 检查是否是超级管理员
+        if (isAdminRole(role.getId())) {
             throw new BusinessException("超级管理员角色不能删除");
         }
 
         // 检查是否有关联用户
-        long userCount = userRoleMapper.selectCount(
-                new LambdaQueryWrapper<com.vben.admin.model.entity.SysUserRole>()
-                        .eq(com.vben.admin.model.entity.SysUserRole::getRoleId, trimmedId)
-        );
-        if (userCount > 0) {
-            throw new BusinessException("角色已关联用户，无法删除");
-        }
+        checkRoleHasUsers(trimmedId);
 
         // 删除角色菜单关联
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, trimmedId));
@@ -192,7 +145,103 @@ public class RoleServiceImpl implements RoleService {
     }
 
     /**
+     * 判断是否是超级管理员角色
+     *
+     * @param roleId 角色ID
+     * @return 是否是超级管理员
+     */
+    private boolean isAdminRole(String roleId) {
+        return ADMIN_ROLE_ID.equals(roleId);
+    }
+
+    /**
+     * 根据ID获取角色，如果不存在则抛出异常
+     *
+     * @param id 角色ID
+     * @return 角色实体
+     * @throws BusinessException 如果角色不存在
+     */
+    private SysRole getRoleByIdOrThrow(String id) {
+        SysRole role = roleMapper.selectById(id);
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
+        return role;
+    }
+
+    /**
+     * 更新角色基本信息
+     *
+     * @param role      角色实体
+     * @param roleDTO   角色DTO
+     * @param isAdminRole 是否是超级管理员
+     */
+    private void updateRoleBasicInfo(SysRole role, RoleDTO roleDTO, boolean isAdminRole) {
+        // 更新名称（超级管理员不允许修改）
+        if (StringUtils.hasText(roleDTO.getName())) {
+            if (isAdminRole) {
+                throw new BusinessException("超级管理员角色不能修改");
+            }
+            role.setName(roleDTO.getName());
+        }
+
+        // 更新状态（超级管理员不允许禁用）
+        if (roleDTO.getStatus() != null) {
+            if (isAdminRole && roleDTO.getStatus() == 0) {
+                throw new BusinessException("超级管理员角色不能禁用");
+            }
+            role.setStatus(roleDTO.getStatus());
+        }
+
+        // 更新备注（允许修改）
+        if (StringUtils.hasText(roleDTO.getRemark())) {
+            role.setRemark(roleDTO.getRemark());
+        } else if (roleDTO.getRemark() != null) {
+            // 允许清空备注
+            role.setRemark(null);
+        }
+    }
+
+    /**
+     * 更新角色权限关联
+     *
+     * @param roleId       角色ID
+     * @param permissions  权限列表（菜单ID列表）
+     */
+    private void updateRolePermissions(String roleId, List<String> permissions) {
+        // 如果传了 permissions，则更新；如果传了空数组，则清空；如果不传，则保持原样
+        if (permissions != null) {
+            // 删除原有关联
+            roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
+
+            // 保存新的关联（如果权限列表不为空）
+            if (!permissions.isEmpty()) {
+                saveRoleMenus(roleId, permissions);
+            }
+        }
+    }
+
+    /**
+     * 检查角色是否有关联用户
+     *
+     * @param roleId 角色ID
+     * @throws BusinessException 如果角色已关联用户
+     */
+    private void checkRoleHasUsers(String roleId) {
+        long userCount = userRoleMapper.selectCount(
+                new LambdaQueryWrapper<com.vben.admin.model.entity.SysUserRole>()
+                        .eq(com.vben.admin.model.entity.SysUserRole::getRoleId, roleId)
+        );
+        if (userCount > 0) {
+            throw new BusinessException("角色已关联用户，无法删除");
+        }
+    }
+
+    /**
      * 保存角色菜单关联
+     *
+     * @param roleId  角色ID
+     * @param menuIds 菜单ID列表
      */
     private void saveRoleMenus(String roleId, List<String> menuIds) {
         for (String menuId : menuIds) {
