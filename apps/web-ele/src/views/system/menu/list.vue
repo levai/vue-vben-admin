@@ -102,6 +102,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       parentField: 'pid',
       rowField: 'id',
       transform: true, // 启用行拖拽时必须为 true
+      reserve: true, // 保留展开状态
     },
   },
 });
