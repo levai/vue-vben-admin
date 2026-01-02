@@ -1,0 +1,1539 @@
+---
+alwaysApply: true
+---
+
+# 后端开发规范
+
+## 📋 目录
+
+1. [技术栈分析](#技术栈分析)
+2. [项目架构概览](#项目架构概览)
+3. [Controller 层设计](#controller-层设计)
+4. [Service 层设计](#service-层设计)
+5. [数据库操作设计](#数据库操作设计)
+6. [API 设计规范](#api-设计规范)
+7. [异常处理设计](#异常处理设计)
+8. [参数校验设计](#参数校验设计)
+9. [工具类使用规范](#工具类使用规范)
+10. [实际使用示例](#实际使用示例)
+11. [后续开发模式](#后续开发模式)
+12. [最佳实践建议](#最佳实践建议)
+
+---
+
+## 技术栈分析
+
+> 📖 **详细技术栈分析文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md)
+
+### 核心框架
+
+| 技术            | 版本   | 用途     | 说明               |
+| --------------- | ------ | -------- | ------------------ |
+| **Spring Boot** | 2.7.18 | 核心框架 | 企业级应用开发框架 |
+| **Java**        | 11     | 编程语言 | LTS 版本，稳定可靠 |
+| **Maven**       | 3.6+   | 构建工具 | 依赖管理和项目构建 |
+
+### 数据层
+
+| 技术             | 版本   | 用途         | 特性                    |
+| ---------------- | ------ | ------------ | ----------------------- |
+| **MySQL**        | 8.0+   | 关系型数据库 | 主数据库                |
+| **MyBatis Plus** | 3.5.9  | ORM 框架     | 增强 MyBatis，简化 CRUD |
+| **Druid**        | 1.2.16 | 数据库连接池 | 监控、统计、SQL 防火墙  |
+
+**MyBatis Plus 特性**：
+
+- ✅ 分页插件：`PaginationInnerInterceptor`
+- ✅ 逻辑删除：`@TableLogic`（自动过滤 deleted=1）
+- ✅ 自动填充：`FieldFillHandler`（自动填充 createTime、updateTime 等）
+- ✅ ID 生成策略：`assign_id`（雪花算法）
+- ✅ 类型安全：`LambdaQueryWrapper`（避免字符串拼接）
+
+### 安全认证
+
+| 技术                | 版本   | 用途       | 配置           |
+| ------------------- | ------ | ---------- | -------------- |
+| **Spring Security** | 2.7.18 | 安全框架   | JWT 无状态认证 |
+| **JWT (jjwt)**      | 0.7.0  | Token 认证 | HS512 签名算法 |
+
+**JWT 配置**：
+
+- **AccessToken**：2小时（7200000ms）- 符合业界标准
+- **RefreshToken**：7天（604800000ms）- 符合业界标准
+- **签名算法**：HS512（HMAC-SHA512）
+
+**Spring Security 配置**：
+
+- ✅ 无状态 Session（STATELESS）
+- ✅ JWT 认证过滤器（`JwtAuthenticationFilter`）
+- ✅ 自定义认证入口点（`CustomAuthenticationEntryPoint`）
+- ✅ 自定义拒绝处理器（`CustomAccessDeniedHandler`）
+
+### API 文档
+
+| 技术        | 版本  | 用途     | 特性             |
+| ----------- | ----- | -------- | ---------------- |
+| **Knife4j** | 3.0.3 | API 文档 | 基于 Swagger 3.0 |
+
+**Swagger 注解规范**：
+
+- Controller 类：`@Api(tags = "...")`（Springfox）
+- Controller 方法：`@Operation(summary = "...")`（OpenAPI 3.0）
+- Controller 参数：`@Parameter(description = "...")`（OpenAPI 3.0）
+- DTO/VO 字段：`@Schema(description = "...")`（OpenAPI 3.0）
+
+### 工具库
+
+| 技术                       | 版本   | 用途         | 常用注解/类                                    |
+| -------------------------- | ------ | ------------ | ---------------------------------------------- |
+| **Lombok**                 | 1.18.32 | 代码生成     | `@Data`、`@RequiredArgsConstructor`、`@Slf4j` |
+| **Hutool**                 | 5.8.26 | Java 工具类库 | 字符串、日期、加密等工具                       |
+| **Apache Commons Lang3**   | -      | 工具类       | 字符串、集合等工具                              |
+
+### 其他依赖
+
+| 技术                       | 版本  | 用途         | 说明                  |
+| -------------------------- | ----- | ------------ | --------------------- |
+| **Spring Boot Validation** | -     | 参数校验     | Bean Validation       |
+| **Spring Boot AOP**        | -     | 面向切面编程 | 操作日志切面          |
+| **JAXB API**               | 2.3.1 | XML 绑定     | Java 11+ 需要单独添加 |
+
+---
+
+## 项目架构概览
+
+Vue Vben Admin 后端服务采用**标准分层架构**设计，支持：
+
+- ✅ **分层清晰**：Controller → Service → Mapper → Database
+- ✅ **统一响应**：`BaseResult<T>` 和 `PageResult<T>`
+- ✅ **类型安全**：使用 `LambdaQueryWrapper` 和泛型
+- ✅ **代码复用**：工具类减少重复代码
+- ✅ **RESTful 设计**：符合 REST 规范
+
+### 项目结构
+
+```
+com.vben.admin/
+├── BackendServiceApplication.java    # 启动类（必需）
+├── config/                           # 配置层
+│   ├── SecurityConfiguration.java   # Spring Security 配置
+│   ├── MybatisPlusConfig.java      # MyBatis Plus 配置
+│   ├── Knife4jConfig.java           # Swagger 配置
+│   ├── CorsConfig.java              # 跨域配置
+│   ├── AsyncConfig.java             # 异步配置
+│   └── FieldFillHandler.java        # 字段自动填充
+├── controller/                       # 控制层（RESTful API）
+│   ├── AuthController.java          # 认证控制器（/auth）
+│   ├── UserController.java          # 用户管理控制器（/system/user）
+│   ├── UserProfileController.java   # 用户个人中心控制器（/user）
+│   ├── RoleController.java          # 角色管理控制器（/system/role）
+│   ├── MenuController.java          # 菜单管理控制器（/system/menu）
+│   ├── MenuRouterController.java    # 菜单路由控制器（/menu）
+│   ├── DeptController.java          # 部门管理控制器（/system/dept）
+│   └── OperationLogController.java  # 操作日志管理控制器（/system/operation-log）
+├── service/                          # 服务层
+│   ├── AuthService.java             # 认证服务接口
+│   ├── UserService.java            # 用户服务接口
+│   ├── RoleService.java            # 角色服务接口
+│   ├── MenuService.java            # 菜单服务接口
+│   ├── DeptService.java            # 部门服务接口
+│   ├── OperationLogService.java    # 操作日志服务接口
+│   └── impl/                        # 服务实现
+│       ├── AuthServiceImpl.java
+│       ├── UserServiceImpl.java
+│       └── ...
+├── mapper/                          # 数据访问层（MyBatis）
+│   ├── UserMapper.java
+│   ├── RoleMapper.java
+│   ├── MenuMapper.java
+│   ├── DeptMapper.java
+│   ├── OperationLogMapper.java
+│   ├── PermissionMapper.java        # 权限码 Mapper（内部使用）
+│   ├── RoleMenuMapper.java          # 角色菜单关联 Mapper（内部使用）
+│   └── UserRoleMapper.java          # 用户角色关联 Mapper（内部使用）
+├── model/                           # 数据模型层
+│   ├── entity/                     # 实体类（数据库表映射）
+│   │   ├── SysUser.java
+│   │   ├── SysRole.java
+│   │   ├── SysMenu.java
+│   │   ├── SysDept.java
+│   │   ├── SysOperationLog.java
+│   │   ├── SysPermission.java       # 权限码实体（内部使用）
+│   │   ├── SysRoleMenu.java         # 角色菜单关联实体（内部使用）
+│   │   └── SysUserRole.java         # 用户角色关联实体（内部使用）
+│   ├── dto/                        # 数据传输对象（请求参数）
+│   │   ├── UserDTO.java
+│   │   ├── RoleDTO.java
+│   │   ├── MenuDTO.java
+│   │   ├── DeptDTO.java
+│   │   ├── OperationLogQueryDTO.java
+│   │   ├── LoginDTO.java            # 登录 DTO
+│   │   ├── UserOptionQueryDTO.java  # 用户选项查询 DTO
+│   │   ├── RoleOptionQueryDTO.java  # 角色选项查询 DTO
+│   │   ├── MenuOrderDTO.java        # 菜单排序 DTO
+│   │   ├── BatchMenuOrderDTO.java   # 批量菜单排序 DTO
+│   │   └── OptionQueryDTO.java      # 通用选项查询 DTO
+│   └── vo/                         # 视图对象（响应数据）
+│       ├── UserVO.java
+│       ├── RoleVO.java
+│       ├── MenuVO.java
+│       ├── DeptVO.java
+│       ├── OperationLogVO.java
+│       ├── LoginResultVO.java      # 登录结果 VO
+│       └── TreeOptionVO.java       # 树形选项 VO
+└── core/                            # 核心功能
+    ├── enums/                      # 枚举类
+    │   ├── OperationType.java       # 操作类型枚举
+    │   ├── ErrMsg.java              # 错误消息枚举
+    │   └── BaseErrMsg.java          # 基础错误消息枚举
+    ├── exception/                  # 异常处理
+    │   ├── BusinessException.java   # 业务异常
+    │   ├── GlobalExceptionHandler.java  # 全局异常处理器
+    │   └── ...
+    ├── filter/                     # 过滤器
+    │   └── JwtAuthenticationFilter.java  # JWT 认证过滤器
+    ├── model/                      # 通用模型
+    │   ├── BaseResult.java         # 统一响应格式
+    │   └── PageResult.java         # 分页响应格式
+    ├── utils/                       # 工具类（统一位置）✅
+    │   ├── JwtUtils.java           # JWT 工具
+    │   ├── SecurityUtils.java      # 安全工具
+    │   ├── CookieUtils.java        # Cookie 工具
+    │   ├── QueryHelper.java        # 查询辅助工具
+    │   ├── OperationInfoParser.java  # 操作信息解析器
+    │   ├── BrowserInfoParser.java  # 浏览器信息解析器
+    │   ├── MenuModuleResolver.java # 菜单模块解析器
+    │   └── SensitiveDataFilter.java # 敏感信息过滤
+    ├── aspect/                      # AOP 切面
+    │   └── OperationLogAspect.java # 操作日志切面
+    └── task/                        # 定时任务
+        └── OperationLogCleanupTask.java  # 操作日志清理任务
+```
+
+### 请求处理流程
+
+```
+HTTP 请求
+  ↓
+Controller 层（参数校验、路由映射）
+  ↓
+Service 层（业务逻辑处理）
+  ↓
+Mapper 层（数据库操作）
+  ↓
+Database（MySQL）
+  ↓
+返回结果（统一格式 BaseResult<T>）
+```
+
+---
+
+## Controller 层设计
+
+### 1. Controller 标准结构
+
+Controller 层负责接收 HTTP 请求，进行参数校验，调用 Service 层处理业务逻辑：
+
+```java
+@Api(tags = "系统用户管理")  // ✅ 使用 @Api（Springfox 原生支持）
+@RestController
+@RequestMapping("/system/user")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    @Operation(summary = "获取用户列表", description = "获取用户列表（支持分页和搜索）")
+    @GetMapping
+    public BaseResult<PageResult<UserVO>> getList(
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String realName,
+            @RequestParam(required = false) String deptId,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+        PageResult<UserVO> result = userService.getUserList(page, pageSize, search, username, realName, deptId, status, startTime, endTime);
+        return new BaseResult<>(result);
+    }
+
+    @Operation(summary = "获取用户信息", description = "根据ID获取用户详细信息")
+    @GetMapping("/{id}")
+    public BaseResult<UserVO> getById(@PathVariable String id) {
+        UserVO user = userService.getUserById(id);
+        return new BaseResult<>(user);
+    }
+
+    @Operation(summary = "创建用户", description = "创建新用户")
+    @PostMapping
+    public BaseResult<String> create(@Validated(UserDTO.Create.class) @RequestBody UserDTO userDTO) {
+        String id = userService.createUser(userDTO);
+        return new BaseResult<>(id);
+    }
+
+    @Operation(summary = "更新用户", description = "更新用户信息")
+    @PutMapping("/{id}")
+    public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+        userService.updateUser(id, userDTO);
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "删除用户", description = "删除用户（逻辑删除）")
+    @DeleteMapping("/{id}")
+    public BaseResult<Boolean> delete(@PathVariable String id) {
+        userService.deleteUser(id);
+        return new BaseResult<>(true);
+    }
+
+    @Operation(summary = "获取用户选项列表", description = "获取用户选项列表（用于下拉选项，支持 limit 限制，支持条件查询，返回完整用户信息，前端自行处理 label 和 value）")
+    @GetMapping("/options")
+    public BaseResult<PageResult<UserVO>> getOptions(UserOptionQueryDTO queryDTO) {
+        PageResult<UserVO> result = userService.getUserOptions(queryDTO);
+        return new BaseResult<>(result);
+    }
+}
+```
+
+**设计要点**：
+1. **使用 `@RequiredArgsConstructor`**：替代 `@Autowired`，通过构造函数注入依赖
+2. **统一返回类型**：所有接口返回 `BaseResult<T>`
+3. **RESTful 设计**：使用标准 HTTP 方法（GET、POST、PUT、DELETE）
+4. **参数校验**：使用 `@Valid` 或 `@Validated` 进行分组校验
+5. **Swagger 注解**：
+   - Controller 类使用 `@Api(tags = "...")`（Springfox 原生支持）
+   - Controller 方法使用 `@Operation(summary = "...")`（OpenAPI 3.0）
+   - Controller 参数使用 `@Parameter(description = "...")`（OpenAPI 3.0）
+   - DTO/VO 字段使用 `@Schema(description = "...")`（OpenAPI 3.0）
+
+**命名规范**：
+- ✅ **业务名称完全一致**：Controller、Service、Mapper、Entity、DTO、VO 使用相同的业务名称
+- ✅ **Controller 命名**：`业务名称` + `Controller`（如 `UserController`、`RoleController`）
+- ✅ **Entity 命名**：`表前缀` + `业务名称`（如 `SysUser` 对应 `sys_user` 表）
+- ✅ **通过路径区分功能**：管理端 CRUD 使用 `/system/*`，用户个人中心使用 `/*`
+
+### 2. RESTful 路由设计
+
+**标准 CRUD 接口**（所有模块统一使用资源根路径）：
+
+```
+GET    /system/user              # 列表（分页）
+GET    /system/user/{id}         # 详情
+POST   /system/user              # 创建
+PUT    /system/user/{id}         # 更新
+DELETE /system/user/{id}         # 删除
+```
+
+**所有系统模块统一规范**：
+
+```
+GET    /system/user              # 用户列表
+GET    /system/role              # 角色列表
+GET    /system/menu              # 菜单列表
+GET    /system/dept              # 部门列表
+GET    /system/operation-log     # 操作日志列表
+```
+
+**子资源接口**：
+
+```
+GET    /system/user/options      # 选项列表（limit 限制）
+PUT    /system/user/{id}/status  # 更新状态（动作）
+PUT    /system/user/{id}/password # 重置密码（动作）
+```
+
+**规范要点**：
+- ✅ **统一使用资源根路径**：列表接口使用 `GET /resource`，不使用 `/list` 后缀
+- ✅ **符合 RESTful 规范**：资源即 URL，通过 HTTP 方法区分操作
+- ✅ **保持一致性**：所有模块遵循相同的路由设计规范
+
+### 3. 统一返回格式
+
+**所有接口统一使用 `BaseResult<T>`**：
+
+```java:14:77:apps/backend-service/src/main/java/com/vben/admin/core/model/BaseResult.java
+@Data
+public class BaseResult<E> implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 状态码：0成功，其他为失败
+     */
+    public int code;
+
+    /**
+     * 成功为ok，其他为失败原因
+     */
+    public String message;
+
+    /**
+     * 数据结果集
+     */
+    public E data;
+
+    public BaseResult() {
+        this.code = ErrMsg.DEFAULT_SUCCESS_CODE;
+        this.message = ErrMsg.DEFAULT_SUCCESS_MESSAGE;
+    }
+
+    public BaseResult(E data) {
+        this();
+        this.data = data;
+    }
+}
+```
+
+**响应格式**：
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": T
+}
+```
+
+**分页接口返回 `PageResult<T>`**：
+
+```java:15:41:apps/backend-service/src/main/java/com/vben/admin/core/model/PageResult.java
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PageResult<T> {
+
+    /**
+     * 数据列表
+     */
+    private List<T> items;
+
+    /**
+     * 总记录数
+     */
+    private Long total;
+
+    /**
+     * 创建分页结果
+     */
+    public static <T> PageResult<T> of(List<T> items, Long total) {
+        return new PageResult<>(items, total);
+    }
+}
+```
+
+**分页响应格式**：
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "items": List<T>,
+    "total": 100
+  }
+}
+```
+
+---
+
+## Service 层设计
+
+### 1. Service 接口设计
+
+Service 接口定义业务方法，使用清晰的 JavaDoc 注释：
+
+```java:13:85:apps/backend-service/src/main/java/com/vben/admin/service/UserService.java
+public interface UserService {
+
+    /**
+     * 获取用户列表（支持分页）
+     *
+     * @param page      页码（从1开始）
+     * @param pageSize  每页大小
+     * @param search    搜索关键词（模糊查询用户名和真实姓名，优先级高于 username/realName）
+     * @param username  用户名（模糊查询，与 search 互斥）
+     * @param realName  真实姓名（模糊查询，与 search 互斥）
+     * @param deptId    部门ID
+     * @param status    状态（0-禁用，1-启用）
+     * @param startTime 开始时间（格式：yyyy-MM-dd）
+     * @param endTime   结束时间（格式：yyyy-MM-dd）
+     * @return 分页结果
+     */
+    PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime);
+
+    /**
+     * 获取用户选项列表（用于下拉选项，支持 limit 限制）
+     *
+     * @param queryDTO 查询条件
+     * @return 用户选项列表（包含所有用户字段，前端自行处理 label 和 value）
+     */
+    PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO);
+}
+```
+
+### 2. Service 实现类设计
+
+Service 实现类使用 `@Service` 和 `@RequiredArgsConstructor`，实现业务逻辑：
+
+```java
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
+        // 构建查询条件
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+
+        // 搜索关键词处理（优先级高于 username/realName）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysUser>of(search)
+                        .searchField(SysUser::getUsername)
+                        .searchField(SysUser::getRealName)
+                        .fallbackField(SysUser::getUsername, username)
+                        .fallbackField(SysUser::getRealName, realName)
+        );
+
+        // 其他查询条件
+        if (StringUtils.hasText(deptId)) {
+            queryWrapper.eq(SysUser::getDeptId, deptId);
+        }
+        if (status != null) {
+            queryWrapper.eq(SysUser::getStatus, status);
+        }
+
+        // 时间范围查询
+        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
+
+        queryWrapper.orderByDesc(SysUser::getCreateTime);
+
+        // 分页查询
+        Page<SysUser> pageParam = new Page<>(page, pageSize);
+        IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
+
+        // 转换为VO
+        List<UserVO> voList = pageResult.getRecords().stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
+
+        return PageResult.of(voList, pageResult.getTotal());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createUser(UserDTO userDTO) {
+        // 验证用户唯一性
+        validateUserUniqueness(userDTO, null);
+
+        // 创建用户实体
+        SysUser user = buildUserEntity(userDTO, null);
+        userMapper.insert(user);
+
+        // 保存用户角色关联
+        if (userDTO.getRoleIds() != null && !userDTO.getRoleIds().isEmpty()) {
+            saveUserRoles(user.getId(), userDTO.getRoleIds());
+        }
+
+        return user.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUser(String id, UserDTO userDTO) {
+        // 查询用户
+        SysUser user = getUserByIdOrThrow(id);
+
+        // 验证用户唯一性（只验证变更的字段）
+        validateUserUniquenessForUpdate(user, userDTO, id);
+
+        // 更新用户基本信息
+        updateUserBasicInfo(user, userDTO);
+        userMapper.updateById(user);
+
+        // 更新用户角色关联
+        updateUserRoles(id, userDTO.getRoleIds());
+    }
+
+    /**
+     * 根据ID获取用户，如果不存在则抛出异常
+     */
+    private SysUser getUserByIdOrThrow(String id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        return user;
+    }
+
+    /**
+     * 验证用户唯一性（创建时）
+     */
+    private void validateUserUniqueness(UserDTO userDTO, String id) {
+        if (StringUtils.hasText(userDTO.getUsername())) {
+            checkUsernameNotExists(userDTO.getUsername(), id);
+        }
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            checkPhoneNotExists(userDTO.getPhone(), id);
+        }
+        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+            checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
+        }
+    }
+
+    // ... 其他私有方法
+}
+```
+
+**设计要点**：
+1. **使用 `@Service`**：标识服务层组件
+2. **使用 `@RequiredArgsConstructor`**：构造函数注入依赖
+3. **事务管理**：写操作使用 `@Transactional(rollbackFor = Exception.class)`
+4. **使用工具类**：时间范围查询使用 `QueryHelper.applyTimeRange()`，搜索使用 `QueryHelper.applySearch()`
+5. **类型安全**：使用 `LambdaQueryWrapper` 而不是字符串拼接
+6. **VO 转换**：使用 `BeanUtils.copyProperties()` 或手动映射
+7. **代码优化**：提取私有方法，提高代码可读性和可维护性
+
+### 3. Service 实现类优化模式
+
+**统一的优化模式**（所有 Service 实现类遵循）：
+
+#### 3.1 实体查询方法
+
+```java
+/**
+ * 根据ID获取实体，如果不存在则抛出异常
+ *
+ * @param id 实体ID
+ * @return 实体对象
+ * @throws BusinessException 如果实体不存在
+ */
+private SysUser getUserByIdOrThrow(String id) {
+    SysUser user = userMapper.selectById(id);
+    if (user == null) {
+        throw new BusinessException("用户不存在");
+    }
+    return user;
+}
+```
+
+**命名规范**：`get{Entity}ByIdOrThrow(String id)`
+
+#### 3.2 验证方法
+
+```java
+/**
+ * 验证用户唯一性（创建时）
+ */
+private void validateUserUniqueness(UserDTO userDTO, String id) {
+    if (StringUtils.hasText(userDTO.getUsername())) {
+        checkUsernameNotExists(userDTO.getUsername(), id);
+    }
+    if (StringUtils.hasText(userDTO.getPhone())) {
+        checkPhoneNotExists(userDTO.getPhone(), id);
+    }
+}
+
+/**
+ * 检查用户名不存在
+ */
+private void checkUsernameNotExists(String username, String id) {
+    LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+            .eq(SysUser::getUsername, username);
+    if (id != null) {
+        queryWrapper.ne(SysUser::getId, id);
+    }
+    long count = userMapper.selectCount(queryWrapper);
+    if (count > 0) {
+        throw new BusinessException("用户名已存在");
+    }
+}
+```
+
+**命名规范**：
+- 验证方法：`validate{Field}NotExists()` 或 `validate{Entity}Uniqueness()`
+- 检查方法：`check{Field}NotExists()`
+
+#### 3.3 构建方法
+
+```java
+/**
+ * 构建用户实体
+ *
+ * @param userDTO 用户DTO
+ * @param id      用户ID（更新时传入，创建时传入null）
+ * @return 用户实体
+ */
+private SysUser buildUserEntity(UserDTO userDTO, String id) {
+    SysUser user = new SysUser();
+    user.setUsername(userDTO.getUsername());
+    // 密码处理：如果未提供密码，则使用默认密码
+    String password = StringUtils.hasText(userDTO.getPassword())
+            ? userDTO.getPassword()
+            : "88888888";
+    user.setPassword(passwordEncoder.encode(password));
+    user.setRealName(userDTO.getRealName());
+    // ... 其他字段设置
+    user.setStatus(userDTO.getStatus() != null ? userDTO.getStatus() : 1);
+    return user;
+}
+```
+
+**命名规范**：`build{Entity}Entity(DTO dto, String id)`
+
+#### 3.4 更新方法
+
+```java
+/**
+ * 更新用户基本信息
+ *
+ * @param user    用户实体
+ * @param userDTO 用户DTO
+ */
+private void updateUserBasicInfo(SysUser user, UserDTO userDTO) {
+    if (StringUtils.hasText(userDTO.getUsername())) {
+        user.setUsername(userDTO.getUsername());
+    }
+    if (StringUtils.hasText(userDTO.getPassword())) {
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+    }
+    // ... 其他字段更新
+}
+```
+
+**命名规范**：`update{Entity}BasicInfo(Entity entity, DTO dto)`
+
+#### 3.5 工具方法
+
+```java
+/**
+ * 获取用户名称（优先使用真实姓名，否则使用用户名）
+ *
+ * @param userId 用户ID
+ * @return 用户名称
+ */
+private String getUserName(String userId) {
+    SysUser user = userMapper.selectById(userId);
+    if (user != null) {
+        return user.getRealName() != null ? user.getRealName() : user.getUsername();
+    }
+    return null;
+}
+```
+
+**命名规范**：根据具体功能命名，如 `getUserName()`、`getDeptName()` 等
+
+### 4. Service 层优化效果
+
+**优化前**：
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public String createUser(UserDTO userDTO) {
+    // 检查用户名是否已存在
+    long count = userMapper.selectCount(
+            new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUsername, userDTO.getUsername())
+    );
+    if (count > 0) {
+        throw new BusinessException("用户名已存在");
+    }
+
+    // 检查手机号是否已存在
+    long phoneCount = userMapper.selectCount(
+            new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getPhone, userDTO.getPhone())
+    );
+    if (phoneCount > 0) {
+        throw new BusinessException("手机号已存在");
+    }
+
+    // 创建用户
+    SysUser user = new SysUser();
+    user.setUsername(userDTO.getUsername());
+    // ... 大量字段设置代码
+    userMapper.insert(user);
+    return user.getId();
+}
+```
+
+**优化后**：
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public String createUser(UserDTO userDTO) {
+    // 验证用户唯一性
+    validateUserUniqueness(userDTO, null);
+
+    // 创建用户实体
+    SysUser user = buildUserEntity(userDTO, null);
+    userMapper.insert(user);
+
+    // 保存用户角色关联
+    if (userDTO.getRoleIds() != null && !userDTO.getRoleIds().isEmpty()) {
+        saveUserRoles(user.getId(), userDTO.getRoleIds());
+    }
+
+    return user.getId();
+}
+```
+
+**优化效果**：
+- ✅ **可读性提升**：主方法逻辑清晰，职责单一
+- ✅ **可维护性提升**：提取的私有方法便于复用和测试
+- ✅ **代码量减少**：消除重复代码，提高代码质量
+- ✅ **统一模式**：所有 Service 实现类遵循相同的优化模式
+
+---
+
+## 数据库操作设计
+
+### 1. MyBatis Plus 查询条件构建
+
+**使用 `LambdaQueryWrapper`（类型安全）**：
+
+```java
+// ✅ 正确：使用 LambdaQueryWrapper
+LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+queryWrapper.like(SysUser::getUsername, keyword);
+queryWrapper.eq(SysUser::getStatus, 1);
+
+// ❌ 错误：避免字符串拼接
+QueryWrapper<SysUser> queryWrapper = new QueryWrapper<>();
+queryWrapper.like("username", keyword);  // 不推荐
+```
+
+### 2. 分页查询
+
+```java
+// 分页查询
+Page<SysUser> pageParam = new Page<>(page, pageSize);
+IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
+
+// 转换为VO
+List<UserVO> voList = pageResult.getRecords().stream()
+        .map(this::convertToVO)
+        .collect(Collectors.toList());
+
+return PageResult.of(voList, pageResult.getTotal());
+```
+
+### 3. 逻辑删除
+
+**Entity 中使用 `@TableLogic`**：
+
+```java
+@TableLogic
+private Integer deleted;
+```
+
+**查询时自动过滤 deleted=1 的记录，删除时自动更新 deleted=1，不物理删除**
+
+### 4. 工具类使用
+
+**时间范围查询**：
+
+```java:37:64:apps/backend-service/src/main/java/com/vben/admin/core/utils/QueryHelper.java
+public static <T> void applyTimeRange(
+        LambdaQueryWrapper<T> queryWrapper,
+        String startTime,
+        String endTime,
+        SFunction<T, ?> timeField
+) {
+    // 开始时间查询
+    if (StringUtils.hasText(startTime)) {
+        try {
+            LocalDate startDate = LocalDate.parse(startTime, DateTimeFormatter.ISO_LOCAL_DATE);
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            queryWrapper.ge(timeField, startDateTime);
+        } catch (DateTimeParseException e) {
+            log.warn("无效的开始时间格式: {}, 错误: {}", startTime, e.getMessage());
+        }
+    }
+
+    // 结束时间查询
+    if (StringUtils.hasText(endTime)) {
+        try {
+            LocalDate endDate = LocalDate.parse(endTime, DateTimeFormatter.ISO_LOCAL_DATE);
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+            queryWrapper.le(timeField, endDateTime);
+        } catch (DateTimeParseException e) {
+            log.warn("无效的结束时间格式: {}, 错误: {}", endTime, e.getMessage());
+        }
+    }
+}
+```
+
+**Limit 限制**：
+
+```java:74:84:apps/backend-service/src/main/java/com/vben/admin/core/utils/QueryHelper.java
+public static <T> List<T> applyLimit(List<T> list, Integer limit) {
+    if (list == null || list.isEmpty()) {
+        return list;
+    }
+
+    int maxLimit = (limit != null && limit > 0) ? limit : DEFAULT_LIMIT;
+    if (list.size() > maxLimit) {
+        return list.subList(0, maxLimit);
+    }
+    return list;
+}
+```
+
+---
+
+## API 设计规范
+
+### 1. List 接口参数设计
+
+**标准参数**：
+
+```java
+@GetMapping
+public BaseResult<PageResult<UserVO>> getList(
+    @RequestParam(required = false, defaultValue = "1") Integer page,        // 页码，默认1
+    @RequestParam(required = false, defaultValue = "20") Integer pageSize, // 每页大小，默认20
+    @RequestParam(required = false) String search,                          // 搜索关键词
+    @RequestParam(required = false) String username,                        // 具体字段查询
+    // ... 其他查询条件
+)
+```
+
+**规范**：
+- `page` 和 `pageSize` 有默认值
+- `search` 参数优先级高于具体字段
+- 时间范围使用 `startTime` 和 `endTime`（格式：`yyyy-MM-dd`）
+
+### 2. Options 接口参数设计
+
+**使用 DTO 封装参数**：
+
+```java:10:52:apps/backend-service/src/main/java/com/vben/admin/model/dto/UserOptionQueryDTO.java
+@Data
+public class UserOptionQueryDTO {
+
+    /**
+     * 搜索关键词（模糊查询用户名和真实姓名，优先级高于 username/realName）
+     */
+    private String search;
+
+    /**
+     * 用户名（模糊查询，与 search 互斥）
+     */
+    private String username;
+
+    /**
+     * 真实姓名（模糊查询，与 search 互斥）
+     */
+    private String realName;
+
+    /**
+     * 部门ID
+     */
+    private String deptId;
+
+    /**
+     * 状态（0-禁用，1-启用）
+     */
+    private Integer status;
+
+    /**
+     * 开始时间（格式：yyyy-MM-dd）
+     */
+    private String startTime;
+
+    /**
+     * 结束时间（格式：yyyy-MM-dd）
+     */
+    private String endTime;
+
+    /**
+     * 最大返回数量（默认 1000，防止数据量过大）
+     */
+    private Integer limit = 1000;
+}
+```
+
+**规范**：
+- DTO 中 `limit` 有默认值（1000）
+- 支持所有查询条件（与 List 接口一致）
+- 不使用分页，直接返回所有数据（受 limit 限制）
+
+### 3. 查询参数语义化
+
+**统一使用 `search` 代替 `keyword`**：
+
+```java
+// ✅ 正确
+@RequestParam(required = false) String search
+
+// ❌ 错误
+@RequestParam(required = false) String keyword
+```
+
+---
+
+## 异常处理设计
+
+### 1. 统一异常处理
+
+**全局异常处理器**：
+
+```java:26:76:apps/backend-service/src/main/java/com/vben/admin/core/exception/GlobalExceptionHandler.java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BusinessException.class)
+    public BaseResult<?> handleBusinessException(BusinessException e) {
+        return BaseResult.error(e.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public BaseResult<?> handleValidationException(MethodArgumentNotValidException e) {
+        // 参数校验异常处理
+    }
+}
+```
+
+### 2. 业务异常
+
+**使用 `BusinessException`**：
+
+```java
+if (user == null) {
+    throw new BusinessException("用户不存在");
+}
+
+if (count > 0) {
+    throw new BusinessException("用户名已存在");
+}
+```
+
+**规范**：
+- 异常消息要清晰明确
+- 使用中文错误消息（便于前端显示）
+- 不要暴露系统内部信息
+
+---
+
+## 参数校验设计
+
+### 1. Bean Validation
+
+**DTO 中使用校验注解**：
+
+```java
+@Data
+public class UserDTO {
+
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 20, message = "用户名长度必须在3-20之间")
+    private String username;
+
+    @NotBlank(message = "密码不能为空")
+    @Size(min = 6, max = 50, message = "密码长度必须在6-50之间")
+    private String password;
+}
+```
+
+### 2. 分组校验
+
+**创建和更新使用不同校验规则**：
+
+```java
+public class UserDTO {
+
+    public interface Create {}
+    public interface Update {}
+
+    @NotBlank(groups = Create.class, message = "用户名不能为空")
+    private String username;
+
+    @NotBlank(groups = Create.class, message = "密码不能为空")
+    private String password;
+}
+
+// Controller 中使用
+@PostMapping
+public BaseResult<String> create(@Validated(UserDTO.Create.class) @RequestBody UserDTO userDTO) {
+    // ...
+}
+
+@PutMapping("/{id}")
+public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+    // ...
+}
+```
+
+---
+
+## 工具类使用规范
+
+### 1. QueryHelper 工具类
+
+**位置**：`apps/backend-service/src/main/java/com/vben/admin/core/utils/QueryHelper.java`
+
+**常用方法**：
+
+```java
+// 时间范围查询
+QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
+
+// Limit 限制
+List<UserVO> users = QueryHelper.applyLimit(users, limit);
+
+// 获取有效 limit
+int maxLimit = QueryHelper.getValidLimit(limit);
+```
+
+**常量**：
+
+```java:26:26:apps/backend-service/src/main/java/com/vben/admin/core/utils/QueryHelper.java
+public static final int DEFAULT_LIMIT = 1000;
+```
+
+### 2. 其他工具类
+
+**位置**：`apps/backend-service/src/main/java/com/vben/admin/core/utils/`
+
+**工具类列表**：
+- `SecurityUtils` - 安全工具（获取当前用户信息）
+- `JwtUtils` - JWT 工具
+- `CookieUtils` - Cookie 工具
+- `QueryHelper` - 查询辅助工具
+- `OperationInfoParser` - 操作信息解析器
+- `BrowserInfoParser` - 浏览器信息解析器
+- `MenuModuleResolver` - 菜单模块解析器
+- `SensitiveDataFilter` - 敏感信息过滤
+
+**说明**：
+- ✅ **统一位置**：所有工具类统一放在 `core/utils/` 目录
+- ✅ 工具类应该是静态方法或单例模式
+- ✅ 使用 `public static` 方法提供工具功能
+
+---
+
+## 实际使用示例
+
+### 1. 完整的 CRUD 接口实现
+
+```java
+@RestController
+@RequestMapping("/system/user")
+@RequiredArgsConstructor
+public class SystemUserController {
+
+    private final UserService userService;
+
+    // 列表查询
+    @GetMapping
+    public BaseResult<PageResult<UserVO>> getList(...) {
+        PageResult<UserVO> result = userService.getUserList(...);
+        return new BaseResult<>(result);
+    }
+
+    // 详情查询
+    @GetMapping("/{id}")
+    public BaseResult<UserVO> getById(@PathVariable String id) {
+        UserVO user = userService.getUserById(id);
+        return new BaseResult<>(user);
+    }
+
+    // 创建
+    @PostMapping
+    public BaseResult<String> create(@Validated(UserDTO.Create.class) @RequestBody UserDTO userDTO) {
+        String id = userService.createUser(userDTO);
+        return new BaseResult<>(id);
+    }
+
+    // 更新
+    @PutMapping("/{id}")
+    public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+        userService.updateUser(id, userDTO);
+        return new BaseResult<>(true);
+    }
+
+    // 删除
+    @DeleteMapping("/{id}")
+    public BaseResult<Boolean> delete(@PathVariable String id) {
+        userService.deleteUser(id);
+        return new BaseResult<>(true);
+    }
+}
+```
+
+### 2. Service 层查询实现
+
+```java
+@Override
+public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
+    // 构建查询条件
+    LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+
+    // 搜索关键词处理（优先级高于 username/realName）
+    QueryHelper.applySearch(
+            queryWrapper,
+            SearchQueryConfig.<SysUser>of(search)
+                    .searchField(SysUser::getUsername)
+                    .searchField(SysUser::getRealName)
+                    .fallbackField(SysUser::getUsername, username)
+                    .fallbackField(SysUser::getRealName, realName)
+    );
+
+    // 其他查询条件
+    if (StringUtils.hasText(deptId)) {
+        queryWrapper.eq(SysUser::getDeptId, deptId);
+    }
+    if (status != null) {
+        queryWrapper.eq(SysUser::getStatus, status);
+    }
+
+    // 时间范围查询
+    QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
+
+    queryWrapper.orderByDesc(SysUser::getCreateTime);
+
+    // 分页查询
+    Page<SysUser> pageParam = new Page<>(page, pageSize);
+    IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
+
+    // 转换为VO
+    List<UserVO> voList = pageResult.getRecords().stream()
+            .map(this::convertToVO)
+            .collect(Collectors.toList());
+
+    return PageResult.of(voList, pageResult.getTotal());
+}
+```
+
+### 3. Options 接口实现
+
+```java
+@Override
+public PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO) {
+    // 构建查询条件（与 List 接口一致）
+    LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+    // ... 查询条件构建
+
+    // 查询所有数据（不分页）
+    List<SysUser> users = userMapper.selectList(queryWrapper);
+
+    // 应用 limit 限制
+    users = QueryHelper.applyLimit(users, queryDTO.getLimit());
+
+    // 转换为VO
+    List<UserVO> voList = users.stream()
+            .map(this::convertToVO)
+            .collect(Collectors.toList());
+
+    return PageResult.of(voList, (long) voList.size());
+}
+```
+
+---
+
+## 命名规范
+
+### 核心原则：业务名称完全一致
+
+**业界最佳实践**：Controller、Entity、DTO、VO、Service、Mapper 使用**相同的业务名称**，只是后缀不同。
+
+| 层级 | 命名规则 | 示例 | 说明 |
+| --- | --- | --- | --- |
+| **Controller** | `业务名称` + `Controller` | `UserController` | 通过 `@RequestMapping` 路径区分功能 |
+| **Service 接口** | `业务名称` + `Service` | `UserService` | 业务服务接口 |
+| **Service 实现** | `业务名称` + `ServiceImpl` | `UserServiceImpl` | 业务服务实现 |
+| **Mapper** | `业务名称` + `Mapper` | `UserMapper` | 数据访问层 |
+| **Entity** | `表前缀` + `业务名称` | `SysUser` | 对应数据库表 `sys_user` |
+| **DTO** | `业务名称` + `DTO` | `UserDTO` | 数据传输对象 |
+| **VO** | `业务名称` + `VO` | `UserVO` | 视图对象 |
+
+### 命名对应关系表
+
+| 业务名称 | Controller | Service | Mapper | Entity | DTO | VO | 路径 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **User** | `UserController` | `UserService` | `UserMapper` | `SysUser` | `UserDTO` | `UserVO` | `/system/user` |
+| **User** | `UserProfileController` | `UserService`（复用） | `UserMapper`（复用） | `SysUser`（复用） | `UserDTO`（复用） | `UserVO`（复用） | `/user` |
+| **Role** | `RoleController` | `RoleService` | `RoleMapper` | `SysRole` | `RoleDTO` | `RoleVO` | `/system/role` |
+| **Menu** | `MenuController` | `MenuService` | `MenuMapper` | `SysMenu` | `MenuDTO` | `MenuVO` | `/system/menu` |
+| **Menu** | `MenuRouterController` | `MenuService`（复用） | `MenuMapper`（复用） | `SysMenu`（复用） | - | `MenuVO`（复用） | `/menu` |
+| **Dept** | `DeptController` | `DeptService` | `DeptMapper` | `SysDept` | `DeptDTO` | `DeptVO` | `/system/dept` |
+| **OperationLog** | `OperationLogController` | `OperationLogService` | `OperationLogMapper` | `SysOperationLog` | `OperationLogQueryDTO` | `OperationLogVO` | `/system/operation-log` |
+| **Auth** | `AuthController` | `AuthService` | - | - | `LoginDTO` | `LoginResultVO` | `/auth` |
+
+**说明**：
+- ✅ **业务名称完全一致**：所有层级使用相同的业务名称（如 `User`）
+- ✅ **Entity 有前缀**：`SysUser`（对应数据库表 `sys_user`），这是合理的
+- ✅ **通过路径区分功能**：管理端 CRUD 使用 `/system/*`，用户个人中心使用 `/*`
+- ✅ **符合业界标准**：遵循 Spring Boot 最佳实践
+
+### Swagger 注解规范
+
+**统一规范**：
+- **Controller 类**: `@Api(tags = "...")`（Springfox）
+- **Controller 方法**: `@Operation(summary = "...")`（OpenAPI 3.0）
+- **Controller 参数**: `@Parameter(description = "...")`（OpenAPI 3.0）
+- **DTO/VO 字段**: `@Schema(description = "...")`（OpenAPI 3.0）
+
+**示例**：
+```java
+// Controller 类
+@Api(tags = "系统用户管理")  // ✅ 使用 @Api（Springfox 原生支持）
+@RestController
+@RequestMapping("/system/user")
+public class UserController {
+    // ...
+}
+
+// DTO 字段
+@Schema(description = "用户名", example = "admin")
+private String username;
+```
+
+---
+
+## 总结
+
+Vue Vben Admin 后端开发规范特点：
+
+1. **分层清晰**：Controller → Service → Mapper → Database
+2. **统一响应**：`BaseResult<T>` 和 `PageResult<T>`
+3. **类型安全**：使用 `LambdaQueryWrapper` 和泛型
+4. **代码复用**：使用工具类减少重复代码
+5. **参数封装**：Options 接口使用 DTO
+6. **语义化命名**：使用 `search` 代替 `keyword`
+7. **RESTful 设计**：符合 REST 规范
+8. **异常处理**：统一异常处理和业务异常
+9. **命名规范**：业务名称完全一致，通过路径区分功能
+10. **工具类统一**：所有工具类统一放在 `core/utils/` 目录
+11. **代码优化**：Service 实现类遵循统一的优化模式，提取私有方法提高可读性和可维护性
+
+后端开发核心流程：
+1. Controller 接收请求 → 参数校验
+2. Service 处理业务逻辑 → 调用 Mapper
+3. Mapper 执行数据库操作 → 返回 Entity
+4. Service 转换为 VO → 返回结果
+5. Controller 封装为 BaseResult → 返回前端
+
+### Service 层优化模式总结
+
+所有 Service 实现类应遵循以下优化模式：
+
+1. **提取 `getXxxByIdOrThrow()`** - 统一实体查询和异常处理
+2. **提取验证方法** - 统一验证逻辑（`validateXxx()`、`checkXxx()`）
+3. **提取构建方法** - 统一实体构建逻辑（`buildXxxEntity()`）
+4. **提取更新方法** - 统一更新逻辑（`updateXxxBasicInfo()`）
+5. **提取工具方法** - 复用通用逻辑（如 `getUserName()`）
+
+**优化效果**：
+- ✅ 可读性：方法职责单一，逻辑清晰
+- ✅ 可维护性：提取的私有方法便于复用和测试
+- ✅ 可扩展性：新增功能时更容易扩展
+- ✅ 代码量：减少重复代码，提高代码质量
+
+---
+
+## 后续开发模式
+
+> 📖 **详细开发模式文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md#后续开发模式)
+
+### 1. 新功能开发流程
+
+**创建新模块的标准流程**（8 步）：
+
+1. **创建 Entity** - 数据库表映射
+2. **创建 DTO** - 请求参数对象
+3. **创建 VO** - 响应数据对象
+4. **创建 Mapper** - 数据访问层接口
+5. **创建 Service 接口** - 业务服务接口
+6. **创建 Service 实现** - 业务逻辑实现（遵循优化模式）
+7. **创建 Controller** - RESTful API 控制器
+8. **创建数据库表** - SQL 脚本
+
+**详细示例代码请参考技术栈分析文档**。
+
+### 2. 代码审查清单
+
+#### Controller 层审查
+
+- [ ] 是否使用 `@RequiredArgsConstructor` 进行依赖注入
+- [ ] 是否统一返回 `BaseResult<T>`
+- [ ] 是否使用 RESTful 路由设计
+- [ ] 是否使用 `@Validated` 进行参数校验
+- [ ] 是否添加 Swagger 注解（`@Api`、`@Operation`、`@Parameter`、`@Schema`）
+
+#### Service 层审查
+
+- [ ] 是否提取 `getXxxByIdOrThrow()` 方法
+- [ ] 是否提取验证方法（`validateXxx()`、`checkXxx()`）
+- [ ] 是否提取构建方法（`buildXxxEntity()`）
+- [ ] 是否提取更新方法（`updateXxxBasicInfo()`）
+- [ ] 是否使用 `@Transactional` 标注写操作
+- [ ] 是否使用工具类（`QueryHelper`、`TreeHelper` 等）
+
+#### Mapper 层审查
+
+- [ ] 是否继承 `BaseMapper<T>`
+- [ ] 是否使用 `LambdaQueryWrapper` 而不是字符串拼接
+- [ ] 是否使用逻辑删除（`@TableLogic`）
+
+#### Model 层审查
+
+- [ ] Entity 是否使用 `@TableName` 和 `@TableId`
+- [ ] Entity 是否使用 `@TableLogic` 标注逻辑删除字段
+- [ ] DTO 是否使用 `@Schema` 注解
+- [ ] DTO 是否使用 Bean Validation 注解
+- [ ] VO 是否只包含需要返回给前端的字段
+
+### 3. 测试规范
+
+#### 单元测试
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class NoticeControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void testGetNoticeList() throws Exception {
+        mockMvc.perform(get("/system/notice")
+                        .param("page", "1")
+                        .param("pageSize", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+}
+```
+
+#### 集成测试
+
+```java
+@SpringBootTest
+@Transactional
+class NoticeServiceTest {
+
+    @Autowired
+    private NoticeService noticeService;
+
+    @Test
+    void testCreateNotice() {
+        NoticeDTO noticeDTO = new NoticeDTO();
+        noticeDTO.setTitle("测试通知");
+        noticeDTO.setContent("这是一条测试通知");
+
+        String id = noticeService.createNotice(noticeDTO);
+        assertNotNull(id);
+
+        NoticeVO notice = noticeService.getNoticeById(id);
+        assertEquals("测试通知", notice.getTitle());
+    }
+}
+```
+
+---
+
+## 最佳实践建议
+
+> 📖 **详细最佳实践文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md#最佳实践建议)
+
+### 1. 代码质量
+
+#### 遵循 DRY 原则
+
+- ✅ 提取公共方法，避免重复代码
+- ✅ 使用工具类（`QueryHelper`、`TreeHelper` 等）
+- ✅ 使用常量定义魔法字符串
+
+#### 保持方法简洁
+
+- ✅ 方法职责单一，逻辑清晰
+- ✅ 方法长度控制在 50 行以内
+- ✅ 复杂逻辑提取为私有方法
+
+#### 类型安全
+
+- ✅ 使用 `LambdaQueryWrapper` 而不是字符串拼接
+- ✅ 使用泛型提高代码复用性
+- ✅ 避免使用 `Object` 类型（除非必要）
+
+### 2. 性能优化
+
+#### 数据库查询优化
+
+- ✅ 使用索引（在数据库表设计中添加合适的索引）
+- ✅ 避免 N+1 查询问题（使用批量查询）
+- ✅ 使用分页查询，避免一次性加载大量数据
+
+#### 缓存策略
+
+- ✅ 对于频繁查询的数据，考虑使用 Redis 缓存
+- ✅ 缓存过期时间设置合理
+- ✅ 缓存更新策略（Cache-Aside、Write-Through 等）
+
+### 3. 安全规范
+
+#### 认证授权
+
+- ✅ 所有接口（除登录、注册外）都需要认证
+- ✅ 使用 JWT Token 进行无状态认证
+- ✅ Token 过期时间设置合理（AccessToken 2小时，RefreshToken 7天）
+
+#### 数据安全
+
+- ✅ 密码使用 BCrypt 加密存储
+- ✅ 敏感信息（如密码）不在日志中输出
+- ✅ 使用 `SensitiveDataFilter` 过滤敏感数据
+
+#### SQL 注入防护
+
+- ✅ 使用 `LambdaQueryWrapper` 进行类型安全的查询
+- ✅ 避免直接拼接 SQL 字符串
+- ✅ 使用参数化查询
+
+### 4. 可维护性
+
+#### 代码注释
+
+- ✅ 类和方法添加 JavaDoc 注释
+- ✅ 复杂逻辑添加行内注释
+- ✅ 常量添加注释说明
+
+#### 日志规范
+
+- ✅ 使用 `@Slf4j` 注解
+- ✅ 关键操作记录日志（INFO 级别）
+- ✅ 异常记录错误日志（ERROR 级别）
+- ✅ 避免在日志中输出敏感信息
+
+#### 异常处理
+
+- ✅ 使用统一的异常处理（`GlobalExceptionHandler`）
+- ✅ 异常消息清晰明确，使用中文
+- ✅ 不要暴露系统内部信息
+
+### 5. 扩展性
+
+#### 接口设计
+
+- ✅ 接口设计考虑未来扩展
+- ✅ 使用 DTO 封装参数，便于后续添加字段
+- ✅ 使用 VO 返回数据，便于后续添加字段
+
+#### 模块化设计
+
+- ✅ 功能模块化，便于独立开发和测试
+- ✅ 使用 Service 接口和实现分离
+- ✅ 工具类统一放在 `core/utils/` 目录
+
+---
+
+## 相关文档
+
+- 📖 **技术栈与开发规范分析**：[`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md)
+- 📖 **命名规范说明**：[`apps/backend-service/.cursor/rules/命名规范说明.mdc`](../../apps/backend-service/.cursor/rules/命名规范说明.mdc)
+- 📖 **Token 最佳实践**：[`apps/backend-service/TOKEN_BEST_PRACTICES.md`](../../apps/backend-service/TOKEN_BEST_PRACTICES.md)
