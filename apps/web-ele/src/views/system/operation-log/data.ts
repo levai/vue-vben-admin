@@ -4,7 +4,10 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn } from '#/adapter/vxe-table';
 import type { SystemOperationLogApi } from '#/api/system/operation-log';
 
-import { getOperationTypeList } from '#/api/system/operation-log';
+import {
+  getOperationModuleList,
+  getOperationTypeList,
+} from '#/api/system/operation-log';
 import { getUserOptions } from '#/api/system/user';
 import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 import { usePermissions } from '#/hooks/use-permissions';
@@ -41,10 +44,7 @@ export function useSearchSchema(): VbenFormSchema[] {
       component: 'ApiTreeSelect',
       componentProps: {
         allowClear: true,
-        api: () =>
-          import('#/api/system/operation-log').then(
-            (m) => m.getOperationModuleList,
-          ),
+        api: getOperationModuleList,
         resultField: 'items',
         labelField: 'label',
         valueField: 'label',

@@ -73,3 +73,13 @@
 .ant-app .form-valid-error .ant-picker-focused {
   box-shadow: 0 0 0 2px rgb(255 38 5 / 6%);
 }
+
+/* vxe-table 中的 Ant Design Vue 按钮文案字体大小设置为 13px */
+.vxe-grid .ant-btn {
+  font-size: 13px !important;
+}
+
+/* vxe-table 中的 Ant Design Vue 按钮文案字体大小设置为 13px */
+.vxe-grid .ant-btn {
+  font-size: 13px !important;
+}

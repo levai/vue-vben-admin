@@ -14,7 +14,14 @@ import {
 import { get, isFunction, isString } from '@vben/utils';
 
 import { objectOmit } from '@vueuse/core';
-import { ElButton, ElImage, ElPopconfirm, ElSwitch, ElTag } from 'element-plus';
+import {
+  ElButton,
+  ElImage,
+  ElMessage,
+  ElPopconfirm,
+  ElSwitch,
+  ElTag,
+} from 'element-plus';
 
 import { $t } from '#/locales';
 
@@ -143,6 +150,58 @@ setupVbenVxeTable({
           }
         }
         return h(ElSwitch, finallyProps);
+      },
+    });
+
+    // 表格配置项可以用 cellRender: { name: 'CellCopy' },
+    vxeUI.renderer.add('CellCopy', {
+      renderTableDefault({ props }, { column, row }) {
+        const value = get(row, column.field);
+        if (!value) {
+          return h('span', { class: 'text-gray-400' }, '-');
+        }
+        // Element Plus 没有内置的复制组件，使用原生实现
+        const handleCopy = (e: Event) => {
+          e.stopPropagation(); // 阻止事件冒泡
+          const text = String(value);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+              ElMessage.success($t('common.copySuccess') || '复制成功');
+            });
+          } else {
+            // 降级方案：使用 document.execCommand
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.append(textarea);
+            textarea.select();
+            try {
+              document.execCommand('copy');
+              ElMessage.success($t('common.copySuccess') || '复制成功');
+            } catch {
+              ElMessage.error('复制失败');
+            }
+            textarea.remove();
+          }
+        };
+        return h(
+          'span',
+          {
+            class: 'flex items-center gap-1 cursor-pointer hover:text-blue-500',
+            onClick: handleCopy,
+            title: '点击复制',
+            ...props,
+          },
+          [
+            h('span', { class: 'flex-1 truncate' }, String(value)),
+            h(IconifyIcon, {
+              icon: 'lucide:copy',
+              class: 'size-4 flex-shrink-0 text-gray-400 hover:text-blue-500',
+              onClick: handleCopy, // 图标也绑定点击事件，确保阻止冒泡
+            }),
+          ],
+        );
       },
     });
 

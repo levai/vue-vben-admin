@@ -14,8 +14,10 @@ async function initSetupVbenForm() {
       // Element Plus 组件库大部分使用 v-model (modelValue)
       // 一些特殊组件需要单独配置
       modelPropNameMap: {
-        Upload: 'fileList',
+        Checkbox: 'model-value',
         CheckboxGroup: 'model-value',
+        Radio: 'model-value',
+        Upload: 'fileList',
       },
     },
     defineRules: {

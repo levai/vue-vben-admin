@@ -42,3 +42,9 @@
 html .el-loading-mask {
   z-index: 1000;
 }
+
+/* 去掉搜索表单区域按钮之间的间距（使用 flex gap 控制间距，不需要 margin-left） */
+.flex.gap-3 .el-button + .el-button,
+.flex.items-center.gap-3 .el-button + .el-button {
+  margin-left: 0 !important;
+}

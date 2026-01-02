@@ -132,6 +132,34 @@ const ElUpload = defineAsyncComponent(() =>
     import('element-plus/es/components/upload/style/css'),
   ]).then(([res]) => res.ElUpload),
 );
+const ElCascader = defineAsyncComponent(() =>
+  Promise.all([
+    import('element-plus/es/components/cascader/index'),
+    import('element-plus/es/components/cascader/style/css'),
+  ]).then(([res]) => res.ElCascader),
+);
+// Element Plus 的 InputPassword 是 Input 组件，使用 type="password" 和 show-password 属性
+const ElInputPassword = defineComponent({
+  name: 'ElInputPassword',
+  setup(props, { attrs, slots }) {
+    return h(
+      ElInput,
+      {
+        ...props,
+        ...attrs,
+        type: 'password',
+        'show-password': true,
+      },
+      slots,
+    );
+  },
+});
+const ElRate = defineAsyncComponent(() =>
+  Promise.all([
+    import('element-plus/es/components/rate/index'),
+    import('element-plus/es/components/rate/style/css'),
+  ]).then(([res]) => res.ElRate),
+);
 
 const withDefaultPlaceholder = <T extends Component>(
   component: T,
@@ -169,18 +197,25 @@ const withDefaultPlaceholder = <T extends Component>(
 
 // 这里需要自行根据业务组件库进行适配，需要用到的组件都需要在这里类型说明
 export type ComponentType =
+  | 'ApiCascader'
   | 'ApiSelect'
   | 'ApiTreeSelect'
   | 'AutoComplete'
+  | 'Cascader'
   | 'Checkbox'
   | 'CheckboxGroup'
   | 'DatePicker'
+  | 'DefaultButton'
   | 'Divider'
   | 'IconPicker'
   | 'Input'
   | 'InputNumber'
+  | 'InputPassword'
+  | 'PrimaryButton'
+  | 'Radio'
   | 'RadioGroup'
   | 'RangePicker'
+  | 'Rate'
   | 'Select'
   | 'Space'
   | 'Switch'
@@ -195,6 +230,19 @@ async function initComponentAdapter() {
     // 如果你的组件体积比较大，可以使用异步加载
     // Button: () =>
     // import('xxx').then((res) => res.Button),
+    ApiCascader: withDefaultPlaceholder(
+      {
+        ...ApiComponent,
+        name: 'ApiCascader',
+      },
+      'select',
+      {
+        component: ElCascader,
+        props: { label: 'label', value: 'value', children: 'children' },
+        loadingSlot: 'loading',
+        visibleEvent: 'onVisibleChange',
+      },
+    ),
     ApiSelect: withDefaultPlaceholder(
       {
         ...ApiComponent,
@@ -215,7 +263,7 @@ async function initComponentAdapter() {
       'select',
       {
         component: ElTreeSelect,
-        props: { label: 'label', children: 'children' },
+        props: { label: 'label', value: 'value', children: 'children' },
         nodeKey: 'value',
         loadingSlot: 'loading',
         optionsPropName: 'data',
@@ -273,6 +321,7 @@ async function initComponentAdapter() {
         slots,
       );
     },
+    Cascader: withDefaultPlaceholder(ElCascader, 'select'),
     Checkbox: ElCheckbox,
     CheckboxGroup: (props, { attrs, slots }) => {
       let defaultSlot;
@@ -309,7 +358,9 @@ async function initComponentAdapter() {
     }),
     Input: withDefaultPlaceholder(ElInput, 'input'),
     InputNumber: withDefaultPlaceholder(ElInputNumber, 'input'),
+    InputPassword: withDefaultPlaceholder(ElInputPassword, 'input'),
     Textarea: withDefaultPlaceholder(Textarea, 'input'),
+    Radio: ElRadio,
     RadioGroup: (props, { attrs, slots }) => {
       let defaultSlot;
       if (Reflect.has(slots, 'default')) {
@@ -434,6 +485,7 @@ async function initComponentAdapter() {
         slots,
       );
     },
+    Rate: ElRate,
     TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select'),
     Upload: ElUpload,
   };
