@@ -6,6 +6,8 @@ import type {
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
+import { $t } from '@vben/locales';
+import { flattenTree } from '@vben/utils';
 
 import { MenuBadge } from '@vben-core/menu-ui';
 
@@ -13,8 +15,9 @@ import { ElButton, ElMessage } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { deleteMenu, getMenuList, SystemMenuApi } from '#/api/system/menu';
-import { $t } from '#/locales';
+import { SYSTEM_PERMISSION_CODES } from '#/constants/permission-codes';
 
+import { useMenuList } from './composables/use-menu-list';
 import { useColumns } from './data';
 import Form from './modules/form.vue';
 
@@ -23,38 +26,10 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
   destroyOnClose: true,
 });
 
-const [Grid, gridApi] = useVbenVxeGrid({
-  gridOptions: {
-    columns: useColumns(onActionClick),
-    height: 'auto',
-    keepSource: true,
-    pagerConfig: {
-      enabled: false,
-    },
-    proxyConfig: {
-      ajax: {
-        query: async (_params) => {
-          return await getMenuList();
-        },
-      },
-    },
-    rowConfig: {
-      keyField: 'id',
-    },
-    toolbarConfig: {
-      custom: true,
-      export: false,
-      refresh: true,
-      zoom: true,
-    },
-    treeConfig: {
-      parentField: 'pid',
-      rowField: 'id',
-      transform: false,
-    },
-  } as VxeTableGridOptions,
-});
+// 使用菜单列表 Composable（仅用于拖拽功能）
+const { createGridEvents } = useMenuList();
 
+// 操作按钮点击处理（需要在 useColumns 之前定义）
 function onActionClick({
   code,
   row,
@@ -78,15 +53,88 @@ function onActionClick({
   }
 }
 
+const [Grid, gridApi] = useVbenVxeGrid({
+  // 启用树形表格展开/折叠功能
+  enableTreeExpandToggle: true,
+  defaultTreeExpanded: false,
+  gridEvents: {},
+  gridOptions: {
+    columns: useColumns(onActionClick),
+    height: 'auto',
+    keepSource: true,
+    pagerConfig: {
+      enabled: false,
+    },
+    proxyConfig: {
+      ajax: {
+        query: async () => {
+          try {
+            // 获取树形数据
+            const treeData = await getMenuList();
+            if (!Array.isArray(treeData)) {
+              return [];
+            }
+            // transform: true 时需要扁平数据，将嵌套结构转换为扁平结构
+            const flatData = flattenTree<SystemMenuApi.SystemMenu>(treeData, {
+              childProps: 'children',
+              parentIdField: 'pid',
+              idField: 'id',
+              initialParentId: null,
+            });
+            return flatData;
+          } catch {
+            return [];
+          }
+        },
+      },
+    },
+    rowConfig: {
+      keyField: 'id',
+      drag: true, // 启用行拖拽
+    },
+    rowDragConfig: {
+      isCrossDrag: false,
+      isToChildDrag: false,
+      isToParentDrag: false,
+      isPeerDrag: true, // 只允许同级拖拽
+      trigger: 'row',
+    },
+    toolbarConfig: {
+      custom: true,
+      export: false,
+      refresh: true,
+      zoom: true,
+    },
+    treeConfig: {
+      parentField: 'pid',
+      rowField: 'id',
+      transform: true, // 启用行拖拽时必须为 true
+    },
+  } as VxeTableGridOptions,
+});
+
+// 刷新函数
 function onRefresh() {
   gridApi.query();
 }
+
+// 创建表格事件处理器
+const gridEvents = createGridEvents(gridApi, onRefresh);
+
+// 更新 gridEvents
+gridApi.setState({
+  gridEvents,
+});
+
+// CRUD 操作
 function onEdit(row: SystemMenuApi.SystemMenu) {
   formDrawerApi.setData(row).open();
 }
+
 function onCreate() {
   formDrawerApi.setData({}).open();
 }
+
 function onAppend(row: SystemMenuApi.SystemMenu) {
   formDrawerApi.setData({ pid: row.id }).open();
 }
@@ -113,7 +161,11 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
     <FormDrawer @success="onRefresh" />
     <Grid>
       <template #toolbar-tools>
-        <ElButton type="primary" @click="onCreate">
+        <ElButton
+          v-access:code="SYSTEM_PERMISSION_CODES.MENU.ADD"
+          type="primary"
+          @click="onCreate"
+        >
           <Plus class="size-5" />
           {{ $t('ui.actionTitle.create', [$t('system.menu.name')]) }}
         </ElButton>
@@ -133,7 +185,6 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
             />
           </div>
           <span class="flex-auto">{{ $t(row.meta?.title) }}</span>
-          <div class="items-center justify-end"></div>
         </div>
         <MenuBadge
           v-if="row.meta?.badgeType"

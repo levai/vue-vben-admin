@@ -365,6 +365,28 @@ async function initComponentAdapter() {
         if (id && !Array.isArray(id)) {
           extraProps.id = [id, `${id}_end`];
         }
+        // 日期范围选择器需要使用 start-placeholder 和 end-placeholder
+        const startPlaceholder =
+          props?.['start-placeholder'] ||
+          attrs?.['start-placeholder'] ||
+          props?.placeholder ||
+          attrs?.placeholder ||
+          $t('ui.placeholder.startDate');
+        const endPlaceholder =
+          props?.['end-placeholder'] ||
+          attrs?.['end-placeholder'] ||
+          props?.placeholder ||
+          attrs?.placeholder ||
+          $t('ui.placeholder.endDate');
+        extraProps['start-placeholder'] = startPlaceholder;
+        extraProps['end-placeholder'] = endPlaceholder;
+      } else {
+        // 单个日期选择器使用 placeholder
+        const placeholder =
+          props?.placeholder ||
+          attrs?.placeholder ||
+          $t('ui.placeholder.input');
+        extraProps.placeholder = placeholder;
       }
       return h(
         ElDatePicker,
@@ -386,10 +408,25 @@ async function initComponentAdapter() {
       if (id && !Array.isArray(id)) {
         extraProps.id = [id, `${id}_end`];
       }
+      // Element Plus 日期范围选择器需要使用 start-placeholder 和 end-placeholder
+      const startPlaceholder =
+        props?.['start-placeholder'] ||
+        attrs?.['start-placeholder'] ||
+        props?.placeholder ||
+        attrs?.placeholder ||
+        $t('ui.placeholder.startDate');
+      const endPlaceholder =
+        props?.['end-placeholder'] ||
+        attrs?.['end-placeholder'] ||
+        props?.placeholder ||
+        attrs?.placeholder ||
+        $t('ui.placeholder.endDate');
       return h(
         ElDatePicker,
         {
           type: 'daterange',
+          'start-placeholder': startPlaceholder,
+          'end-placeholder': endPlaceholder,
           ...props,
           ...attrs,
           ...extraProps,

@@ -13,6 +13,15 @@ const routes: RouteRecordRaw[] = [
     path: '/system',
     children: [
       {
+        path: '/system/user',
+        name: 'SystemUser',
+        meta: {
+          icon: 'lucide:users',
+          title: $t('system.user.title'),
+        },
+        component: () => import('#/views/system/user/list.vue'),
+      },
+      {
         path: '/system/role',
         name: 'SystemRole',
         meta: {
@@ -38,6 +47,15 @@ const routes: RouteRecordRaw[] = [
           title: $t('system.dept.title'),
         },
         component: () => import('#/views/system/dept/list.vue'),
+      },
+      {
+        path: '/system/operation-log',
+        name: 'SystemOperationLog',
+        meta: {
+          icon: 'mdi:file-document-outline',
+          title: $t('system.operationLog.title'),
+        },
+        component: () => import('#/views/system/operation-log/list.vue'),
       },
     ],
   },

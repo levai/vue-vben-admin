@@ -9,10 +9,11 @@ export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
     name: import.meta.env.VITE_APP_TITLE,
+    authPageLayout: 'panel-center',
+    accessMode: 'backend',
   },
   theme: {
     mode: 'light',
-    radius: '0.25',
   },
   widget: {
     fullscreen: true, // 全屏

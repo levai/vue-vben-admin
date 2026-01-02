@@ -1,7 +1,7 @@
 /**
  * 该文件可自行根据业务逻辑进行调整
  */
-import type { RequestClientOptions } from '@vben/request';
+import type { AxiosResponseHeaders, RequestClientOptions } from '@vben/request';
 
 import { useAppConfig } from '@vben/hooks';
 import { preferences } from '@vben/preferences';
@@ -12,8 +12,10 @@ import {
   RequestClient,
 } from '@vben/request';
 import { useAccessStore } from '@vben/stores';
+import { cloneDeep } from '@vben/utils';
 
 import { ElMessage } from 'element-plus';
+import JSONBigInt from 'json-bigint';
 
 import { useAuthStore } from '#/store';
 
@@ -25,6 +27,21 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
     ...options,
     baseURL,
+    // 使用 RFC3986 格式确保空格被编码为 %20 而不是 +
+    // 这样可以解决表单搜索时空格变成 + 的问题
+    paramsSerializer: 'rfc3986-repeat',
+    transformResponse: (data: any, header: AxiosResponseHeaders) => {
+      // storeAsString指示将BigInt存储为字符串，设为false则会存储为内置的BigInt类型
+      if (
+        header.getContentType()?.toString().includes('application/json') &&
+        typeof data === 'string'
+      ) {
+        return cloneDeep(
+          JSONBigInt({ storeAsString: true, strict: true }).parse(data),
+        );
+      }
+      return data;
+    },
   });
 
   /**
@@ -67,6 +84,15 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
+
+      // 添加当前页面URL到请求头（用于操作日志记录）
+      if (typeof window !== 'undefined') {
+        const pageUrl = window.location.pathname;
+        if (pageUrl) {
+          config.headers['X-Page-Url'] = pageUrl;
+        }
+      }
+
       return config;
     },
   });
@@ -111,3 +137,9 @@ export const requestClient = createRequestClient(apiURL, {
 });
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });
+
+export interface PageFetchParams {
+  [key: string]: any;
+  pageNo?: number;
+  pageSize?: number;
+}
