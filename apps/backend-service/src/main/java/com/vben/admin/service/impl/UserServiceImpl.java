@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
+import com.vben.admin.core.utils.SearchQueryConfig;
 import com.vben.admin.core.utils.SecurityUtils;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.RoleMapper;
@@ -49,22 +50,17 @@ public class UserServiceImpl implements UserService {
         // 构建查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 搜索关键词（优先级高于 username/realName）
-        if (StringUtils.hasText(search)) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(SysUser::getUsername, search)
-                    .or()
-                    .like(SysUser::getRealName, search)
-            );
-        } else {
-            // 如果没有 search，使用 username 和 realName
-            if (StringUtils.hasText(username)) {
-                queryWrapper.like(SysUser::getUsername, username);
-            }
-            if (StringUtils.hasText(realName)) {
-                queryWrapper.like(SysUser::getRealName, realName);
-            }
-        }
+        // 搜索关键词处理（优先级高于 username/realName）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysUser>of(search)
+                        .searchField(SysUser::getUsername)
+                        .searchField(SysUser::getRealName)
+                        .fallbackField(SysUser::getUsername, username)
+                        .fallbackField(SysUser::getRealName, realName)
+        );
+
+        // 其他查询条件
         if (StringUtils.hasText(deptId)) {
             queryWrapper.eq(SysUser::getDeptId, deptId);
         }
@@ -452,29 +448,20 @@ public class UserServiceImpl implements UserService {
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SysUser::getDeleted, 0);
 
-        // 搜索关键词（优先级高于 username/realName）
-        if (StringUtils.hasText(queryDTO.getSearch())) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(SysUser::getUsername, queryDTO.getSearch())
-                    .or()
-                    .like(SysUser::getRealName, queryDTO.getSearch())
-            );
-        } else {
-            // 如果没有 search，使用 username 和 realName
-            if (StringUtils.hasText(queryDTO.getUsername())) {
-                queryWrapper.like(SysUser::getUsername, queryDTO.getUsername());
-            }
-            if (StringUtils.hasText(queryDTO.getRealName())) {
-                queryWrapper.like(SysUser::getRealName, queryDTO.getRealName());
-            }
-        }
+        // 搜索关键词处理（优先级高于 username/realName）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysUser>of(queryDTO.getSearch())
+                        .searchField(SysUser::getUsername)
+                        .searchField(SysUser::getRealName)
+                        .fallbackField(SysUser::getUsername, queryDTO.getUsername())
+                        .fallbackField(SysUser::getRealName, queryDTO.getRealName())
+        );
 
-        // 部门筛选
+        // 其他查询条件
         if (StringUtils.hasText(queryDTO.getDeptId())) {
             queryWrapper.eq(SysUser::getDeptId, queryDTO.getDeptId());
         }
-
-        // 状态筛选
         if (queryDTO.getStatus() != null) {
             queryWrapper.eq(SysUser::getStatus, queryDTO.getStatus());
         }

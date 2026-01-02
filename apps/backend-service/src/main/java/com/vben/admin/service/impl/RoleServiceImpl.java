@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
+import com.vben.admin.core.utils.SearchQueryConfig;
 import com.vben.admin.mapper.RoleMapper;
 import com.vben.admin.mapper.RoleMenuMapper;
 import com.vben.admin.mapper.UserRoleMapper;
@@ -52,22 +53,16 @@ public class RoleServiceImpl implements RoleService {
         // 构建查询条件
         LambdaQueryWrapper<SysRole> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 搜索关键词（优先级高于 name/id）
-        if (StringUtils.hasText(search)) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(SysRole::getName, search)
-                    .or()
-                    .like(SysRole::getId, search)
-            );
-        } else {
-            // 如果没有 search，使用 name 和 id
-            if (StringUtils.hasText(name)) {
-                queryWrapper.like(SysRole::getName, name);
-            }
-            if (StringUtils.hasText(id)) {
-                queryWrapper.like(SysRole::getId, id);
-            }
-        }
+        // 搜索关键词处理（优先级高于 name/id，ID 使用精确匹配）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysRole>of(search)
+                        .searchField(SysRole::getName)
+                        .exactIdField(SysRole::getId, id)
+                        .fallbackField(SysRole::getName, name)
+        );
+
+        // 其他查询条件
         if (StringUtils.hasText(remark)) {
             queryWrapper.like(SysRole::getRemark, remark);
         }
@@ -213,29 +208,19 @@ public class RoleServiceImpl implements RoleService {
         // 构建查询条件（查询所有字段）
         LambdaQueryWrapper<SysRole> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 搜索关键词（优先级高于 name/id）
-        if (StringUtils.hasText(queryDTO.getSearch())) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(SysRole::getName, queryDTO.getSearch())
-                    .or()
-                    .like(SysRole::getId, queryDTO.getSearch())
-            );
-        } else {
-            // 如果没有 search，使用 name 和 id
-            if (StringUtils.hasText(queryDTO.getName())) {
-                queryWrapper.like(SysRole::getName, queryDTO.getName());
-            }
-            if (StringUtils.hasText(queryDTO.getId())) {
-                queryWrapper.like(SysRole::getId, queryDTO.getId());
-            }
-        }
+        // 搜索关键词处理（优先级高于 name/id，ID 使用精确匹配）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysRole>of(queryDTO.getSearch())
+                        .searchField(SysRole::getName)
+                        .exactIdField(SysRole::getId, queryDTO.getId())
+                        .fallbackField(SysRole::getName, queryDTO.getName())
+        );
 
-        // 备注筛选
+        // 其他查询条件
         if (StringUtils.hasText(queryDTO.getRemark())) {
             queryWrapper.like(SysRole::getRemark, queryDTO.getRemark());
         }
-
-        // 状态筛选
         if (queryDTO.getStatus() != null) {
             queryWrapper.eq(SysRole::getStatus, queryDTO.getStatus());
         }

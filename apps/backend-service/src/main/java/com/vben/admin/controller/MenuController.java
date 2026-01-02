@@ -27,10 +27,12 @@ public class MenuController {
 
     private final MenuService menuService;
 
-    @Operation(summary = "获取菜单列表", description = "获取菜单列表")
+    @Operation(summary = "获取菜单列表", description = "获取菜单列表（支持按状态过滤）")
     @GetMapping
-    public BaseResult<List<MenuVO>> getList() {
-        List<MenuVO> menus = menuService.getMenuList();
+    public BaseResult<List<MenuVO>> getList(
+            @Parameter(description = "状态（0-禁用，1-启用，不传则返回所有状态）")
+            @RequestParam(required = false) Integer status) {
+        List<MenuVO> menus = menuService.getMenuList(status);
         return new BaseResult<>(menus);
     }
 

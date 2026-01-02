@@ -23,9 +23,10 @@ public interface MenuService {
     /**
      * 获取菜单列表
      *
+     * @param status 状态（0-禁用，1-启用，null-所有状态）
      * @return 菜单列表
      */
-    List<MenuVO> getMenuList();
+    List<MenuVO> getMenuList(Integer status);
 
     /**
      * 检查菜单名称是否存在

@@ -237,7 +237,7 @@ public class MenuModuleResolver {
     private String findMenuTitleByPagePath(String pagePath) {
         try {
             // 从菜单树中查找匹配的菜单
-            List<MenuVO> menuTree = menuService.getMenuList();
+            List<MenuVO> menuTree = menuService.getMenuList(null);
             MenuVO menu = findMenuInTree(menuTree, pagePath);
             if (menu != null) {
                 return extractMenuTitle(menu);
@@ -343,7 +343,7 @@ public class MenuModuleResolver {
      */
     private String findModuleLabelFromMenuTree(String modulePath) {
         try {
-            List<MenuVO> menuTree = menuService.getMenuList();
+            List<MenuVO> menuTree = menuService.getMenuList(null);
             return findModuleLabelInTree(menuTree, modulePath);
         } catch (Exception e) {
             log.warn("从菜单树查找模块失败: {}", e.getMessage());

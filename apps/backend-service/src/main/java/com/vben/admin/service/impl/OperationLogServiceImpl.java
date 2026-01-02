@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.enums.OperationType;
 import com.vben.admin.core.utils.OperationInfoParser;
+import com.vben.admin.core.utils.QueryHelper;
+import com.vben.admin.core.utils.SearchQueryConfig;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.model.vo.TreeOptionVO;
@@ -25,10 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -94,29 +93,14 @@ public class OperationLogServiceImpl implements OperationLogService {
         }
 
         // 时间范围查询
-        if (StringUtils.hasText(queryDTO.getStartTime())) {
-            try {
-                LocalDate startDate = LocalDate.parse(queryDTO.getStartTime(), DateTimeFormatter.ISO_LOCAL_DATE);
-                LocalDateTime startDateTime = startDate.atStartOfDay();
-                queryWrapper.ge(SysOperationLog::getCreateTime, startDateTime);
-            } catch (DateTimeParseException e) {
-                log.warn("无效的开始时间格式: {}", queryDTO.getStartTime());
-            }
-        }
-        if (StringUtils.hasText(queryDTO.getEndTime())) {
-            try {
-                LocalDate endDate = LocalDate.parse(queryDTO.getEndTime(), DateTimeFormatter.ISO_LOCAL_DATE);
-                LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
-                queryWrapper.le(SysOperationLog::getCreateTime, endDateTime);
-            } catch (DateTimeParseException e) {
-                log.warn("无效的结束时间格式: {}", queryDTO.getEndTime());
-            }
-        }
+        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysOperationLog::getCreateTime);
 
         // 搜索关键词（请求URL）
-        if (StringUtils.hasText(queryDTO.getSearch())) {
-            queryWrapper.like(SysOperationLog::getRequestUrl, queryDTO.getSearch());
-        }
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysOperationLog>of(queryDTO.getSearch())
+                        .searchField(SysOperationLog::getRequestUrl)
+        );
 
         queryWrapper.orderByDesc(SysOperationLog::getCreateTime);
 
@@ -168,7 +152,7 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Override
     public PageResult<TreeOptionVO> getOperationModuleList(String search) {
         // 获取菜单树形结构
-        List<MenuVO> menuTree = menuService.getMenuList();
+        List<MenuVO> menuTree = menuService.getMenuList(null);
 
         // 转换为 TreeOptionVO 树形结构
         List<TreeOptionVO> optionTree = convertMenuTreeToOptionTree(menuTree, search);
@@ -332,7 +316,7 @@ public class OperationLogServiceImpl implements OperationLogService {
         }
 
         // 获取菜单树
-        List<MenuVO> menuTree = menuService.getMenuList();
+        List<MenuVO> menuTree = menuService.getMenuList(null);
 
         // 递归查找匹配的菜单
         MenuVO matchedMenu = findMenuByModuleValue(menuTree, moduleValue);

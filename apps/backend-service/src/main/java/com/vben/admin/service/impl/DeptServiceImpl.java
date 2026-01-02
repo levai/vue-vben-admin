@@ -1,6 +1,7 @@
 package com.vben.admin.service.impl;
 
 import com.vben.admin.core.exception.BusinessException;
+import com.vben.admin.core.utils.TreeHelper;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.UserMapper;
 import com.vben.admin.model.dto.DeptDTO;
@@ -14,9 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -48,7 +47,7 @@ public class DeptServiceImpl implements DeptService {
         SysDept dept = new SysDept();
         BeanUtils.copyProperties(deptDTO, dept);
         if (dept.getPid() == null) {
-            dept.setPid("0");
+            dept.setPid(TreeHelper.ROOT_ID);
         }
         if (dept.getStatus() == null) {
             dept.setStatus(1);
@@ -75,7 +74,7 @@ public class DeptServiceImpl implements DeptService {
 
         BeanUtils.copyProperties(deptDTO, dept, "id");
         if (dept.getPid() == null) {
-            dept.setPid("0");
+            dept.setPid(TreeHelper.ROOT_ID);
         }
 
         deptMapper.updateById(dept);
@@ -103,32 +102,23 @@ public class DeptServiceImpl implements DeptService {
      */
     private List<DeptVO> buildDeptTree(List<SysDept> depts) {
         if (depts == null || depts.isEmpty()) {
-            return new ArrayList<>();
+            return List.of();
         }
 
         // 转换为VO
-        List<DeptVO> deptVOs = depts.stream().map(this::convertToVO).collect(Collectors.toList());
+        List<DeptVO> deptVOs = depts.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
 
-        // 构建树形结构
-        List<DeptVO> rootDepts = new ArrayList<>();
-        Map<String, DeptVO> deptMap = deptVOs.stream()
-                .collect(Collectors.toMap(DeptVO::getId, dept -> dept));
-
-        for (DeptVO dept : deptVOs) {
-            if ("0".equals(dept.getPid()) || dept.getPid() == null) {
-                rootDepts.add(dept);
-            } else {
-                DeptVO parent = deptMap.get(dept.getPid());
-                if (parent != null) {
-                    if (parent.getChildren() == null) {
-                        parent.setChildren(new ArrayList<>());
-                    }
-                    parent.getChildren().add(dept);
-                }
-            }
-        }
-
-        return rootDepts;
+        // 使用 TreeHelper 构建树形结构
+        return TreeHelper.buildTree(
+                deptVOs,
+                DeptVO::getId,
+                DeptVO::getPid,
+                DeptVO::getChildren,
+                DeptVO::setChildren,
+                TreeHelper.ROOT_ID
+        );
     }
 
     @Override

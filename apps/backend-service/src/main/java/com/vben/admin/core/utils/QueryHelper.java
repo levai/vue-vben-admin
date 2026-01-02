@@ -92,4 +92,130 @@ public class QueryHelper {
     public static int getValidLimit(Integer limit) {
         return (limit != null && limit > 0) ? limit : DEFAULT_LIMIT;
     }
+
+    /**
+     * 应用搜索关键词查询条件（支持多字段模糊查询）
+     * 如果 search 有值，则使用 search 进行多字段 OR 查询（优先级高）
+     * 如果 search 为空，则使用具体字段进行查询
+     *
+     * @param queryWrapper 查询包装器
+     * @param search       搜索关键词
+     * @param field1       第一个搜索字段
+     * @param field2       第二个搜索字段（可选）
+     * @param <T>          实体类型
+     */
+    public static <T> void applySearchKeyword(
+            LambdaQueryWrapper<T> queryWrapper,
+            String search,
+            SFunction<T, ?> field1,
+            SFunction<T, ?> field2
+    ) {
+        if (StringUtils.hasText(search)) {
+            // 使用 search 进行多字段 OR 查询
+            queryWrapper.and(wrapper -> {
+                wrapper.like(field1, search);
+                if (field2 != null) {
+                    wrapper.or().like(field2, search);
+                }
+            });
+        }
+    }
+
+    /**
+     * 应用搜索关键词查询条件
+     *
+     * <p>统一方法，支持以下场景：</p>
+     * <ul>
+     *   <li>普通搜索：所有字段模糊匹配</li>
+     *   <li>ID 精确匹配：ID 字段精确匹配，其他字段模糊匹配</li>
+     * </ul>
+     *
+     * <p>使用示例：</p>
+     * <pre>{@code
+     * // 普通搜索（链式调用，推荐）
+     * QueryHelper.applySearch(
+     *     queryWrapper,
+     *     SearchQueryConfig.of(search)
+     *         .searchField(SysUser::getUsername)
+     *         .searchField(SysUser::getRealName)
+     *         .fallbackField(SysUser::getUsername, username)
+     *         .fallbackField(SysUser::getRealName, realName)
+     * );
+     *
+     * // ID 精确匹配
+     * QueryHelper.applySearch(
+     *     queryWrapper,
+     *     SearchQueryConfig.of(search)
+     *         .searchField(SysRole::getName)
+     *         .exactIdField(SysRole::getId, id)
+     *         .fallbackField(SysRole::getName, name)
+     * );
+     * }</pre>
+     *
+     * @param queryWrapper 查询包装器
+     * @param config       搜索配置对象
+     * @param <T>          实体类型
+     * @throws IllegalArgumentException 如果 queryWrapper 或 config 为空，或 searchFields 为空
+     */
+    public static <T> void applySearch(
+            LambdaQueryWrapper<T> queryWrapper,
+            SearchQueryConfig<T> config
+    ) {
+        // 参数校验
+        if (queryWrapper == null) {
+            throw new IllegalArgumentException("queryWrapper 不能为空");
+        }
+        if (config == null) {
+            throw new IllegalArgumentException("config 不能为空");
+        }
+        // searchFields 可以为空（如果只使用 fallbackFields 或 idField）
+        // 但如果 search 有值且 searchFields 为空，则无法进行搜索
+        if (StringUtils.hasText(config.getSearch())
+                && (config.getSearchFields() == null || config.getSearchFields().isEmpty())
+                && config.getIdField() == null) {
+            throw new IllegalArgumentException("当 search 有值时，searchFields 或 idField 至少需要一个");
+        }
+
+        if (StringUtils.hasText(config.getSearch())) {
+            // 使用 search 进行多字段 OR 查询
+            queryWrapper.and(wrapper -> {
+                boolean first = true;
+                // 搜索字段（模糊查询）
+                if (config.getSearchFields() != null) {
+                    for (SFunction<T, ?> field : config.getSearchFields()) {
+                        if (field != null) {
+                            if (first) {
+                                wrapper.like(field, config.getSearch());
+                                first = false;
+                            } else {
+                                wrapper.or().like(field, config.getSearch());
+                            }
+                        }
+                    }
+                }
+                // 如果提供了 ID 字段，也进行精确匹配（适用于角色管理等场景）
+                if (config.getIdField() != null) {
+                    if (first) {
+                        wrapper.eq(config.getIdField(), config.getSearch());
+                    } else {
+                        wrapper.or().eq(config.getIdField(), config.getSearch());
+                    }
+                }
+            });
+        } else {
+            // 使用具体字段进行查询
+            // ID 精确匹配（如果提供了 ID 字段）
+            if (StringUtils.hasText(config.getIdValue()) && config.getIdField() != null) {
+                queryWrapper.eq(config.getIdField(), config.getIdValue());
+            }
+            // 其他字段模糊查询
+            if (config.getFallbackFields() != null) {
+                config.getFallbackFields().forEach((field, value) -> {
+                    if (field != null && StringUtils.hasText(value)) {
+                        queryWrapper.like(field, value);
+                    }
+                });
+            }
+        }
+    }
 }

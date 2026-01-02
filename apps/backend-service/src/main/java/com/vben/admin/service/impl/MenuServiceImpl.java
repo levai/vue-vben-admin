@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.utils.SecurityUtils;
+import com.vben.admin.core.utils.TreeHelper;
 import com.vben.admin.mapper.MenuMapper;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.dto.MenuOrderDTO;
@@ -43,8 +44,8 @@ public class MenuServiceImpl implements MenuService {
     private static final String MENU_TYPE_LINK = "link";
     private static final String MENU_TYPE_BUTTON = "button";
 
-    // 根菜单ID
-    private static final String ROOT_MENU_ID = "0";
+    // 根菜单ID（使用 TreeHelper 的常量）
+    private static final String ROOT_MENU_ID = TreeHelper.ROOT_ID;
 
     // 菜单名称长度限制
     private static final int MENU_NAME_MIN_LENGTH = 2;
@@ -110,14 +111,19 @@ public class MenuServiceImpl implements MenuService {
     }
 
     @Override
-    public List<MenuVO> getMenuList() {
-        // 只查询启用状态的菜单（status=1），过滤掉禁用的菜单
-        // 这样在角色管理页面分配权限时，不会显示禁用的菜单
-        List<SysMenu> menus = menuMapper.selectList(
-                new QueryWrapper<SysMenu>()
-                        .eq("status", 1)
-                        .orderByAsc("sort_order")
-        );
+    public List<MenuVO> getMenuList(Integer status) {
+        // 构建查询条件
+        LambdaQueryWrapper<SysMenu> queryWrapper = new LambdaQueryWrapper<>();
+
+        // 如果指定了状态，则按状态过滤
+        if (status != null) {
+            queryWrapper.eq(SysMenu::getStatus, status);
+        }
+
+        // 按排序字段排序
+        queryWrapper.orderByAsc(SysMenu::getSortOrder);
+
+        List<SysMenu> menus = menuMapper.selectList(queryWrapper);
         return buildMenuTree(menus);
     }
 
@@ -230,7 +236,7 @@ public class MenuServiceImpl implements MenuService {
             // 处理父级ID
             String pid = menuOrderDTO.getPid();
             if (pid == null || pid.isEmpty() || "null".equalsIgnoreCase(pid)) {
-                pid = ROOT_MENU_ID;
+                pid = TreeHelper.ROOT_ID;
             }
 
             // 校验：防止菜单成为自己的父级（循环引用）
@@ -239,7 +245,7 @@ public class MenuServiceImpl implements MenuService {
             }
 
             // 校验：如果 pid 不是根节点，检查父菜单是否存在
-            if (!ROOT_MENU_ID.equals(pid)) {
+            if (!TreeHelper.ROOT_ID.equals(pid)) {
                 SysMenu parentMenu = menuMapper.selectById(pid);
                 if (parentMenu == null) {
                     throw new BusinessException("父菜单不存在，父菜单ID: " + pid + "，菜单ID: " + menuOrderDTO.getId());
@@ -277,30 +283,23 @@ public class MenuServiceImpl implements MenuService {
      */
     private List<MenuVO> buildMenuTree(List<SysMenu> menus) {
         if (menus == null || menus.isEmpty()) {
-            return new ArrayList<>();
+            return List.of();
         }
 
         // 转换为VO
-        List<MenuVO> menuVOs = menus.stream().map(this::convertToVO).collect(Collectors.toList());
+        List<MenuVO> menuVOs = menus.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
 
-        // 构建树形结构
-        List<MenuVO> rootMenus = new ArrayList<>();
-        Map<String, MenuVO> menuMap = menuVOs.stream()
-                .collect(Collectors.toMap(MenuVO::getId, menu -> menu));
-
-        for (MenuVO menu : menuVOs) {
-            if (ROOT_MENU_ID.equals(menu.getPid()) || menu.getPid() == null) {
-                rootMenus.add(menu);
-            } else {
-                MenuVO parent = menuMap.get(menu.getPid());
-                if (parent != null) {
-                    if (parent.getChildren() == null) {
-                        parent.setChildren(new ArrayList<>());
-                    }
-                    parent.getChildren().add(menu);
-                }
-            }
-        }
+        // 使用 TreeHelper 构建树形结构
+        List<MenuVO> rootMenus = TreeHelper.buildTree(
+                menuVOs,
+                MenuVO::getId,
+                MenuVO::getPid,
+                MenuVO::getChildren,
+                MenuVO::setChildren,
+                ROOT_MENU_ID
+        );
 
         // 对根菜单和子菜单进行排序
         sortMenuTree(rootMenus);
@@ -403,7 +402,7 @@ public class MenuServiceImpl implements MenuService {
         nameChain.add(menuName);
 
         String pid = menu.getPid();
-        while (pid != null && !ROOT_MENU_ID.equals(pid)) {
+        while (pid != null && !TreeHelper.ROOT_ID.equals(pid)) {
             SysMenu parentMenu = menuMapper.selectById(pid);
             if (parentMenu == null || parentMenu.getDeleted() == 1 || parentMenu.getStatus() == 0) {
                 break;
@@ -577,7 +576,7 @@ public class MenuServiceImpl implements MenuService {
 
         // 设置默认值
         if (menu.getPid() == null) {
-            menu.setPid(ROOT_MENU_ID);
+            menu.setPid(TreeHelper.ROOT_ID);
         }
         if (isCreate && menu.getStatus() == null) {
             menu.setStatus(1);
