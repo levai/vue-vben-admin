@@ -29,9 +29,6 @@ export function useVbenVxeGrid<
   extendedApi.useStore = (selector) => {
     return useStore(api.store, selector);
   };
-  // 初始化树形表格展开/折叠方法（将在组件中设置）
-  extendedApi.toggleTreeExpand = undefined;
-  extendedApi.getTreeExpanded = undefined;
 
   const Grid = defineComponent(
     (props: VxeGridProps<T>, { attrs, slots }) => {

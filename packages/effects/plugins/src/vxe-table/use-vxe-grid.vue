@@ -76,8 +76,6 @@ const {
   tableTitleHelp,
   showSearchForm,
   separator,
-  enableTreeExpandToggle,
-  defaultTreeExpanded,
 } = usePriorityValues(props, state);
 
 const { isMobile } = usePreferences();
@@ -103,53 +101,20 @@ const separatorBg = computed(() => {
 });
 const slots: SetupContext['slots'] = useSlots();
 
-// 树形表格展开/折叠状态
-const isTreeExpanded = ref(
-  defaultTreeExpanded.value === undefined ? true : defaultTreeExpanded.value,
-);
-
 // 检查是否是树形表格
 const isTreeTable = computed(() => {
   return !!gridOptions.value?.treeConfig;
 });
 
+// 树形表格展开/折叠状态
+const isTreeExpanded = ref(false);
+
 // 切换树形表格展开/折叠
 function toggleTreeExpand() {
-  if (!isTreeTable.value) return;
-  isTreeExpanded.value = !isTreeExpanded.value;
-  if (props.api.grid) {
-    props.api.grid.setAllTreeExpand(isTreeExpanded.value);
-  }
-}
-
-// 获取树形表格展开状态
-function getTreeExpanded() {
-  return isTreeExpanded.value;
-}
-
-// 设置树形表格展开状态
-function setTreeExpandState() {
   if (!isTreeTable.value || !props.api.grid) return;
-  Promise.resolve().then(() => {
-    requestAnimationFrame(() => {
-      if (props.api.grid) {
-        props.api.grid.setAllTreeExpand(isTreeExpanded.value);
-      }
-    });
-  });
+  isTreeExpanded.value = !isTreeExpanded.value;
+  props.api.grid.setAllTreeExpand(isTreeExpanded.value);
 }
-
-// 将方法绑定到 API（在组件挂载时设置）
-watch(
-  () => props.api,
-  (api) => {
-    if (api) {
-      (api as ExtendedVxeGridApi).toggleTreeExpand = toggleTreeExpand;
-      (api as ExtendedVxeGridApi).getTreeExpanded = getTreeExpanded;
-    }
-  },
-  { immediate: true },
-);
 
 const [Form, formApi] = useTableForm({
   compact: true,
@@ -280,14 +245,6 @@ const options = computed(() => {
   if (mergedOptions.formConfig) {
     mergedOptions.formConfig.enabled = false;
   }
-  // 如果启用了树形表格展开/折叠功能，设置 treeConfig.expandAll
-  if (
-    enableTreeExpandToggle.value &&
-    mergedOptions.treeConfig &&
-    !mergedOptions.treeConfig.expandAll
-  ) {
-    mergedOptions.treeConfig.expandAll = isTreeExpanded.value;
-  }
   return mergedOptions;
 });
 
@@ -381,32 +338,6 @@ async function init() {
   extendProxyOptions(props.api, defaultGridOptions, () =>
     formApi.getLatestSubmissionValues(),
   );
-
-  // 如果启用了树形表格展开/折叠功能，在数据加载完成后设置展开状态
-  if (enableTreeExpandToggle.value && isTreeTable.value) {
-    const originalQuery = defaultGridOptions.proxyConfig?.ajax?.query;
-    if (originalQuery && typeof originalQuery === 'function') {
-      const wrappedQuery = async (
-        params: any,
-        customValues?: any,
-        ...rest: any[]
-      ): Promise<any> => {
-        const result = await originalQuery(params, customValues, ...rest);
-        // 数据返回后，使用微任务确保树形结构构建完成后再设置展开状态
-        setTreeExpandState();
-        return result;
-      };
-      props.api.setState({
-        gridOptions: {
-          proxyConfig: {
-            ajax: {
-              query: wrappedQuery,
-            },
-          },
-        },
-      });
-    }
-  }
 }
 
 // formOptions支持响应式
@@ -484,9 +415,19 @@ onUnmounted(() => {
       </template>
       <template #toolbar-tools="slotProps">
         <slot name="toolbar-tools" v-bind="slotProps"></slot>
-        <!-- 新增：树形表格展开/折叠按钮（仅在启用时显示，不影响原有逻辑） -->
+        <!-- 搜索按钮 -->
         <VxeButton
-          v-if="enableTreeExpandToggle && isTreeTable"
+          icon="vxe-icon-search"
+          circle
+          class="ml-2"
+          v-if="gridOptions?.toolbarConfig?.search && !!formOptions"
+          :status="showSearchForm ? 'primary' : undefined"
+          :title="$t('common.search')"
+          @click="onSearchBtnClick"
+        />
+        <!-- 树形表格展开/折叠按钮 -->
+        <VxeButton
+          v-if="gridOptions?.toolbarConfig?.expand && isTreeTable"
           circle
           class="ml-2"
           v-tippy="{
@@ -503,16 +444,6 @@ onUnmounted(() => {
             class="size-4"
           />
         </VxeButton>
-        <!-- 原有逻辑：搜索按钮 -->
-        <VxeButton
-          icon="vxe-icon-search"
-          circle
-          class="ml-2"
-          v-if="gridOptions?.toolbarConfig?.search && !!formOptions"
-          :status="showSearchForm ? 'primary' : undefined"
-          :title="$t('common.search')"
-          @click="onSearchBtnClick"
-        />
       </template>
 
       <!-- form表单 -->
