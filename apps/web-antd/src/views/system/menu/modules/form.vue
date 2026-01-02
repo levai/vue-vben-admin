@@ -466,9 +466,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
       if (data) {
         formData.value = data;
         formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title
-          ? $t(formData.value.meta.title)
-          : '';
+        // 编辑时不自动显示翻译结果，只在用户输入时显示
+        titleSuffix.value = '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';
