@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { OnActionClickParams } from '#/adapter/vxe-table';
 
+import { nextTick, ref } from 'vue';
+
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
 import { $t } from '@vben/locales';
@@ -25,6 +27,9 @@ const [FormDrawer, formDrawerApi] = useVbenDrawer({
 
 // 使用菜单列表 Composable（仅用于拖拽功能）
 const { createGridEvents } = useMenuList();
+
+// 使用响应式状态维护展开的行 ID
+const expandedRowKeys = ref<string[]>([]);
 
 // 操作按钮点击处理（需要在 useColumns 之前定义）
 function onActionClick({
@@ -51,7 +56,18 @@ function onActionClick({
 }
 
 const [Grid, gridApi] = useVbenVxeGrid({
-  gridEvents: {},
+  gridEvents: {
+    // 监听树节点展开/折叠事件，同步更新状态
+    treeExpandChange: ({ row, expanded }) => {
+      const rowId = row.id;
+      const index = expandedRowKeys.value.indexOf(rowId);
+      if (expanded && index === -1) {
+        expandedRowKeys.value.push(rowId);
+      } else if (!expanded && index !== -1) {
+        expandedRowKeys.value.splice(index, 1);
+      }
+    },
+  },
   gridOptions: {
     columns: useColumns(onActionClick),
     height: 'auto',
@@ -106,17 +122,63 @@ const [Grid, gridApi] = useVbenVxeGrid({
   },
 });
 
-// 刷新函数
-function onRefresh() {
-  gridApi.query();
+/**
+ * 保存当前展开的行 ID
+ */
+function saveExpandedRowIds(): string[] {
+  if (!gridApi.grid) return expandedRowKeys.value;
+  const expandedRecords = gridApi.grid.getTreeExpandRecords() || [];
+  const ids = expandedRecords.map((row: SystemMenuApi.SystemMenu) => row.id);
+  // 同步更新 expandedRowKeys
+  expandedRowKeys.value = ids;
+  return ids;
 }
 
-// 创建表格事件处理器
-const gridEvents = createGridEvents(gridApi as any, onRefresh);
+/**
+ * 恢复展开状态
+ */
+async function restoreExpandedState(expandedIds: string[]) {
+  if (!gridApi.grid || expandedIds.length === 0) return;
+  // 等待 DOM 更新和数据加载完成后再恢复展开状态
+  await nextTick();
+  // 使用 setTimeout 确保表格渲染完成
+  setTimeout(() => {
+    // transform: true 模式下，getTableData() 返回对象，需要使用 .tableData 属性
+    const tableDataResult = gridApi.grid.getTableData();
+    const tableData = (tableDataResult?.tableData || tableDataResult) as
+      | SystemMenuApi.SystemMenu[]
+      | undefined;
+    if (!Array.isArray(tableData)) return;
 
-// 更新 gridEvents
+    expandedIds.forEach((id) => {
+      const row = tableData.find(
+        (item: SystemMenuApi.SystemMenu) => item.id === id,
+      );
+      if (row) {
+        gridApi.grid.setTreeExpand(row, true);
+      }
+    });
+  }, 50);
+}
+
+// 刷新函数（保持展开状态）
+async function onRefresh() {
+  // 保存当前展开的行 ID
+  const expandedIds = saveExpandedRowIds();
+  // 刷新数据
+  await gridApi.query();
+  // 恢复展开状态
+  restoreExpandedState(expandedIds);
+}
+
+// 创建表格事件处理器（合并拖拽事件）
+const dragEvents = createGridEvents(gridApi as any, onRefresh);
+
+// 更新 gridEvents（合并拖拽事件，展开事件已在 gridEvents 中配置）
 gridApi.setState({
-  gridEvents,
+  gridEvents: {
+    ...dragEvents,
+  },
 });
 
 // CRUD 操作
