@@ -76,11 +76,10 @@ public class SecurityConfiguration {
      */
     private Set<RequestMatcher> getIgnoreUrls() {
         Set<RequestMatcher> ignoreUrls = new HashSet<>(16);
-        // 白名单：登录、退出登录、刷新token、API文档、测试接口
+        // 白名单：登录、退出登录、刷新token、API文档
         ignoreUrls.add(new AntPathRequestMatcher("/auth/login"));
         ignoreUrls.add(new AntPathRequestMatcher("/auth/logout")); // 退出登录允许无token访问
         ignoreUrls.add(new AntPathRequestMatcher("/auth/refresh"));
-        ignoreUrls.add(new AntPathRequestMatcher("/test/**")); // 测试接口（仅开发环境）
         // Knife4j 文档相关路径
         ignoreUrls.add(new AntPathRequestMatcher("/doc.html"));
         ignoreUrls.add(new AntPathRequestMatcher("/v3/api-docs/**"));
