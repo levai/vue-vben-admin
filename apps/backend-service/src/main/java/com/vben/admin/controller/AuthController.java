@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 认证控制器
+ * 认证控制器（管理端）
  *
  * @author vben
  */

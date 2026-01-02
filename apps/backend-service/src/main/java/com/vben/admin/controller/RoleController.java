@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 系统角色管理控制器
+ * 系统角色管理控制器（管理端）
  *
  * @author vben
  */
@@ -25,7 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/system/role")
 @RequiredArgsConstructor
-public class SystemRoleController {
+public class RoleController {
 
     private final RoleService roleService;
 

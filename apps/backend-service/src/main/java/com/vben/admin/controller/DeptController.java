@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 系统部门管理控制器
+ * 系统部门管理控制器（管理端）
  *
  * @author vben
  */
@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/system/dept")
 @RequiredArgsConstructor
-public class SystemDeptController {
+public class DeptController {
 
     private final DeptService deptService;
 

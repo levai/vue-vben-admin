@@ -1,0 +1,643 @@
+---
+alwaysApply: true
+---
+
+# 后端服务命名规范和项目结构
+
+## 📋 项目结构
+
+```
+com.vben.admin/
+├── BackendServiceApplication.java    # 启动类（必需）
+├── config/                            # 配置层
+│   ├── SecurityConfiguration.java   # Spring Security 配置
+│   ├── MybatisPlusConfig.java        # MyBatis Plus 配置
+│   ├── Knife4jConfig.java           # Swagger 配置
+│   ├── CorsConfig.java               # 跨域配置
+│   ├── AsyncConfig.java              # 异步配置
+│   └── FieldFillHandler.java         # 字段自动填充
+├── controller/                        # 控制层（RESTful API）
+│   ├── AuthController.java           # 认证控制器（/auth）
+│   ├── UserController.java           # 用户管理控制器（/system/user）
+│   ├── UserProfileController.java    # 用户个人中心控制器（/user）
+│   ├── RoleController.java           # 角色管理控制器（/system/role）
+│   ├── MenuController.java           # 菜单管理控制器（/system/menu）
+│   ├── MenuRouterController.java     # 菜单路由控制器（/menu）
+│   ├── DeptController.java           # 部门管理控制器（/system/dept）
+│   └── OperationLogController.java   # 操作日志管理控制器（/system/operation-log）
+├── service/                          # 服务层
+│   ├── AuthService.java              # 认证服务接口
+│   ├── UserService.java              # 用户服务接口
+│   ├── RoleService.java              # 角色服务接口
+│   ├── MenuService.java              # 菜单服务接口
+│   ├── DeptService.java              # 部门服务接口
+│   ├── OperationLogService.java      # 操作日志服务接口
+│   └── impl/                         # 服务实现
+│       ├── AuthServiceImpl.java
+│       ├── UserServiceImpl.java
+│       └── ...
+├── mapper/                           # 数据访问层（MyBatis）
+│   ├── UserMapper.java
+│   ├── RoleMapper.java
+│   ├── MenuMapper.java
+│   ├── DeptMapper.java
+│   ├── OperationLogMapper.java
+│   ├── PermissionMapper.java         # 权限码 Mapper（内部使用）
+│   ├── RoleMenuMapper.java           # 角色菜单关联 Mapper（内部使用）
+│   └── UserRoleMapper.java           # 用户角色关联 Mapper（内部使用）
+├── model/                            # 数据模型层
+│   ├── entity/                       # 实体类（数据库表映射）
+│   │   ├── SysUser.java
+│   │   ├── SysRole.java
+│   │   ├── SysMenu.java
+│   │   ├── SysDept.java
+│   │   ├── SysOperationLog.java
+│   │   ├── SysPermission.java       # 权限码实体（内部使用）
+│   │   ├── SysRoleMenu.java         # 角色菜单关联实体（内部使用）
+│   │   └── SysUserRole.java         # 用户角色关联实体（内部使用）
+│   ├── dto/                          # 数据传输对象（请求参数）
+│   │   ├── UserDTO.java
+│   │   ├── RoleDTO.java
+│   │   ├── MenuDTO.java
+│   │   ├── DeptDTO.java
+│   │   ├── OperationLogQueryDTO.java
+│   │   ├── LoginDTO.java             # 登录 DTO
+│   │   ├── UserOptionQueryDTO.java   # 用户选项查询 DTO
+│   │   ├── RoleOptionQueryDTO.java   # 角色选项查询 DTO
+│   │   ├── MenuOrderDTO.java         # 菜单排序 DTO
+│   │   ├── BatchMenuOrderDTO.java    # 批量菜单排序 DTO
+│   │   └── OptionQueryDTO.java       # 通用选项查询 DTO
+│   └── vo/                           # 视图对象（响应数据）
+│       ├── UserVO.java
+│       ├── RoleVO.java
+│       ├── MenuVO.java
+│       ├── DeptVO.java
+│       ├── OperationLogVO.java
+│       ├── LoginResultVO.java        # 登录结果 VO
+│       └── TreeOptionVO.java         # 树形选项 VO
+└── core/                             # 核心功能
+    ├── enums/                        # 枚举类
+    │   ├── OperationType.java        # 操作类型枚举
+    │   ├── ErrMsg.java               # 错误消息枚举
+    │   └── BaseErrMsg.java           # 基础错误消息枚举
+    ├── exception/                    # 异常处理
+    │   ├── BusinessException.java    # 业务异常
+    │   ├── GlobalExceptionHandler.java  # 全局异常处理器
+    │   └── ...
+    ├── filter/                       # 过滤器
+    │   └── JwtAuthenticationFilter.java  # JWT 认证过滤器
+    ├── model/                        # 通用模型
+    │   ├── BaseResult.java           # 统一响应格式
+    │   └── PageResult.java           # 分页响应格式
+    ├── utils/                        # 工具类（统一位置）✅
+    │   ├── JwtUtils.java             # JWT 工具
+    │   ├── SecurityUtils.java        # 安全工具
+    │   ├── CookieUtils.java          # Cookie 工具
+    │   ├── QueryHelper.java          # 查询辅助工具
+    │   └── ...
+    ├── aspect/                       # AOP 切面
+    │   └── OperationLogAspect.java  # 操作日志切面
+    └── task/                         # 定时任务
+        └── OperationLogCleanupTask.java  # 操作日志清理任务
+```
+
+## 📝 命名规范（业界标准）
+
+### 🎯 核心原则：业务名称完全一致
+
+**业界最佳实践**：Controller、Entity、DTO、VO、Service、Mapper 使用**相同的业务名称**，只是后缀不同。
+
+| 层级 | 命名规则 | 示例 | 说明 |
+| --- | --- | --- | --- |
+| **Controller** | `业务名称` + `Controller` | `UserController` | 通过 `@RequestMapping` 路径区分功能 |
+| **Service 接口** | `业务名称` + `Service` | `UserService` | 业务服务接口 |
+| **Service 实现** | `业务名称` + `ServiceImpl` | `UserServiceImpl` | 业务服务实现 |
+| **Mapper** | `业务名称` + `Mapper` | `UserMapper` | 数据访问层 |
+| **Entity** | `表前缀` + `业务名称` | `SysUser` | 对应数据库表 `sys_user` |
+| **DTO** | `业务名称` + `DTO` | `UserDTO` | 数据传输对象 |
+| **VO** | `业务名称` + `VO` | `UserVO` | 视图对象 |
+
+### 1. Controller（控制器）
+
+**命名规则**: `业务名称` + `Controller`
+
+**当前结构**:
+- ✅ **所有 Controller 都在 `controller/` 根目录下**
+- ✅ **所有功能都是管理端接口**，通过路径前缀区分功能
+- ✅ **业务名称与 Entity、DTO、VO、Service、Mapper 保持一致**
+
+**示例**:
+- `UserController` - 用户管理控制器（`/system/user`）
+- `UserProfileController` - 用户个人中心控制器（`/user`）
+- `RoleController` - 角色管理控制器（`/system/role`）
+- `MenuController` - 菜单管理控制器（`/system/menu`）
+- `MenuRouterController` - 菜单路由控制器（`/menu`）
+- `DeptController` - 部门管理控制器（`/system/dept`）
+- `OperationLogController` - 操作日志管理控制器（`/system/operation-log`）
+- `AuthController` - 认证控制器（`/auth`）
+
+**当前实现示例**:
+```java
+// ✅ 用户管理（CRUD）
+@Api(tags = "系统用户管理")
+@RestController
+@RequestMapping("/system/user")
+@RequiredArgsConstructor
+public class UserController {
+    private final UserService userService;
+    // 管理端用户管理接口（CRUD）
+}
+
+// ✅ 用户个人中心
+@Api(tags = "用户个人中心")
+@RestController
+@RequestMapping("/user")
+@RequiredArgsConstructor
+public class UserProfileController {
+    private final UserService userService;
+    // 用户个人中心接口（个人信息、修改密码等）
+}
+```
+
+**路径前缀规范**:
+- **管理端 CRUD**: `/system/*` - 系统管理接口（如 `/system/user`、`/system/role`）
+- **用户个人中心**: `/*` - 用户个人中心接口（如 `/user`、`/menu`）
+- **认证接口**: `/auth` - 认证管理接口
+
+**未来扩展方案（多端支持）**:
+
+业界推荐两种方案，可根据项目规模和扩展需求选择：
+
+#### 方案一：通过 controller 子包区分（⭐ 推荐，适合多端扩展）
+
+```
+controller/
+├── admin/                    # 管理端（当前所有 Controller 移到这里）
+│   ├── UserController.java
+│   ├── RoleController.java
+│   └── ...
+├── user/                     # 用户端（未来扩展）
+│   ├── UserController.java
+│   └── ...
+└── mobile/                   # 移动端（未来扩展）
+    ├── UserController.java
+    └── ...
+```
+
+**优点**:
+- ✅ **重构成本低**：只需重构 controller 包，Service、Mapper、Model 保持不变
+- ✅ **扩展性好**：未来添加新端时，只需创建新的子包
+- ✅ **隔离清晰**：不同端的 Controller 完全隔离，类名可以相同
+- ✅ **维护简单**：结构清晰，易于理解和维护
+- ✅ **共享资源**：Service、Mapper、Model 可以共享，避免重复代码
+
+**示例**:
+```java
+// 管理端：controller/admin/UserController.java
+@Api(tags = "系统用户管理")
+@RestController
+@RequestMapping("/system/user")
+public class UserController {
+    // 管理端用户管理接口（CRUD）
+}
+
+// 用户端：controller/user/UserController.java
+@Api(tags = "用户个人中心")
+@RestController
+@RequestMapping("/user")
+public class UserController {
+    // 用户端个人中心接口（个人信息、修改密码等）
+}
+```
+
+#### 方案二：通过路径前缀区分（当前方案，适合扩展需求不明确的项目）
+
+```
+controller/
+├── UserController.java       # 管理端用户管理（/system/user）
+├── UserProfileController.java # 用户个人中心（/user）
+├── RoleController.java        # 管理端角色管理（/system/role）
+└── ...
+```
+
+**优点**:
+- ✅ **无需重构**：保持当前结构，无需改动
+- ✅ **结构简单**：无需创建子包，所有 Controller 在同一目录
+- ✅ **路径清晰**：通过路径前缀清晰区分不同功能
+
+**缺点**:
+- ⚠️ **类名需要区分**：管理端和用户端需要使用不同的类名（如 `UserController` vs `UserProfileController`）
+- ⚠️ **不够优雅**：类名不一致，不够简洁
+- ⚠️ **扩展性一般**：未来添加新端时，类名会越来越复杂
+
+### 2. Service（服务层）
+
+**命名规则**:
+- 接口: `业务名称` + `Service`
+- 实现: `业务名称` + `ServiceImpl`
+
+**示例**:
+- `UserService` / `UserServiceImpl`
+- `RoleService` / `RoleServiceImpl`
+- `MenuService` / `MenuServiceImpl`
+- `AuthService` / `AuthServiceImpl`
+
+**说明**:
+- ✅ 接口和实现分离，实现类放在 `service/impl/` 目录
+- ✅ 使用 `@Service` 注解标识服务层
+- ✅ 使用 `@RequiredArgsConstructor` 进行依赖注入
+- ✅ **业务名称与 Controller、Entity、DTO、VO、Mapper 保持一致**
+
+### 3. Mapper（数据访问层）
+
+**命名规则**: `业务名称` + `Mapper`
+
+**示例**:
+- `UserMapper`
+- `RoleMapper`
+- `MenuMapper`
+- `DeptMapper`
+- `OperationLogMapper`
+
+**说明**:
+- ✅ 对应 MyBatis Mapper 接口
+- ✅ 使用 `@Mapper` 注解或 `@MapperScan` 扫描
+- ✅ **业务名称与 Controller、Service、Entity 保持一致**
+
+**关联表 Mapper**（只有 Mapper，无 Controller/Service）:
+- `PermissionMapper` - 权限码 Mapper（内部使用）
+- `RoleMenuMapper` - 角色菜单关联 Mapper（内部使用）
+- `UserRoleMapper` - 用户角色关联 Mapper（内部使用）
+
+### 4. Entity（实体类）
+
+**命名规则**: `表前缀` + `业务名称`（首字母大写）
+
+**示例**:
+- `SysUser` - 用户实体（对应 `sys_user` 表）
+- `SysRole` - 角色实体（对应 `sys_role` 表）
+- `SysMenu` - 菜单实体（对应 `sys_menu` 表）
+- `SysDept` - 部门实体（对应 `sys_dept` 表）
+
+**说明**:
+- ✅ 实体类对应数据库表，使用表前缀（如 `Sys`）表示系统表
+- ✅ 表名通常为 `sys_*`（如 `sys_user`、`sys_role`）
+- ✅ **业务名称部分与 Controller、Service、DTO、VO 保持一致**
+- ⚠️ **Entity 有前缀是合理的**，因为需要对应数据库表名
+
+**当前 Entity 列表**:
+- ✅ `SysDept`
+- ✅ `SysMenu`
+- ✅ `SysOperationLog`
+- ✅ `SysPermission`（内部使用）
+- ✅ `SysRole`
+- ✅ `SysRoleMenu`（关联表，内部使用）
+- ✅ `SysUser`
+- ✅ `SysUserRole`（关联表，内部使用）
+
+### 5. DTO（数据传输对象）
+
+**命名规则**: `业务名称` + `DTO` 或 `业务名称` + `描述` + `DTO`
+
+**示例**:
+- `UserDTO` - 用户 DTO
+- `RoleDTO` - 角色 DTO
+- `MenuDTO` - 菜单 DTO
+- `LoginDTO` - 登录 DTO
+- `UserOptionQueryDTO` - 用户选项查询 DTO
+- `OperationLogQueryDTO` - 操作日志查询 DTO
+
+**说明**:
+- ✅ DTO 用于接收前端请求数据
+- ✅ 不包含数据库相关字段（如 `id`、`createTime`、`deleted`）
+- ✅ 用于创建和更新操作
+- ✅ **业务名称与 Controller、Service、Entity、VO 保持一致**
+- ✅ 查询 DTO 使用 `*QueryDTO` 后缀（如 `UserOptionQueryDTO`）
+
+**Swagger 注解**:
+```java
+@Schema(description = "用户DTO")
+public class UserDTO {
+    @Schema(description = "用户名", example = "admin")
+    private String username;
+
+    @Schema(description = "真实姓名", example = "张三")
+    private String realName;
+}
+```
+
+**当前 DTO 列表**:
+- ✅ `BatchMenuOrderDTO`
+- ✅ `DeptDTO`
+- ✅ `LoginDTO`
+- ✅ `MenuDTO`
+- ✅ `MenuOrderDTO`
+- ✅ `OperationLogQueryDTO`
+- ✅ `OptionQueryDTO`
+- ✅ `RoleDTO`
+- ✅ `RoleOptionQueryDTO`
+- ✅ `UserDTO`
+- ✅ `UserOptionQueryDTO`
+
+### 6. VO（视图对象）
+
+**命名规则**: `业务名称` + `VO` 或 `业务名称` + `描述` + `VO`
+
+**示例**:
+- `UserVO` - 用户 VO
+- `RoleVO` - 角色 VO
+- `MenuVO` - 菜单 VO
+- `LoginResultVO` - 登录结果 VO
+- `TreeOptionVO` - 树形选项 VO
+
+**说明**:
+- ✅ VO 用于返回给前端的数据
+- ✅ 包含需要展示的字段
+- ✅ 可以包含关联数据（如部门名称、角色名称）
+- ✅ **业务名称与 Controller、Service、Entity、DTO 保持一致**
+
+**Swagger 注解**:
+```java
+@Schema(description = "用户VO")
+public class UserVO {
+    @Schema(description = "用户ID")
+    private String id;
+
+    @Schema(description = "用户名")
+    private String username;
+}
+```
+
+**当前 VO 列表**:
+- ✅ `DeptVO`
+- ✅ `LoginResultVO`
+- ✅ `MenuVO`
+- ✅ `OperationLogVO`
+- ✅ `RoleVO`
+- ✅ `TreeOptionVO`
+- ✅ `UserVO`
+
+### 7. 工具类（Utils）
+
+**命名规则**: `*Utils` 或 `*Helper` 或 `*Parser`
+
+**示例**:
+- `JwtUtils` - JWT 工具
+- `SecurityUtils` - 安全工具
+- `CookieUtils` - Cookie 工具
+- `QueryHelper` - 查询辅助工具
+- `OperationInfoParser` - 操作信息解析器
+
+**说明**:
+- ✅ **统一位置**: 所有工具类放在 `core/utils/` 目录
+- ✅ 工具类应该是静态方法或单例模式
+- ✅ 使用 `public static` 方法提供工具功能
+
+**当前工具类列表**:
+- ✅ `BrowserInfoParser.java`
+- ✅ `CookieUtils.java`
+- ✅ `JwtUtils.java`
+- ✅ `MenuModuleResolver.java`
+- ✅ `OperationInfoParser.java`
+- ✅ `QueryHelper.java`
+- ✅ `SecurityUtils.java`
+- ✅ `SensitiveDataFilter.java`
+
+### 8. 枚举类（Enums）
+
+**命名规则**: `*Type` 或 `*Msg` 或 `*Status`
+
+**示例**:
+- `OperationType` - 操作类型枚举
+- `ErrMsg` - 错误消息枚举
+- `BaseErrMsg` - 基础错误消息枚举
+
+**说明**:
+- ✅ 枚举类放在 `core/enums/` 目录
+- ✅ 使用枚举替代魔法字符串，提高代码可维护性
+
+### 9. 异常类（Exception）
+
+**命名规则**: `*Exception`
+
+**示例**:
+- `BusinessException` - 业务异常
+- `GlobalExceptionHandler` - 全局异常处理器
+
+**说明**:
+- ✅ 异常类放在 `core/exception/` 目录
+- ✅ 自定义异常继承 `RuntimeException`
+
+### 10. 配置类（Config）
+
+**命名规则**: `*Configuration` 或 `*Config`
+
+**示例**:
+- `SecurityConfiguration` - Spring Security 配置
+- `MybatisPlusConfig` - MyBatis Plus 配置
+- `Knife4jConfig` - Swagger 配置
+- `CorsConfig` - 跨域配置
+
+**说明**:
+- ✅ 配置类放在 `config/` 目录
+- ✅ 使用 `@Configuration` 注解标识配置类
+
+## 🎯 命名对应关系（业界标准）
+
+### 完整对应关系表
+
+| 业务名称 | Controller | Service | Mapper | Entity | DTO | VO | 路径 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **User** | `UserController` | `UserService` | `UserMapper` | `SysUser` | `UserDTO` | `UserVO` | `/system/user` |
+| **User** | `UserProfileController` | `UserService`（复用） | `UserMapper`（复用） | `SysUser`（复用） | `UserDTO`（复用） | `UserVO`（复用） | `/user` |
+| **Role** | `RoleController` | `RoleService` | `RoleMapper` | `SysRole` | `RoleDTO` | `RoleVO` | `/system/role` |
+| **Menu** | `MenuController` | `MenuService` | `MenuMapper` | `SysMenu` | `MenuDTO` | `MenuVO` | `/system/menu` |
+| **Menu** | `MenuRouterController` | `MenuService`（复用） | `MenuMapper`（复用） | `SysMenu`（复用） | - | `MenuVO`（复用） | `/menu` |
+| **Dept** | `DeptController` | `DeptService` | `DeptMapper` | `SysDept` | `DeptDTO` | `DeptVO` | `/system/dept` |
+| **OperationLog** | `OperationLogController` | `OperationLogService` | `OperationLogMapper` | `SysOperationLog` | `OperationLogQueryDTO` | `OperationLogVO` | `/system/operation-log` |
+| **Auth** | `AuthController` | `AuthService` | - | - | `LoginDTO` | `LoginResultVO` | `/auth` |
+
+**说明**:
+- ✅ **业务名称完全一致**：所有层级使用相同的业务名称（如 `User`）
+- ✅ **Entity 有前缀**：`SysUser`（对应数据库表 `sys_user`），这是合理的
+- ✅ **通过路径区分功能**：管理端 CRUD 使用 `/system/*`，用户个人中心使用 `/*`
+- ✅ **符合业界标准**：遵循 Spring Boot 最佳实践
+
+### 特殊场景处理
+
+**1. 用户个人中心**:
+- Controller: `UserProfileController`（避免与 `UserController` 冲突）
+- 复用 `UserService`、`UserDTO`、`UserVO`
+- 路径: `/user`
+
+**2. 菜单路由**:
+- Controller: `MenuRouterController`（避免与 `MenuController` 冲突）
+- 复用 `MenuService`、`MenuVO`
+- 路径: `/menu`
+
+**3. 认证模块**:
+- Controller: `AuthController`
+- Service: `AuthService`
+- DTO: `LoginDTO`
+- VO: `LoginResultVO`
+- 无 Entity 和 Mapper（认证不涉及实体）
+
+**4. 关联表**（只有 Entity 和 Mapper）:
+- `SysPermission` + `PermissionMapper` - 权限码表（内部使用）
+- `SysRoleMenu` + `RoleMenuMapper` - 角色菜单关联表（内部使用）
+- `SysUserRole` + `UserRoleMapper` - 用户角色关联表（内部使用）
+
+**5. 查询 DTO**:
+- `UserOptionQueryDTO` - 用户选项查询（用于下拉选项）
+- `RoleOptionQueryDTO` - 角色选项查询
+- `OperationLogQueryDTO` - 操作日志查询
+- `OptionQueryDTO` - 通用选项查询
+
+**6. 其他特殊 DTO**:
+- `MenuOrderDTO` - 菜单排序 DTO
+- `BatchMenuOrderDTO` - 批量菜单排序 DTO
+
+## 🎯 Swagger 注解规范
+
+### Controller 类注解
+
+```java
+import io.swagger.annotations.Api;
+
+@Api(tags = "系统用户管理")  // ✅ 使用 @Api（Springfox 原生支持）
+@RestController
+@RequestMapping("/system/user")
+public class UserController {
+    // ...
+}
+```
+
+**说明**:
+- ✅ 使用 `@Api(tags = "...")` 注解（Springfox 原生支持）
+- ❌ 不使用 `@Tag` 注解（Springfox 对 OpenAPI 3.0 的 `@Tag` 支持有限）
+
+### Controller 方法注解
+
+```java
+import io.swagger.v3.oas.annotations.Operation;
+
+@Operation(summary = "获取用户列表", description = "获取用户列表（支持分页和搜索）")
+@GetMapping
+public BaseResult<PageResult<UserVO>> getList(...) {
+    // ...
+}
+```
+
+### Controller 参数注解
+
+```java
+import io.swagger.v3.oas.annotations.Parameter;
+
+@Parameter(description = "页码，从1开始", example = "1")
+@RequestParam(required = false, defaultValue = "1") Integer page
+```
+
+### DTO/VO 字段注解
+
+```java
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "用户名", example = "admin")
+private String username;
+```
+
+**统一规范**:
+- **Controller 类**: `@Api(tags = "...")`（Springfox）
+- **Controller 方法**: `@Operation(summary = "...")`（OpenAPI 3.0）
+- **Controller 参数**: `@Parameter(description = "...")`（OpenAPI 3.0）
+- **DTO/VO 字段**: `@Schema(description = "...")`（OpenAPI 3.0）
+
+## 📚 文件位置规范
+
+### Model 类位置
+
+```
+apps/backend-service/src/main/java/com/vben/admin/model/
+├── entity/          # 实体类（Entity）
+│   ├── SysDept.java
+│   ├── SysMenu.java
+│   ├── SysRole.java
+│   └── ...
+├── dto/             # 数据传输对象（DTO）
+│   ├── DeptDTO.java
+│   ├── MenuDTO.java
+│   ├── RoleDTO.java
+│   └── ...
+└── vo/              # 视图对象（VO）
+    ├── DeptVO.java
+    ├── MenuVO.java
+    ├── RoleVO.java
+    ├── UserVO.java
+    └── LoginResultVO.java
+```
+
+### 工具类位置
+
+```
+apps/backend-service/src/main/java/com/vben/admin/core/utils/
+├── BrowserInfoParser.java
+├── CookieUtils.java
+├── JwtUtils.java
+├── MenuModuleResolver.java
+├── OperationInfoParser.java
+├── QueryHelper.java
+├── SecurityUtils.java
+└── SensitiveDataFilter.java
+```
+
+**说明**:
+- ✅ 所有工具类统一放在 `core/utils/` 目录
+- ❌ 不再使用 `util/` 目录（已删除）
+
+## 📝 命名原则
+
+1. **一致性**: 同一类型的对象使用相同的命名规则 ✅
+2. **可读性**: 名称应该清晰表达对象的用途 ✅
+3. **简洁性**: 避免不必要的中间词（如 `Info`、`Detail`） ✅
+4. **明确性**: 如果简化会导致混淆，可以保留更明确的名称 ✅
+5. **统一性**: 工具类统一在 `core/utils/` 目录 ✅
+6. **对应性**: Controller、Entity、DTO、VO 保持业务名称一致 ✅
+7. **路径区分**: 通过 `@RequestMapping` 路径区分功能，而不是类名前缀 ✅
+
+## 🎯 命名规范总结
+
+| 类型 | 命名规则 | 示例 | 状态 |
+| --- | --- | --- | --- |
+| **Controller** | `业务名称` + `Controller` | `UserController`, `RoleController` | ✅ 统一 |
+| **Service 接口** | `业务名称` + `Service` | `UserService`, `RoleService` | ✅ 统一 |
+| **Service 实现** | `业务名称` + `ServiceImpl` | `UserServiceImpl`, `RoleServiceImpl` | ✅ 统一 |
+| **Mapper** | `业务名称` + `Mapper` | `UserMapper`, `RoleMapper` | ✅ 统一 |
+| **Entity** | `表前缀` + `业务名称` | `SysDept`, `SysMenu`, `SysRole`, `SysUser` | ✅ 统一 |
+| **DTO** | `业务名称` + `DTO` | `DeptDTO`, `MenuDTO`, `RoleDTO`, `UserDTO` | ✅ 统一 |
+| **VO** | `业务名称` + `VO` | `DeptVO`, `MenuVO`, `RoleVO`, `UserVO` | ✅ 统一 |
+| **工具类** | `*Utils` / `*Helper` / `*Parser` | `JwtUtils`, `QueryHelper`, `OperationInfoParser` | ✅ 统一 |
+| **枚举类** | `*Type` / `*Msg` / `*Status` | `OperationType`, `ErrMsg` | ✅ 统一 |
+| **异常类** | `*Exception` | `BusinessException` | ✅ 统一 |
+| **配置类** | `*Configuration` / `*Config` | `SecurityConfiguration`, `Knife4jConfig` | ✅ 统一 |
+
+## ⚠️ 注意事项
+
+1. **新增 Model 类时**，请遵循上述命名规范
+2. **Entity 类**必须使用表前缀（如 `Sys`），对应数据库表名
+3. **DTO 类**用于接收前端请求，不包含数据库字段
+4. **VO 类**用于返回给前端，统一使用 `VO` 后缀
+5. **工具类**统一放在 `core/utils/` 目录
+6. **避免使用中间词**（如 `Info`、`Detail`），保持命名简洁
+7. **命名对应关系**：
+   - ✅ Controller、Entity、DTO、VO 保持业务名称一致
+   - ✅ Entity 有表前缀（如 `Sys`），这是合理的
+   - ✅ 通过 `@RequestMapping` 路径区分功能，而不是类名前缀
+   - ✅ 特殊 Controller（如 `UserProfileController`）使用描述性名称避免冲突
+8. **Swagger 注解**：
+   - Controller 类使用 `@Api(tags = "...")`
+   - DTO/VO 字段使用 `@Schema(description = "...")`
+   - Controller 参数使用 `@Parameter(description = "...")`
+
+## 📖 相关文档
+
+- [项目 README](../../README.md)

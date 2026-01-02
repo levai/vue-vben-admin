@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 系统操作日志管理控制器
+ * 系统操作日志管理控制器（管理端）
  *
  * @author vben
  */
@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/system/operation-log")
 @RequiredArgsConstructor
-public class SystemOperationLogController {
+public class OperationLogController {
 
     private final OperationLogService operationLogService;
 
