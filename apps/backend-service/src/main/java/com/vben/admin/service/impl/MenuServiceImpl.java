@@ -111,8 +111,11 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public List<MenuVO> getMenuList() {
+        // 只查询启用状态的菜单（status=1），过滤掉禁用的菜单
+        // 这样在角色管理页面分配权限时，不会显示禁用的菜单
         List<SysMenu> menus = menuMapper.selectList(
                 new QueryWrapper<SysMenu>()
+                        .eq("status", 1)
                         .orderByAsc("sort_order")
         );
         return buildMenuTree(menus);
