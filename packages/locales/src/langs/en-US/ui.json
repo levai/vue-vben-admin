@@ -25,7 +25,9 @@
   },
   "placeholder": {
     "input": "Please enter",
-    "select": "Please select"
+    "select": "Please select",
+    "startDate": "Start date",
+    "endDate": "End date"
   },
   "captcha": {
     "title": "Please complete the security verification",

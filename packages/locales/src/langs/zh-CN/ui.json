@@ -25,7 +25,9 @@
   },
   "placeholder": {
     "input": "请输入",
-    "select": "请选择"
+    "select": "请选择",
+    "startDate": "开始时间",
+    "endDate": "结束时间"
   },
   "captcha": {
     "title": "请完成安全验证",
