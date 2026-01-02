@@ -105,6 +105,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
         },
       },
     },
+    rowConfig: {
+      keyField: 'id', // reserve 需要 keyField
+    },
     toolbarConfig: {
       custom: true,
       export: false,
@@ -116,6 +119,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       parentField: 'pid',
       rowField: 'id',
       transform: false,
+      reserve: true, // 保留展开状态
     },
   },
 });
