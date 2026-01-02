@@ -1,12 +1,14 @@
 package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.core.utils.CookieUtils;
 import com.vben.admin.model.dto.LoginDTO;
 import com.vben.admin.model.vo.LoginResultVO;
 import com.vben.admin.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -28,27 +30,43 @@ public class AuthController {
 
     @Operation(summary = "登录", description = "用户登录接口")
     @PostMapping("/login")
-    public BaseResult<LoginResultVO> login(@Valid @RequestBody LoginDTO loginDTO) {
+    public BaseResult<LoginResultVO> login(
+            @Valid @RequestBody LoginDTO loginDTO,
+            HttpServletResponse response) {
         LoginResultVO result = authService.login(loginDTO);
+
+        // 将 refreshToken 设置到 Cookie 中
+        if (result.getRefreshToken() != null) {
+            CookieUtils.setRefreshTokenCookie(response, result.getRefreshToken());
+            // 清除返回结果中的 refreshToken，不返回给前端
+            result.setRefreshToken(null);
+        }
+
         return new BaseResult<>(result);
     }
 
     @Operation(summary = "退出登录", description = "用户退出登录接口")
     @PostMapping("/logout")
-    public BaseResult<Boolean> logout() {
+    public BaseResult<Boolean> logout(HttpServletResponse response) {
         authService.logout();
+        // 清除 refreshToken Cookie
+        CookieUtils.clearRefreshTokenCookie(response);
         return new BaseResult<>(true);
     }
 
     @Operation(summary = "刷新Token", description = "刷新AccessToken接口")
     @PostMapping("/refresh")
     public BaseResult<String> refresh(HttpServletRequest request) {
-        // 从Cookie中获取RefreshToken（这里简化处理，实际应该从Cookie获取）
-        String refreshToken = request.getHeader("Refresh-Token");
+        // 从 Cookie 中获取 RefreshToken
+        String refreshToken = CookieUtils.getRefreshTokenFromCookie(request);
+
         if (refreshToken == null) {
-            refreshToken = request.getParameter("refreshToken");
+            throw new com.vben.admin.core.exception.BusinessException("RefreshToken 不存在，请重新登录");
         }
+
+        // 刷新 token（生成新的 accessToken，继续使用原 refreshToken）
         String newAccessToken = authService.refreshToken(refreshToken);
+
         return new BaseResult<>(newAccessToken);
     }
 
