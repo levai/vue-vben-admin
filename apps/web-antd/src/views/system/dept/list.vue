@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams } from '#/adapter/vxe-table';
 import type { SystemDeptApi } from '#/api/system/dept';
 
 import { Page, useVbenModal } from '@vben/common-ui';
@@ -94,9 +91,6 @@ function onActionClick({
 
 const [Grid, gridApi] = useVbenVxeGrid({
   gridEvents: {},
-  // 启用树形表格展开/折叠功能
-  enableTreeExpandToggle: true,
-  defaultTreeExpanded: true,
   gridOptions: {
     columns: useColumns(onActionClick),
     height: 'auto',
@@ -106,7 +100,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     proxyConfig: {
       ajax: {
-        query: async (_params) => {
+        query: async (_params: any) => {
           return await getDeptList();
         },
       },
@@ -116,13 +110,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
       export: false,
       refresh: true,
       zoom: true,
+      expand: true, // 启用展开/折叠按钮（框架自动处理）
     },
     treeConfig: {
       parentField: 'pid',
       rowField: 'id',
       transform: false,
     },
-  } as VxeTableGridOptions,
+  },
 });
 
 /**
