@@ -36,6 +36,24 @@ public class MenuServiceImpl implements MenuService {
     private final MenuMapper menuMapper;
     private final ObjectMapper objectMapper;
 
+    // 菜单类型常量
+    private static final String MENU_TYPE_CATALOG = "catalog";
+    private static final String MENU_TYPE_MENU = "menu";
+    private static final String MENU_TYPE_EMBEDDED = "embedded";
+    private static final String MENU_TYPE_LINK = "link";
+    private static final String MENU_TYPE_BUTTON = "button";
+
+    // 根菜单ID
+    private static final String ROOT_MENU_ID = "0";
+
+    // 菜单名称长度限制
+    private static final int MENU_NAME_MIN_LENGTH = 2;
+    private static final int MENU_NAME_MAX_LENGTH = 30;
+
+    // 路径长度限制
+    private static final int PATH_MIN_LENGTH = 2;
+    private static final int PATH_MAX_LENGTH = 100;
+
     @Override
     public List<MenuVO> getAllMenus() {
         // 获取当前登录用户ID
@@ -65,7 +83,7 @@ public class MenuServiceImpl implements MenuService {
         // 转换为列表并构建树形结构
         // 过滤掉按钮类型的菜单（按钮类型不应该显示在左侧菜单中）
         List<SysMenu> allMenus = menuMap.values().stream()
-                .filter(menu -> !"button".equals(menu.getType()))
+                .filter(menu -> !MENU_TYPE_BUTTON.equals(menu.getType()))
                 .collect(Collectors.toList());
         return buildMenuTree(allMenus);
     }
@@ -78,7 +96,7 @@ public class MenuServiceImpl implements MenuService {
      */
     private void addParentMenus(String pid, Map<String, SysMenu> menuMap) {
         // 如果父ID为空或者是根节点，则停止递归
-        if (pid == null || "0".equals(pid) || menuMap.containsKey(pid)) {
+        if (pid == null || ROOT_MENU_ID.equals(pid) || menuMap.containsKey(pid)) {
             return;
         }
 
@@ -113,121 +131,19 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createMenu(MenuDTO menuDTO) {
-        // 校验菜单名称
-        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
-            throw new BusinessException("菜单名称不能为空");
-        }
-        if (menuDTO.getName().length() < 2 || menuDTO.getName().length() > 30) {
-            throw new BusinessException("菜单名称长度必须在2-30之间");
-        }
-        // 检查名称是否已存在
-        if (isNameExists(menuDTO.getName(), null)) {
-            throw new BusinessException("菜单名称已存在");
-        }
+        // 校验菜单基本信息
+        validateMenuBasicInfo(menuDTO, null);
 
-        // 校验菜单类型
-        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
-            throw new BusinessException("菜单类型不能为空");
-        }
+        // 校验菜单类型相关字段
         String menuType = menuDTO.getType();
+        validateMenuTypeFields(menuDTO, menuType, null);
 
-        // 根据菜单类型进行不同的校验
-        switch (menuType) {
-            case "catalog":
-            case "embedded":
-            case "menu":
-                // 这些类型需要 path
-                if (menuDTO.getPath() == null || menuDTO.getPath().trim().isEmpty()) {
-                    throw new BusinessException("路由路径不能为空");
-                }
-                if (menuDTO.getPath().length() < 2 || menuDTO.getPath().length() > 100) {
-                    throw new BusinessException("路由路径长度必须在2-100之间");
-                }
-                if (!menuDTO.getPath().startsWith("/")) {
-                    throw new BusinessException("路由路径必须以'/'开头");
-                }
-                // 检查路径是否已存在
-                if (isPathExists(menuDTO.getPath(), null)) {
-                    throw new BusinessException("菜单路径已存在");
-                }
-                break;
-            case "button":
-                // button 类型不需要 path，但需要 authCode
-                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
-                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
-                }
-                break;
-            case "link":
-                // link 类型不需要 path，但需要 link（在 meta.link 中）
-                if (menuDTO.getMeta() == null || menuDTO.getMeta().get("link") == null) {
-                    throw new BusinessException("外链类型菜单的链接地址不能为空");
-                }
-                break;
-            default:
-                throw new BusinessException("不支持的菜单类型: " + menuType);
-        }
-
-        // menu 类型需要 component
-        if ("menu".equals(menuType)) {
-            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
-                throw new BusinessException("菜单类型必须指定组件路径");
-            }
-        }
-
-        // embedded 和 link 类型需要 linkSrc（在 meta 中）
-        if ("embedded".equals(menuType) || "link".equals(menuType)) {
-            if (menuDTO.getMeta() == null) {
-                throw new BusinessException("菜单元数据不能为空");
-            }
-            String linkSrc = "embedded".equals(menuType)
-                ? (String) menuDTO.getMeta().get("iframeSrc")
-                : (String) menuDTO.getMeta().get("link");
-            if (linkSrc == null || linkSrc.trim().isEmpty()) {
-                throw new BusinessException("链接地址不能为空");
-            }
-            // 可以添加 URL 格式校验
-            if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {
-                throw new BusinessException("链接地址格式不正确，必须以 http:// 或 https:// 开头");
-            }
-        }
-
+        // 创建菜单实体
         SysMenu menu = new SysMenu();
         BeanUtils.copyProperties(menuDTO, menu);
 
-        // 处理排序字段：从 meta.order 读取，保存到实体的 rank（映射到数据库 sort_order）
-        Integer sortOrder = null;
-        if (menuDTO.getMeta() != null) {
-            Object orderObj = menuDTO.getMeta().get("order");
-            if (orderObj != null) {
-                if (orderObj instanceof Number) {
-                    sortOrder = ((Number) orderObj).intValue();
-                } else if (orderObj instanceof String) {
-                    try {
-                        sortOrder = Integer.parseInt((String) orderObj);
-                    } catch (NumberFormatException e) {
-                        // 忽略解析错误
-                    }
-                }
-            }
-            try {
-                menu.setMeta(objectMapper.writeValueAsString(menuDTO.getMeta()));
-            } catch (Exception e) {
-                throw new BusinessException("菜单元数据格式错误");
-            }
-        }
-
-        if (menu.getPid() == null) {
-            menu.setPid("0");
-        }
-        if (menu.getStatus() == null) {
-            menu.setStatus(1);
-        }
-        // 设置排序值
-        if (sortOrder != null) {
-            menu.setSortOrder(sortOrder);
-        } else if (menu.getSortOrder() == null) {
-            menu.setSortOrder(0);
-        }
+        // 处理菜单特殊字段
+        processMenuFields(menu, menuDTO, menuType, true);
 
         menuMapper.insert(menu);
         return menu.getId();
@@ -241,115 +157,18 @@ public class MenuServiceImpl implements MenuService {
             throw new BusinessException("菜单不存在");
         }
 
-        // 校验菜单名称
-        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
-            throw new BusinessException("菜单名称不能为空");
-        }
-        if (menuDTO.getName().length() < 2 || menuDTO.getName().length() > 30) {
-            throw new BusinessException("菜单名称长度必须在2-30之间");
-        }
-        // 检查名称是否已存在（排除自己）
-        if (isNameExists(menuDTO.getName(), id)) {
-            throw new BusinessException("菜单名称已存在");
-        }
+        // 校验菜单基本信息
+        validateMenuBasicInfo(menuDTO, id);
 
-        // 校验菜单类型
-        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
-            throw new BusinessException("菜单类型不能为空");
-        }
+        // 校验菜单类型相关字段
         String menuType = menuDTO.getType();
+        validateMenuTypeFields(menuDTO, menuType, id);
 
-        // 根据菜单类型进行不同的校验
-        switch (menuType) {
-            case "catalog":
-            case "embedded":
-            case "menu":
-                // 这些类型需要 path
-                if (menuDTO.getPath() == null || menuDTO.getPath().trim().isEmpty()) {
-                    throw new BusinessException("路由路径不能为空");
-                }
-                if (menuDTO.getPath().length() < 2 || menuDTO.getPath().length() > 100) {
-                    throw new BusinessException("路由路径长度必须在2-100之间");
-                }
-                if (!menuDTO.getPath().startsWith("/")) {
-                    throw new BusinessException("路由路径必须以'/'开头");
-                }
-                // 检查路径是否已存在（排除自己）
-                if (isPathExists(menuDTO.getPath(), id)) {
-                    throw new BusinessException("菜单路径已存在");
-                }
-                break;
-            case "button":
-                // button 类型不需要 path，但需要 authCode
-                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
-                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
-                }
-                break;
-            case "link":
-                // link 类型不需要 path，但需要 link（在 meta.link 中）
-                if (menuDTO.getMeta() == null || menuDTO.getMeta().get("link") == null) {
-                    throw new BusinessException("外链类型菜单的链接地址不能为空");
-                }
-                break;
-            default:
-                throw new BusinessException("不支持的菜单类型: " + menuType);
-        }
-
-        // menu 类型需要 component
-        if ("menu".equals(menuType)) {
-            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
-                throw new BusinessException("菜单类型必须指定组件路径");
-            }
-        }
-
-        // embedded 和 link 类型需要 linkSrc（在 meta 中）
-        if ("embedded".equals(menuType) || "link".equals(menuType)) {
-            if (menuDTO.getMeta() == null) {
-                throw new BusinessException("菜单元数据不能为空");
-            }
-            String linkSrc = "embedded".equals(menuType)
-                ? (String) menuDTO.getMeta().get("iframeSrc")
-                : (String) menuDTO.getMeta().get("link");
-            if (linkSrc == null || linkSrc.trim().isEmpty()) {
-                throw new BusinessException("链接地址不能为空");
-            }
-            // 可以添加 URL 格式校验
-            if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {
-                throw new BusinessException("链接地址格式不正确，必须以 http:// 或 https:// 开头");
-            }
-        }
-
+        // 更新菜单实体
         BeanUtils.copyProperties(menuDTO, menu, "id");
 
-        // 处理排序字段：从 meta.order 读取，保存到实体的 rank（映射到数据库 sort_order）
-        Integer sortOrder = null;
-        if (menuDTO.getMeta() != null) {
-            Object orderObj = menuDTO.getMeta().get("order");
-            if (orderObj != null) {
-                if (orderObj instanceof Number) {
-                    sortOrder = ((Number) orderObj).intValue();
-                } else if (orderObj instanceof String) {
-                    try {
-                        sortOrder = Integer.parseInt((String) orderObj);
-                    } catch (NumberFormatException e) {
-                        // 忽略解析错误
-                    }
-                }
-            }
-            try {
-                menu.setMeta(objectMapper.writeValueAsString(menuDTO.getMeta()));
-            } catch (Exception e) {
-                throw new BusinessException("菜单元数据格式错误");
-            }
-        }
-
-        if (menu.getPid() == null) {
-            menu.setPid("0");
-        }
-        // 设置排序值
-        if (sortOrder != null) {
-            menu.setSortOrder(sortOrder);
-        }
+        // 处理菜单特殊字段
+        processMenuFields(menu, menuDTO, menuType, false);
 
         menuMapper.updateById(menu);
     }
@@ -408,7 +227,7 @@ public class MenuServiceImpl implements MenuService {
             // 处理父级ID
             String pid = menuOrderDTO.getPid();
             if (pid == null || pid.isEmpty() || "null".equalsIgnoreCase(pid)) {
-                pid = "0";
+                pid = ROOT_MENU_ID;
             }
 
             // 校验：防止菜单成为自己的父级（循环引用）
@@ -416,8 +235,8 @@ public class MenuServiceImpl implements MenuService {
                 throw new BusinessException("菜单不能成为自己的父级，菜单ID: " + menuOrderDTO.getId());
             }
 
-            // 校验：如果 pid 不是 "0"，检查父菜单是否存在
-            if (!"0".equals(pid)) {
+            // 校验：如果 pid 不是根节点，检查父菜单是否存在
+            if (!ROOT_MENU_ID.equals(pid)) {
                 SysMenu parentMenu = menuMapper.selectById(pid);
                 if (parentMenu == null) {
                     throw new BusinessException("父菜单不存在，父菜单ID: " + pid + "，菜单ID: " + menuOrderDTO.getId());
@@ -425,28 +244,7 @@ public class MenuServiceImpl implements MenuService {
             }
 
             // 处理排序字段：从 meta.order 读取
-            Integer sortOrder = null;
-            Object orderObj = menuOrderDTO.getMeta().get("order");
-            if (orderObj != null) {
-                if (orderObj instanceof Number) {
-                    sortOrder = ((Number) orderObj).intValue();
-                } else if (orderObj instanceof String) {
-                    try {
-                        sortOrder = Integer.parseInt((String) orderObj);
-                    } catch (NumberFormatException e) {
-                        throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuOrderDTO.getId());
-                    }
-                } else {
-                    throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuOrderDTO.getId());
-                }
-
-                // 校验排序值范围（可选，根据业务需求调整）
-                if (sortOrder < 0) {
-                    throw new BusinessException("排序值不能小于0，菜单ID: " + menuOrderDTO.getId());
-                }
-            } else {
-                throw new BusinessException("排序值不能为空，菜单ID: " + menuOrderDTO.getId());
-            }
+            Integer sortOrder = parseSortOrderWithValidation(menuOrderDTO.getMeta(), menuOrderDTO.getId());
 
             // 更新父级ID
             menu.setPid(pid);
@@ -488,7 +286,7 @@ public class MenuServiceImpl implements MenuService {
                 .collect(Collectors.toMap(MenuVO::getId, menu -> menu));
 
         for (MenuVO menu : menuVOs) {
-            if ("0".equals(menu.getPid()) || menu.getPid() == null) {
+            if (ROOT_MENU_ID.equals(menu.getPid()) || menu.getPid() == null) {
                 rootMenus.add(menu);
             } else {
                 MenuVO parent = menuMap.get(menu.getPid());
@@ -602,7 +400,7 @@ public class MenuServiceImpl implements MenuService {
         nameChain.add(menuName);
 
         String pid = menu.getPid();
-        while (pid != null && !"0".equals(pid)) {
+        while (pid != null && !ROOT_MENU_ID.equals(pid)) {
             SysMenu parentMenu = menuMapper.selectById(pid);
             if (parentMenu == null || parentMenu.getDeleted() == 1 || parentMenu.getStatus() == 0) {
                 break;
@@ -637,5 +435,220 @@ public class MenuServiceImpl implements MenuService {
 
         // 降级使用 name 字段
         return menu.getName() != null ? menu.getName() : "";
+    }
+
+    /**
+     * 校验菜单基本信息（名称、类型）
+     *
+     * @param menuDTO 菜单DTO
+     * @param id      菜单ID（更新时传入，创建时传入null）
+     */
+    private void validateMenuBasicInfo(MenuDTO menuDTO, String id) {
+        // 校验菜单名称
+        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
+            throw new BusinessException("菜单名称不能为空");
+        }
+        if (menuDTO.getName().length() < MENU_NAME_MIN_LENGTH || menuDTO.getName().length() > MENU_NAME_MAX_LENGTH) {
+            throw new BusinessException("菜单名称长度必须在" + MENU_NAME_MIN_LENGTH + "-" + MENU_NAME_MAX_LENGTH + "之间");
+        }
+        // 检查名称是否已存在
+        if (isNameExists(menuDTO.getName(), id)) {
+            throw new BusinessException("菜单名称已存在");
+        }
+
+        // 校验菜单类型
+        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
+            throw new BusinessException("菜单类型不能为空");
+        }
+    }
+
+    /**
+     * 校验菜单类型相关字段
+     *
+     * @param menuDTO 菜单DTO
+     * @param menuType 菜单类型
+     * @param id      菜单ID（更新时传入，创建时传入null）
+     */
+    private void validateMenuTypeFields(MenuDTO menuDTO, String menuType, String id) {
+        // 根据菜单类型进行不同的校验
+        switch (menuType) {
+            case MENU_TYPE_CATALOG:
+            case MENU_TYPE_EMBEDDED:
+            case MENU_TYPE_MENU:
+                validatePath(menuDTO.getPath(), id);
+                break;
+            case MENU_TYPE_BUTTON:
+                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
+                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
+                }
+                break;
+            case MENU_TYPE_LINK:
+                if (menuDTO.getMeta() == null || menuDTO.getMeta().get("link") == null) {
+                    throw new BusinessException("外链类型菜单的链接地址不能为空");
+                }
+                break;
+            default:
+                throw new BusinessException("不支持的菜单类型: " + menuType);
+        }
+
+        // menu 类型需要 component
+        if (MENU_TYPE_MENU.equals(menuType)) {
+            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
+                throw new BusinessException("菜单类型必须指定组件路径");
+            }
+        }
+
+        // embedded 和 link 类型需要 linkSrc（在 meta 中）
+        if (MENU_TYPE_EMBEDDED.equals(menuType) || MENU_TYPE_LINK.equals(menuType)) {
+            validateLinkSrc(menuDTO, menuType);
+        }
+    }
+
+    /**
+     * 校验路由路径
+     *
+     * @param path 路径
+     * @param id   菜单ID（更新时传入，创建时传入null）
+     */
+    private void validatePath(String path, String id) {
+        if (path == null || path.trim().isEmpty()) {
+            throw new BusinessException("路由路径不能为空");
+        }
+        if (path.length() < PATH_MIN_LENGTH || path.length() > PATH_MAX_LENGTH) {
+            throw new BusinessException("路由路径长度必须在" + PATH_MIN_LENGTH + "-" + PATH_MAX_LENGTH + "之间");
+        }
+        if (!path.startsWith("/")) {
+            throw new BusinessException("路由路径必须以'/'开头");
+        }
+        // 检查路径是否已存在
+        if (isPathExists(path, id)) {
+            throw new BusinessException("菜单路径已存在");
+        }
+    }
+
+    /**
+     * 校验链接地址（embedded 和 link 类型）
+     *
+     * @param menuDTO 菜单DTO
+     * @param menuType 菜单类型
+     */
+    private void validateLinkSrc(MenuDTO menuDTO, String menuType) {
+        if (menuDTO.getMeta() == null) {
+            throw new BusinessException("菜单元数据不能为空");
+        }
+        String linkSrc = MENU_TYPE_EMBEDDED.equals(menuType)
+                ? (String) menuDTO.getMeta().get("iframeSrc")
+                : (String) menuDTO.getMeta().get("link");
+        if (linkSrc == null || linkSrc.trim().isEmpty()) {
+            throw new BusinessException("链接地址不能为空");
+        }
+        // URL 格式校验
+        if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {
+            throw new BusinessException("链接地址格式不正确，必须以 http:// 或 https:// 开头");
+        }
+    }
+
+    /**
+     * 处理菜单特殊字段（path、meta、sortOrder、pid、status）
+     *
+     * @param menu    菜单实体
+     * @param menuDTO 菜单DTO
+     * @param menuType 菜单类型
+     * @param isCreate 是否为创建操作
+     */
+    private void processMenuFields(SysMenu menu, MenuDTO menuDTO, String menuType, boolean isCreate) {
+        // 对于不需要 path 的菜单类型（button、link），将 path 设置为 NULL，避免违反唯一约束
+        if (MENU_TYPE_BUTTON.equals(menuType) || MENU_TYPE_LINK.equals(menuType)) {
+            menu.setPath(null);
+        }
+
+        // 处理 meta 和 sortOrder
+        Integer sortOrder = parseSortOrder(menuDTO.getMeta());
+        if (menuDTO.getMeta() != null) {
+            try {
+                menu.setMeta(objectMapper.writeValueAsString(menuDTO.getMeta()));
+            } catch (Exception e) {
+                throw new BusinessException("菜单元数据格式错误");
+            }
+        }
+
+        // 设置默认值
+        if (menu.getPid() == null) {
+            menu.setPid(ROOT_MENU_ID);
+        }
+        if (isCreate && menu.getStatus() == null) {
+            menu.setStatus(1);
+        }
+
+        // 设置排序值
+        if (sortOrder != null) {
+            menu.setSortOrder(sortOrder);
+        } else if (isCreate && menu.getSortOrder() == null) {
+            menu.setSortOrder(0);
+        }
+    }
+
+    /**
+     * 解析排序值（从 meta.order 读取）
+     *
+     * @param meta 元数据
+     * @return 排序值
+     */
+    private Integer parseSortOrder(Map<String, Object> meta) {
+        if (meta == null) {
+            return null;
+        }
+        Object orderObj = meta.get("order");
+        if (orderObj == null) {
+            return null;
+        }
+        if (orderObj instanceof Number) {
+            return ((Number) orderObj).intValue();
+        } else if (orderObj instanceof String) {
+            try {
+                return Integer.parseInt((String) orderObj);
+            } catch (NumberFormatException e) {
+                // 忽略解析错误
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 解析排序值（带校验，用于批量更新）
+     *
+     * @param meta 元数据
+     * @param menuId 菜单ID（用于错误提示）
+     * @return 排序值
+     */
+    private Integer parseSortOrderWithValidation(Map<String, Object> meta, String menuId) {
+        if (meta == null) {
+            throw new BusinessException("菜单元数据不能为空，菜单ID: " + menuId);
+        }
+        Object orderObj = meta.get("order");
+        if (orderObj == null) {
+            throw new BusinessException("排序值不能为空，菜单ID: " + menuId);
+        }
+
+        Integer sortOrder;
+        if (orderObj instanceof Number) {
+            sortOrder = ((Number) orderObj).intValue();
+        } else if (orderObj instanceof String) {
+            try {
+                sortOrder = Integer.parseInt((String) orderObj);
+            } catch (NumberFormatException e) {
+                throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuId);
+            }
+        } else {
+            throw new BusinessException("排序值格式错误，必须是数字，菜单ID: " + menuId);
+        }
+
+        // 校验排序值范围
+        if (sortOrder < 0) {
+            throw new BusinessException("排序值不能小于0，菜单ID: " + menuId);
+        }
+
+        return sortOrder;
     }
 }
