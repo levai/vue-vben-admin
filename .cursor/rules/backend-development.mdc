@@ -6,15 +6,97 @@ alwaysApply: true
 
 ## 📋 目录
 
-1. [项目架构概览](#项目架构概览)
-2. [Controller 层设计](#controller-层设计)
-3. [Service 层设计](#service-层设计)
-4. [数据库操作设计](#数据库操作设计)
-5. [API 设计规范](#api-设计规范)
-6. [异常处理设计](#异常处理设计)
-7. [参数校验设计](#参数校验设计)
-8. [工具类使用规范](#工具类使用规范)
-9. [实际使用示例](#实际使用示例)
+1. [技术栈分析](#技术栈分析)
+2. [项目架构概览](#项目架构概览)
+3. [Controller 层设计](#controller-层设计)
+4. [Service 层设计](#service-层设计)
+5. [数据库操作设计](#数据库操作设计)
+6. [API 设计规范](#api-设计规范)
+7. [异常处理设计](#异常处理设计)
+8. [参数校验设计](#参数校验设计)
+9. [工具类使用规范](#工具类使用规范)
+10. [实际使用示例](#实际使用示例)
+11. [后续开发模式](#后续开发模式)
+12. [最佳实践建议](#最佳实践建议)
+
+---
+
+## 技术栈分析
+
+> 📖 **详细技术栈分析文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md)
+
+### 核心框架
+
+| 技术            | 版本   | 用途     | 说明               |
+| --------------- | ------ | -------- | ------------------ |
+| **Spring Boot** | 2.7.18 | 核心框架 | 企业级应用开发框架 |
+| **Java**        | 11     | 编程语言 | LTS 版本，稳定可靠 |
+| **Maven**       | 3.6+   | 构建工具 | 依赖管理和项目构建 |
+
+### 数据层
+
+| 技术             | 版本   | 用途         | 特性                    |
+| ---------------- | ------ | ------------ | ----------------------- |
+| **MySQL**        | 8.0+   | 关系型数据库 | 主数据库                |
+| **MyBatis Plus** | 3.5.9  | ORM 框架     | 增强 MyBatis，简化 CRUD |
+| **Druid**        | 1.2.16 | 数据库连接池 | 监控、统计、SQL 防火墙  |
+
+**MyBatis Plus 特性**：
+
+- ✅ 分页插件：`PaginationInnerInterceptor`
+- ✅ 逻辑删除：`@TableLogic`（自动过滤 deleted=1）
+- ✅ 自动填充：`FieldFillHandler`（自动填充 createTime、updateTime 等）
+- ✅ ID 生成策略：`assign_id`（雪花算法）
+- ✅ 类型安全：`LambdaQueryWrapper`（避免字符串拼接）
+
+### 安全认证
+
+| 技术                | 版本   | 用途       | 配置           |
+| ------------------- | ------ | ---------- | -------------- |
+| **Spring Security** | 2.7.18 | 安全框架   | JWT 无状态认证 |
+| **JWT (jjwt)**      | 0.7.0  | Token 认证 | HS512 签名算法 |
+
+**JWT 配置**：
+
+- **AccessToken**：2小时（7200000ms）- 符合业界标准
+- **RefreshToken**：7天（604800000ms）- 符合业界标准
+- **签名算法**：HS512（HMAC-SHA512）
+
+**Spring Security 配置**：
+
+- ✅ 无状态 Session（STATELESS）
+- ✅ JWT 认证过滤器（`JwtAuthenticationFilter`）
+- ✅ 自定义认证入口点（`CustomAuthenticationEntryPoint`）
+- ✅ 自定义拒绝处理器（`CustomAccessDeniedHandler`）
+
+### API 文档
+
+| 技术        | 版本  | 用途     | 特性             |
+| ----------- | ----- | -------- | ---------------- |
+| **Knife4j** | 3.0.3 | API 文档 | 基于 Swagger 3.0 |
+
+**Swagger 注解规范**：
+
+- Controller 类：`@Api(tags = "...")`（Springfox）
+- Controller 方法：`@Operation(summary = "...")`（OpenAPI 3.0）
+- Controller 参数：`@Parameter(description = "...")`（OpenAPI 3.0）
+- DTO/VO 字段：`@Schema(description = "...")`（OpenAPI 3.0）
+
+### 工具库
+
+| 技术                       | 版本   | 用途         | 常用注解/类                                    |
+| -------------------------- | ------ | ------------ | ---------------------------------------------- |
+| **Lombok**                 | 1.18.32 | 代码生成     | `@Data`、`@RequiredArgsConstructor`、`@Slf4j` |
+| **Hutool**                 | 5.8.26 | Java 工具类库 | 字符串、日期、加密等工具                       |
+| **Apache Commons Lang3**   | -      | 工具类       | 字符串、集合等工具                              |
+
+### 其他依赖
+
+| 技术                       | 版本  | 用途         | 说明                  |
+| -------------------------- | ----- | ------------ | --------------------- |
+| **Spring Boot Validation** | -     | 参数校验     | Bean Validation       |
+| **Spring Boot AOP**        | -     | 面向切面编程 | 操作日志切面          |
+| **JAXB API**               | 2.3.1 | XML 绑定     | Java 11+ 需要单独添加 |
 
 ---
 
@@ -1250,3 +1332,208 @@ Vue Vben Admin 后端开发规范特点：
 - ✅ 可维护性：提取的私有方法便于复用和测试
 - ✅ 可扩展性：新增功能时更容易扩展
 - ✅ 代码量：减少重复代码，提高代码质量
+
+---
+
+## 后续开发模式
+
+> 📖 **详细开发模式文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md#后续开发模式)
+
+### 1. 新功能开发流程
+
+**创建新模块的标准流程**（8 步）：
+
+1. **创建 Entity** - 数据库表映射
+2. **创建 DTO** - 请求参数对象
+3. **创建 VO** - 响应数据对象
+4. **创建 Mapper** - 数据访问层接口
+5. **创建 Service 接口** - 业务服务接口
+6. **创建 Service 实现** - 业务逻辑实现（遵循优化模式）
+7. **创建 Controller** - RESTful API 控制器
+8. **创建数据库表** - SQL 脚本
+
+**详细示例代码请参考技术栈分析文档**。
+
+### 2. 代码审查清单
+
+#### Controller 层审查
+
+- [ ] 是否使用 `@RequiredArgsConstructor` 进行依赖注入
+- [ ] 是否统一返回 `BaseResult<T>`
+- [ ] 是否使用 RESTful 路由设计
+- [ ] 是否使用 `@Validated` 进行参数校验
+- [ ] 是否添加 Swagger 注解（`@Api`、`@Operation`、`@Parameter`、`@Schema`）
+
+#### Service 层审查
+
+- [ ] 是否提取 `getXxxByIdOrThrow()` 方法
+- [ ] 是否提取验证方法（`validateXxx()`、`checkXxx()`）
+- [ ] 是否提取构建方法（`buildXxxEntity()`）
+- [ ] 是否提取更新方法（`updateXxxBasicInfo()`）
+- [ ] 是否使用 `@Transactional` 标注写操作
+- [ ] 是否使用工具类（`QueryHelper`、`TreeHelper` 等）
+
+#### Mapper 层审查
+
+- [ ] 是否继承 `BaseMapper<T>`
+- [ ] 是否使用 `LambdaQueryWrapper` 而不是字符串拼接
+- [ ] 是否使用逻辑删除（`@TableLogic`）
+
+#### Model 层审查
+
+- [ ] Entity 是否使用 `@TableName` 和 `@TableId`
+- [ ] Entity 是否使用 `@TableLogic` 标注逻辑删除字段
+- [ ] DTO 是否使用 `@Schema` 注解
+- [ ] DTO 是否使用 Bean Validation 注解
+- [ ] VO 是否只包含需要返回给前端的字段
+
+### 3. 测试规范
+
+#### 单元测试
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class NoticeControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void testGetNoticeList() throws Exception {
+        mockMvc.perform(get("/system/notice")
+                        .param("page", "1")
+                        .param("pageSize", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+}
+```
+
+#### 集成测试
+
+```java
+@SpringBootTest
+@Transactional
+class NoticeServiceTest {
+
+    @Autowired
+    private NoticeService noticeService;
+
+    @Test
+    void testCreateNotice() {
+        NoticeDTO noticeDTO = new NoticeDTO();
+        noticeDTO.setTitle("测试通知");
+        noticeDTO.setContent("这是一条测试通知");
+
+        String id = noticeService.createNotice(noticeDTO);
+        assertNotNull(id);
+
+        NoticeVO notice = noticeService.getNoticeById(id);
+        assertEquals("测试通知", notice.getTitle());
+    }
+}
+```
+
+---
+
+## 最佳实践建议
+
+> 📖 **详细最佳实践文档**：请参考 [`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md#最佳实践建议)
+
+### 1. 代码质量
+
+#### 遵循 DRY 原则
+
+- ✅ 提取公共方法，避免重复代码
+- ✅ 使用工具类（`QueryHelper`、`TreeHelper` 等）
+- ✅ 使用常量定义魔法字符串
+
+#### 保持方法简洁
+
+- ✅ 方法职责单一，逻辑清晰
+- ✅ 方法长度控制在 50 行以内
+- ✅ 复杂逻辑提取为私有方法
+
+#### 类型安全
+
+- ✅ 使用 `LambdaQueryWrapper` 而不是字符串拼接
+- ✅ 使用泛型提高代码复用性
+- ✅ 避免使用 `Object` 类型（除非必要）
+
+### 2. 性能优化
+
+#### 数据库查询优化
+
+- ✅ 使用索引（在数据库表设计中添加合适的索引）
+- ✅ 避免 N+1 查询问题（使用批量查询）
+- ✅ 使用分页查询，避免一次性加载大量数据
+
+#### 缓存策略
+
+- ✅ 对于频繁查询的数据，考虑使用 Redis 缓存
+- ✅ 缓存过期时间设置合理
+- ✅ 缓存更新策略（Cache-Aside、Write-Through 等）
+
+### 3. 安全规范
+
+#### 认证授权
+
+- ✅ 所有接口（除登录、注册外）都需要认证
+- ✅ 使用 JWT Token 进行无状态认证
+- ✅ Token 过期时间设置合理（AccessToken 2小时，RefreshToken 7天）
+
+#### 数据安全
+
+- ✅ 密码使用 BCrypt 加密存储
+- ✅ 敏感信息（如密码）不在日志中输出
+- ✅ 使用 `SensitiveDataFilter` 过滤敏感数据
+
+#### SQL 注入防护
+
+- ✅ 使用 `LambdaQueryWrapper` 进行类型安全的查询
+- ✅ 避免直接拼接 SQL 字符串
+- ✅ 使用参数化查询
+
+### 4. 可维护性
+
+#### 代码注释
+
+- ✅ 类和方法添加 JavaDoc 注释
+- ✅ 复杂逻辑添加行内注释
+- ✅ 常量添加注释说明
+
+#### 日志规范
+
+- ✅ 使用 `@Slf4j` 注解
+- ✅ 关键操作记录日志（INFO 级别）
+- ✅ 异常记录错误日志（ERROR 级别）
+- ✅ 避免在日志中输出敏感信息
+
+#### 异常处理
+
+- ✅ 使用统一的异常处理（`GlobalExceptionHandler`）
+- ✅ 异常消息清晰明确，使用中文
+- ✅ 不要暴露系统内部信息
+
+### 5. 扩展性
+
+#### 接口设计
+
+- ✅ 接口设计考虑未来扩展
+- ✅ 使用 DTO 封装参数，便于后续添加字段
+- ✅ 使用 VO 返回数据，便于后续添加字段
+
+#### 模块化设计
+
+- ✅ 功能模块化，便于独立开发和测试
+- ✅ 使用 Service 接口和实现分离
+- ✅ 工具类统一放在 `core/utils/` 目录
+
+---
+
+## 相关文档
+
+- 📖 **技术栈与开发规范分析**：[`apps/backend-service/技术栈与开发规范分析.md`](../../apps/backend-service/技术栈与开发规范分析.md)
+- 📖 **命名规范说明**：[`apps/backend-service/.cursor/rules/命名规范说明.mdc`](../../apps/backend-service/.cursor/rules/命名规范说明.mdc)
+- 📖 **Token 最佳实践**：[`apps/backend-service/TOKEN_BEST_PRACTICES.md`](../../apps/backend-service/TOKEN_BEST_PRACTICES.md)
