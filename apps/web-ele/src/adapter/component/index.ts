@@ -237,6 +237,7 @@ async function initComponentAdapter() {
       },
       'select',
       {
+        clearable: true,
         component: ElCascader,
         props: { label: 'label', value: 'value', children: 'children' },
         loadingSlot: 'loading',
@@ -250,6 +251,7 @@ async function initComponentAdapter() {
       },
       'select',
       {
+        clearable: true,
         component: ElSelectV2,
         loadingSlot: 'loading',
         visibleEvent: 'onVisibleChange',
@@ -262,6 +264,7 @@ async function initComponentAdapter() {
       },
       'select',
       {
+        clearable: true,
         component: ElTreeSelect,
         props: { label: 'label', value: 'value', children: 'children' },
         nodeKey: 'value',
@@ -321,7 +324,9 @@ async function initComponentAdapter() {
         slots,
       );
     },
-    Cascader: withDefaultPlaceholder(ElCascader, 'select'),
+    Cascader: withDefaultPlaceholder(ElCascader, 'select', {
+      clearable: true,
+    }),
     Checkbox: ElCheckbox,
     CheckboxGroup: (props, { attrs, slots }) => {
       let defaultSlot;
@@ -356,8 +361,12 @@ async function initComponentAdapter() {
       modelValueProp: 'model-value',
       inputComponent: ElInput,
     }),
-    Input: withDefaultPlaceholder(ElInput, 'input'),
-    InputNumber: withDefaultPlaceholder(ElInputNumber, 'input'),
+    Input: withDefaultPlaceholder(ElInput, 'input', {
+      clearable: true,
+    }),
+    InputNumber: withDefaultPlaceholder(ElInputNumber, 'input', {
+      clearable: true,
+    }),
     InputPassword: withDefaultPlaceholder(ElInputPassword, 'input'),
     Textarea: withDefaultPlaceholder(Textarea, 'input'),
     Radio: ElRadio,
@@ -399,6 +408,7 @@ async function initComponentAdapter() {
       return h(
         ElTimePicker,
         {
+          clearable: true,
           ...props,
           ...attrs,
           ...extraProps,
@@ -442,6 +452,7 @@ async function initComponentAdapter() {
       return h(
         ElDatePicker,
         {
+          clearable: true,
           ...props,
           ...attrs,
           ...extraProps,
@@ -486,7 +497,9 @@ async function initComponentAdapter() {
       );
     },
     Rate: ElRate,
-    TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select'),
+    TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select', {
+      clearable: true,
+    }),
     Upload: ElUpload,
   };
 

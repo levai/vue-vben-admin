@@ -83,7 +83,8 @@ export function useFormSchema(isEdit = false): VbenFormSchema[] {
     {
       component: 'ApiTreeSelect',
       componentProps: {
-        allowClear: false,
+        clearable: true, // Element Plus 使用 clearable 而不是 allowClear
+        checkStrictly: true, // 允许选择父级节点
         api: () => import('#/api/system/dept').then((m) => m.getDeptList()),
         class: 'w-full',
         labelField: 'name',
@@ -138,7 +139,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
     {
       component: 'ApiTreeSelect',
       componentProps: {
-        allowClear: true,
+        checkStrictly: true, // 允许选择父级节点
         api: () => import('#/api/system/dept').then((m) => m.getDeptList()),
         class: 'w-full',
         labelField: 'name',
