@@ -12,6 +12,9 @@ export const overridesPreferences = defineOverridesPreferences({
     authPageLayout: 'panel-right',
     accessMode: 'backend',
   },
+  transition: {
+    enable: false,
+  },
   theme: {
     mode: 'light',
   },
