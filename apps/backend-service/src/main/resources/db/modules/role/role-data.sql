@@ -12,6 +12,6 @@ SET CHARACTER SET utf8mb4;
 -- 初始化角色
 -- =============================================
 INSERT INTO `sys_role` (`id`, `name`, `status`, `remark`, `deleted`) VALUES
-('1', 'admin', 1, '超级管理员', 0),
-('2', 'user', 1, '普通用户', 0)
+('1', '超级管理员', 1, '超级管理员', 0),
+('2', '普通用户', 1, '普通用户', 0)
 ON DUPLICATE KEY UPDATE `name` = `name`;

@@ -41,7 +41,7 @@ public class RoleServiceImpl implements RoleService {
     /**
      * 超级管理员角色名称
      */
-    private static final String ADMIN_ROLE_NAME = "admin";
+    private static final String ADMIN_ROLE_NAME = "超级管理员";
 
     private final RoleMapper roleMapper;
     private final RoleMenuMapper roleMenuMapper;
