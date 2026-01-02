@@ -55,8 +55,8 @@ public class AuthController {
     }
 
     @Operation(summary = "刷新Token", description = "刷新AccessToken接口")
-    @PostMapping("/refresh")
-    public BaseResult<String> refresh(HttpServletRequest request) {
+    @PostMapping(value = "/refresh", produces = "text/plain;charset=UTF-8")
+    public String refresh(HttpServletRequest request) {
         // 从 Cookie 中获取 RefreshToken
         String refreshToken = CookieUtils.getRefreshTokenFromCookie(request);
 
@@ -65,9 +65,8 @@ public class AuthController {
         }
 
         // 刷新 token（生成新的 accessToken，继续使用原 refreshToken）
-        String newAccessToken = authService.refreshToken(refreshToken);
-
-        return new BaseResult<>(newAccessToken);
+        // 直接返回 token 字符串，与 Mock 服务保持一致，前端无需解析 BaseResult
+        return authService.refreshToken(refreshToken);
     }
 
     @Operation(summary = "获取权限码列表", description = "获取当前用户的权限码列表")

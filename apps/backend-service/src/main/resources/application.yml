@@ -72,8 +72,14 @@ logging:
 
 jwt:
   secret: vben-admin-secret-key-for-jwt-token-generation-minimum-256-bits-required-for-hmac-sha256-algorithm
-  access-token-expiration: 7200000
-  refresh-token-expiration: 604800000
+  # AccessToken 过期时间（毫秒）
+  # 业界推荐：15分钟(900000) - 2小时(7200000)
+  # 当前：2小时（符合业界标准，平衡安全性和用户体验）
+  access-token-expiration: 7200000 # 2小时
+  # RefreshToken 过期时间（毫秒）
+  # 业界推荐：7天(604800000) - 30天(2592000000)
+  # 当前：7天（符合业界标准，安全性较高）
+  refresh-token-expiration: 604800000 # 7天
 
 # Knife4j 配置
 knife4j:

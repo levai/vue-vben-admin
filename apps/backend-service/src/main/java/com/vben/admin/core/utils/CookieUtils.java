@@ -13,14 +13,16 @@ import javax.servlet.http.HttpServletResponse;
 public class CookieUtils {
 
     /**
-     * RefreshToken Cookie 名称（与 Mock 服务保持一致）
+     * RefreshToken Cookie 名称
+     * 使用语义化的名称，便于理解和调试
      */
-    private static final String REFRESH_TOKEN_COOKIE_NAME = "jwt";
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 
     /**
-     * Cookie 最大存活时间（秒），30天
+     * Cookie 最大存活时间（秒）
+     * 与 refreshToken 过期时间保持一致：7天 = 604800 秒
      */
-    private static final int MAX_AGE = 30 * 24 * 60 * 60;
+    private static final int MAX_AGE = 7 * 24 * 60 * 60; // 7天
 
     /**
      * 设置 RefreshToken Cookie
