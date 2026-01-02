@@ -75,7 +75,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
 async function loadPermissions() {
   loadingPermissions.value = true;
   try {
-    const res = await getMenuList();
+    // 角色授权时只显示启用的菜单
+    const res = await getMenuList({ status: 1 });
     permissions.value = res as unknown as DataNode[];
   } finally {
     loadingPermissions.value = false;

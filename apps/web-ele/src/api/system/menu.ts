@@ -91,10 +91,20 @@ export namespace SystemMenuApi {
 }
 
 /**
+ * 获取菜单列表参数
+ */
+interface GetMenuListParams {
+  /** 状态（0-禁用，1-启用，不传则返回所有状态） */
+  status?: number;
+}
+
+/**
  * 获取菜单数据列表
  */
-async function getMenuList() {
-  return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu');
+async function getMenuList(params?: GetMenuListParams) {
+  return requestClient.get<Array<SystemMenuApi.SystemMenu>>('/system/menu', {
+    params: params || undefined,
+  });
 }
 
 async function isMenuNameExists(
