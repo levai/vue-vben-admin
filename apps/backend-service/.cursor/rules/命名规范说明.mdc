@@ -248,6 +248,22 @@ controller/
 - ✅ 使用 `@RequiredArgsConstructor` 进行依赖注入
 - ✅ **业务名称与 Controller、Entity、DTO、VO、Mapper 保持一致**
 
+**Service 实现类优化模式**:
+
+所有 Service 实现类应遵循统一的优化模式，提取私有方法提高代码质量：
+
+1. **实体查询方法**：`get{Entity}ByIdOrThrow(String id)` - 统一实体查询和异常处理
+2. **验证方法**：`validate{Field}NotExists()` / `check{Field}NotExists()` - 统一验证逻辑
+3. **构建方法**：`build{Entity}Entity(DTO dto, String id)` - 统一实体构建逻辑
+4. **更新方法**：`update{Entity}BasicInfo(Entity entity, DTO dto)` - 统一更新逻辑
+5. **工具方法**：根据具体功能命名，如 `getUserName()`、`getDeptName()` 等
+
+**优化效果**：
+- ✅ 可读性：方法职责单一，逻辑清晰
+- ✅ 可维护性：提取的私有方法便于复用和测试
+- ✅ 可扩展性：新增功能时更容易扩展
+- ✅ 代码量：减少重复代码，提高代码质量
+
 ### 3. Mapper（数据访问层）
 
 **命名规则**: `业务名称` + `Mapper`

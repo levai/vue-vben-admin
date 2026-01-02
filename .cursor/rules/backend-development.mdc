@@ -392,36 +392,37 @@ public interface UserService {
 
 Service 实现类使用 `@Service` 和 `@RequiredArgsConstructor`，实现业务逻辑：
 
-```java:20:100:apps/backend-service/src/main/java/com/vben/admin/service/impl/UserServiceImpl.java
+```java
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
         // 构建查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 搜索关键词（优先级高于 username/realName）
-        if (StringUtils.hasText(search)) {
-            queryWrapper.and(wrapper -> wrapper
-                    .like(SysUser::getUsername, search)
-                    .or()
-                    .like(SysUser::getRealName, search)
-            );
-        } else {
-            // 如果没有 search，使用 username 和 realName
-            if (StringUtils.hasText(username)) {
-                queryWrapper.like(SysUser::getUsername, username);
-            }
-            if (StringUtils.hasText(realName)) {
-                queryWrapper.like(SysUser::getRealName, realName);
-            }
+        // 搜索关键词处理（优先级高于 username/realName）
+        QueryHelper.applySearch(
+                queryWrapper,
+                SearchQueryConfig.<SysUser>of(search)
+                        .searchField(SysUser::getUsername)
+                        .searchField(SysUser::getRealName)
+                        .fallbackField(SysUser::getUsername, username)
+                        .fallbackField(SysUser::getRealName, realName)
+        );
+
+        // 其他查询条件
+        if (StringUtils.hasText(deptId)) {
+            queryWrapper.eq(SysUser::getDeptId, deptId);
+        }
+        if (status != null) {
+            queryWrapper.eq(SysUser::getStatus, status);
         }
 
-        // 其他查询条件...
         // 时间范围查询
         QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
 
@@ -438,6 +439,69 @@ public class UserServiceImpl implements UserService {
 
         return PageResult.of(voList, pageResult.getTotal());
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createUser(UserDTO userDTO) {
+        // 验证用户唯一性
+        validateUserUniqueness(userDTO, null);
+
+        // 创建用户实体
+        SysUser user = buildUserEntity(userDTO, null);
+        userMapper.insert(user);
+
+        // 保存用户角色关联
+        if (userDTO.getRoleIds() != null && !userDTO.getRoleIds().isEmpty()) {
+            saveUserRoles(user.getId(), userDTO.getRoleIds());
+        }
+
+        return user.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUser(String id, UserDTO userDTO) {
+        // 查询用户
+        SysUser user = getUserByIdOrThrow(id);
+
+        // 验证用户唯一性（只验证变更的字段）
+        validateUserUniquenessForUpdate(user, userDTO, id);
+
+        // 更新用户基本信息
+        updateUserBasicInfo(user, userDTO);
+        userMapper.updateById(user);
+
+        // 更新用户角色关联
+        updateUserRoles(id, userDTO.getRoleIds());
+    }
+
+    /**
+     * 根据ID获取用户，如果不存在则抛出异常
+     */
+    private SysUser getUserByIdOrThrow(String id) {
+        SysUser user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        return user;
+    }
+
+    /**
+     * 验证用户唯一性（创建时）
+     */
+    private void validateUserUniqueness(UserDTO userDTO, String id) {
+        if (StringUtils.hasText(userDTO.getUsername())) {
+            checkUsernameNotExists(userDTO.getUsername(), id);
+        }
+        if (StringUtils.hasText(userDTO.getPhone())) {
+            checkPhoneNotExists(userDTO.getPhone(), id);
+        }
+        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+            checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
+        }
+    }
+
+    // ... 其他私有方法
 }
 ```
 
@@ -445,9 +509,200 @@ public class UserServiceImpl implements UserService {
 1. **使用 `@Service`**：标识服务层组件
 2. **使用 `@RequiredArgsConstructor`**：构造函数注入依赖
 3. **事务管理**：写操作使用 `@Transactional(rollbackFor = Exception.class)`
-4. **使用工具类**：时间范围查询使用 `QueryHelper.applyTimeRange()`
+4. **使用工具类**：时间范围查询使用 `QueryHelper.applyTimeRange()`，搜索使用 `QueryHelper.applySearch()`
 5. **类型安全**：使用 `LambdaQueryWrapper` 而不是字符串拼接
 6. **VO 转换**：使用 `BeanUtils.copyProperties()` 或手动映射
+7. **代码优化**：提取私有方法，提高代码可读性和可维护性
+
+### 3. Service 实现类优化模式
+
+**统一的优化模式**（所有 Service 实现类遵循）：
+
+#### 3.1 实体查询方法
+
+```java
+/**
+ * 根据ID获取实体，如果不存在则抛出异常
+ *
+ * @param id 实体ID
+ * @return 实体对象
+ * @throws BusinessException 如果实体不存在
+ */
+private SysUser getUserByIdOrThrow(String id) {
+    SysUser user = userMapper.selectById(id);
+    if (user == null) {
+        throw new BusinessException("用户不存在");
+    }
+    return user;
+}
+```
+
+**命名规范**：`get{Entity}ByIdOrThrow(String id)`
+
+#### 3.2 验证方法
+
+```java
+/**
+ * 验证用户唯一性（创建时）
+ */
+private void validateUserUniqueness(UserDTO userDTO, String id) {
+    if (StringUtils.hasText(userDTO.getUsername())) {
+        checkUsernameNotExists(userDTO.getUsername(), id);
+    }
+    if (StringUtils.hasText(userDTO.getPhone())) {
+        checkPhoneNotExists(userDTO.getPhone(), id);
+    }
+}
+
+/**
+ * 检查用户名不存在
+ */
+private void checkUsernameNotExists(String username, String id) {
+    LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+            .eq(SysUser::getUsername, username);
+    if (id != null) {
+        queryWrapper.ne(SysUser::getId, id);
+    }
+    long count = userMapper.selectCount(queryWrapper);
+    if (count > 0) {
+        throw new BusinessException("用户名已存在");
+    }
+}
+```
+
+**命名规范**：
+- 验证方法：`validate{Field}NotExists()` 或 `validate{Entity}Uniqueness()`
+- 检查方法：`check{Field}NotExists()`
+
+#### 3.3 构建方法
+
+```java
+/**
+ * 构建用户实体
+ *
+ * @param userDTO 用户DTO
+ * @param id      用户ID（更新时传入，创建时传入null）
+ * @return 用户实体
+ */
+private SysUser buildUserEntity(UserDTO userDTO, String id) {
+    SysUser user = new SysUser();
+    user.setUsername(userDTO.getUsername());
+    // 密码处理：如果未提供密码，则使用默认密码
+    String password = StringUtils.hasText(userDTO.getPassword())
+            ? userDTO.getPassword()
+            : "88888888";
+    user.setPassword(passwordEncoder.encode(password));
+    user.setRealName(userDTO.getRealName());
+    // ... 其他字段设置
+    user.setStatus(userDTO.getStatus() != null ? userDTO.getStatus() : 1);
+    return user;
+}
+```
+
+**命名规范**：`build{Entity}Entity(DTO dto, String id)`
+
+#### 3.4 更新方法
+
+```java
+/**
+ * 更新用户基本信息
+ *
+ * @param user    用户实体
+ * @param userDTO 用户DTO
+ */
+private void updateUserBasicInfo(SysUser user, UserDTO userDTO) {
+    if (StringUtils.hasText(userDTO.getUsername())) {
+        user.setUsername(userDTO.getUsername());
+    }
+    if (StringUtils.hasText(userDTO.getPassword())) {
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+    }
+    // ... 其他字段更新
+}
+```
+
+**命名规范**：`update{Entity}BasicInfo(Entity entity, DTO dto)`
+
+#### 3.5 工具方法
+
+```java
+/**
+ * 获取用户名称（优先使用真实姓名，否则使用用户名）
+ *
+ * @param userId 用户ID
+ * @return 用户名称
+ */
+private String getUserName(String userId) {
+    SysUser user = userMapper.selectById(userId);
+    if (user != null) {
+        return user.getRealName() != null ? user.getRealName() : user.getUsername();
+    }
+    return null;
+}
+```
+
+**命名规范**：根据具体功能命名，如 `getUserName()`、`getDeptName()` 等
+
+### 4. Service 层优化效果
+
+**优化前**：
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public String createUser(UserDTO userDTO) {
+    // 检查用户名是否已存在
+    long count = userMapper.selectCount(
+            new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUsername, userDTO.getUsername())
+    );
+    if (count > 0) {
+        throw new BusinessException("用户名已存在");
+    }
+
+    // 检查手机号是否已存在
+    long phoneCount = userMapper.selectCount(
+            new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getPhone, userDTO.getPhone())
+    );
+    if (phoneCount > 0) {
+        throw new BusinessException("手机号已存在");
+    }
+
+    // 创建用户
+    SysUser user = new SysUser();
+    user.setUsername(userDTO.getUsername());
+    // ... 大量字段设置代码
+    userMapper.insert(user);
+    return user.getId();
+}
+```
+
+**优化后**：
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public String createUser(UserDTO userDTO) {
+    // 验证用户唯一性
+    validateUserUniqueness(userDTO, null);
+
+    // 创建用户实体
+    SysUser user = buildUserEntity(userDTO, null);
+    userMapper.insert(user);
+
+    // 保存用户角色关联
+    if (userDTO.getRoleIds() != null && !userDTO.getRoleIds().isEmpty()) {
+        saveUserRoles(user.getId(), userDTO.getRoleIds());
+    }
+
+    return user.getId();
+}
+```
+
+**优化效果**：
+- ✅ **可读性提升**：主方法逻辑清晰，职责单一
+- ✅ **可维护性提升**：提取的私有方法便于复用和测试
+- ✅ **代码量减少**：消除重复代码，提高代码质量
+- ✅ **统一模式**：所有 Service 实现类遵循相同的优化模式
 
 ---
 
@@ -831,21 +1086,32 @@ public class SystemUserController {
 
 ```java
 @Override
-public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, ...) {
+public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
     // 构建查询条件
     LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
-    // 搜索关键词（优先级高于 username/realName）
-    if (StringUtils.hasText(search)) {
-        queryWrapper.and(wrapper -> wrapper
-                .like(SysUser::getUsername, search)
-                .or()
-                .like(SysUser::getRealName, search)
-        );
+    // 搜索关键词处理（优先级高于 username/realName）
+    QueryHelper.applySearch(
+            queryWrapper,
+            SearchQueryConfig.<SysUser>of(search)
+                    .searchField(SysUser::getUsername)
+                    .searchField(SysUser::getRealName)
+                    .fallbackField(SysUser::getUsername, username)
+                    .fallbackField(SysUser::getRealName, realName)
+    );
+
+    // 其他查询条件
+    if (StringUtils.hasText(deptId)) {
+        queryWrapper.eq(SysUser::getDeptId, deptId);
+    }
+    if (status != null) {
+        queryWrapper.eq(SysUser::getStatus, status);
     }
 
     // 时间范围查询
     QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
+
+    queryWrapper.orderByDesc(SysUser::getCreateTime);
 
     // 分页查询
     Page<SysUser> pageParam = new Page<>(page, pageSize);
@@ -960,6 +1226,7 @@ Vue Vben Admin 后端开发规范特点：
 8. **异常处理**：统一异常处理和业务异常
 9. **命名规范**：业务名称完全一致，通过路径区分功能
 10. **工具类统一**：所有工具类统一放在 `core/utils/` 目录
+11. **代码优化**：Service 实现类遵循统一的优化模式，提取私有方法提高可读性和可维护性
 
 后端开发核心流程：
 1. Controller 接收请求 → 参数校验
@@ -967,3 +1234,19 @@ Vue Vben Admin 后端开发规范特点：
 3. Mapper 执行数据库操作 → 返回 Entity
 4. Service 转换为 VO → 返回结果
 5. Controller 封装为 BaseResult → 返回前端
+
+### Service 层优化模式总结
+
+所有 Service 实现类应遵循以下优化模式：
+
+1. **提取 `getXxxByIdOrThrow()`** - 统一实体查询和异常处理
+2. **提取验证方法** - 统一验证逻辑（`validateXxx()`、`checkXxx()`）
+3. **提取构建方法** - 统一实体构建逻辑（`buildXxxEntity()`）
+4. **提取更新方法** - 统一更新逻辑（`updateXxxBasicInfo()`）
+5. **提取工具方法** - 复用通用逻辑（如 `getUserName()`）
+
+**优化效果**：
+- ✅ 可读性：方法职责单一，逻辑清晰
+- ✅ 可维护性：提取的私有方法便于复用和测试
+- ✅ 可扩展性：新增功能时更容易扩展
+- ✅ 代码量：减少重复代码，提高代码质量

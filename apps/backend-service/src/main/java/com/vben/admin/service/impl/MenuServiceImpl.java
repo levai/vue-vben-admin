@@ -38,11 +38,11 @@ public class MenuServiceImpl implements MenuService {
     private final ObjectMapper objectMapper;
 
     // 菜单类型常量
-    private static final String MENU_TYPE_CATALOG = "catalog";
-    private static final String MENU_TYPE_MENU = "menu";
-    private static final String MENU_TYPE_EMBEDDED = "embedded";
-    private static final String MENU_TYPE_LINK = "link";
-    private static final String MENU_TYPE_BUTTON = "button";
+    private static final String MENU_TYPE_CATALOG = "catalog"; // 目录
+    private static final String MENU_TYPE_MENU = "menu"; // 菜单
+    private static final String MENU_TYPE_EMBEDDED = "embedded"; // 内嵌
+    private static final String MENU_TYPE_LINK = "link"; // 外链
+    private static final String MENU_TYPE_BUTTON = "button"; // 按钮
 
     // 根菜单ID（使用 TreeHelper 的常量）
     private static final String ROOT_MENU_ID = TreeHelper.ROOT_ID;
