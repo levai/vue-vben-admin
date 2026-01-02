@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams } from '#/adapter/vxe-table';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
 import { IconifyIcon, Plus } from '@vben/icons';
@@ -54,9 +51,6 @@ function onActionClick({
 }
 
 const [Grid, gridApi] = useVbenVxeGrid({
-  // 启用树形表格展开/折叠功能
-  enableTreeExpandToggle: true,
-  defaultTreeExpanded: false,
   gridEvents: {},
   gridOptions: {
     columns: useColumns(onActionClick),
@@ -94,8 +88,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     rowDragConfig: {
       isCrossDrag: false,
-      isToChildDrag: false,
-      isToParentDrag: false,
       isPeerDrag: true, // 只允许同级拖拽
       trigger: 'row',
     },
@@ -104,13 +96,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
       export: false,
       refresh: true,
       zoom: true,
+      expand: true, // 启用展开/折叠按钮（框架自动处理）
     },
     treeConfig: {
       parentField: 'pid',
       rowField: 'id',
       transform: true, // 启用行拖拽时必须为 true
     },
-  } as VxeTableGridOptions,
+  },
 });
 
 // 刷新函数
@@ -119,7 +112,7 @@ function onRefresh() {
 }
 
 // 创建表格事件处理器
-const gridEvents = createGridEvents(gridApi, onRefresh);
+const gridEvents = createGridEvents(gridApi as any, onRefresh);
 
 // 更新 gridEvents
 gridApi.setState({
@@ -184,7 +177,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
               class="size-full"
             />
           </div>
-          <span class="flex-auto">{{ $t(row.meta?.title) }}</span>
+          <span class="flex-auto">{{ $t(row.meta?.title || '') }}</span>
         </div>
         <MenuBadge
           v-if="row.meta?.badgeType"

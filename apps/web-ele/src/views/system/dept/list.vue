@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams } from '#/adapter/vxe-table';
 import type { SystemDeptApi } from '#/api/system/dept';
 
 import { Page, useVbenModal } from '@vben/common-ui';
@@ -110,13 +107,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
       export: false,
       refresh: true,
       zoom: true,
+      expand: true, // 启用展开/折叠按钮（框架自动处理）
     },
     treeConfig: {
       parentField: 'pid',
       rowField: 'id',
       transform: false,
     },
-  } as VxeTableGridOptions,
+  },
 });
 
 /**
