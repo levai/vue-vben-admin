@@ -5,8 +5,8 @@ import com.vben.admin.core.utils.CookieUtils;
 import com.vben.admin.model.dto.LoginDTO;
 import com.vben.admin.model.vo.LoginResultVO;
 import com.vben.admin.service.AuthService;
+import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -20,7 +20,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Tag(name = "认证管理", description = "认证相关接口")
+@Api(tags = "认证管理")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor

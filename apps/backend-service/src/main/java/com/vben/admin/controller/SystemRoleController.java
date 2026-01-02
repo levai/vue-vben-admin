@@ -6,8 +6,9 @@ import com.vben.admin.model.dto.RoleDTO;
 import com.vben.admin.model.dto.RoleOptionQueryDTO;
 import com.vben.admin.model.vo.RoleVO;
 import com.vben.admin.service.RoleService;
+import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -20,7 +21,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Tag(name = "系统角色管理", description = "系统角色管理接口")
+@Api(tags = "系统角色管理")
 @RestController
 @RequestMapping("/system/role")
 @RequiredArgsConstructor
@@ -31,14 +32,23 @@ public class SystemRoleController {
     @Operation(summary = "获取角色列表", description = "获取角色列表（支持分页）")
     @GetMapping
     public BaseResult<PageResult<RoleVO>> getList(
+            @Parameter(description = "页码，从1开始", example = "1")
             @RequestParam(required = false, defaultValue = "1") Integer page,
+            @Parameter(description = "每页大小", example = "20")
             @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @Parameter(description = "搜索关键词（模糊查询角色名称和ID，优先级高于 name/id）")
             @RequestParam(required = false) String search,
+            @Parameter(description = "角色名称（模糊查询，与 search 互斥）")
             @RequestParam(required = false) String name,
+            @Parameter(description = "角色ID（模糊查询，与 search 互斥）")
             @RequestParam(required = false) String id,
+            @Parameter(description = "备注（模糊查询）")
             @RequestParam(required = false) String remark,
+            @Parameter(description = "状态（0-禁用，1-启用）")
             @RequestParam(required = false) Integer status,
+            @Parameter(description = "开始时间（格式：yyyy-MM-dd）")
             @RequestParam(required = false) String startTime,
+            @Parameter(description = "结束时间（格式：yyyy-MM-dd）")
             @RequestParam(required = false) String endTime) {
         PageResult<RoleVO> result = roleService.getRoleList(page, pageSize, search, name, id, remark, status, startTime, endTime);
         return new BaseResult<>(result);

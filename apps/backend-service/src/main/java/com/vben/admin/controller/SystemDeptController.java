@@ -4,8 +4,8 @@ import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.model.dto.DeptDTO;
 import com.vben.admin.model.vo.DeptVO;
 import com.vben.admin.service.DeptService;
+import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +17,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Tag(name = "系统部门管理", description = "系统部门管理接口")
+@Api(tags = "系统部门管理")
 @RestController
 @RequestMapping("/system/dept")
 @RequiredArgsConstructor

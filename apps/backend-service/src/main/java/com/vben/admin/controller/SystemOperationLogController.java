@@ -6,8 +6,9 @@ import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.vo.TreeOptionVO;
 import com.vben.admin.model.vo.OperationLogVO;
 import com.vben.admin.service.OperationLogService;
+import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +19,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Tag(name = "系统操作日志管理", description = "系统操作日志管理接口")
+@Api(tags = "系统操作日志管理")
 @RestController
 @RequestMapping("/system/operation-log")
 @RequiredArgsConstructor
@@ -57,6 +58,7 @@ public class SystemOperationLogController {
     @Operation(summary = "获取操作模块列表", description = "获取操作模块列表（用于下拉选项，返回全部数据，支持搜索关键词过滤）")
     @GetMapping("/modules")
     public BaseResult<PageResult<TreeOptionVO>> getModuleList(
+            @Parameter(description = "搜索关键词")
             @RequestParam(required = false) String search
     ) {
         PageResult<TreeOptionVO> result = operationLogService.getOperationModuleList(search);
@@ -66,6 +68,7 @@ public class SystemOperationLogController {
     @Operation(summary = "获取操作类型列表", description = "获取操作类型列表（用于下拉选项，返回全部数据，支持搜索关键词过滤）")
     @GetMapping("/types")
     public BaseResult<PageResult<TreeOptionVO>> getTypeList(
+            @Parameter(description = "搜索关键词")
             @RequestParam(required = false) String search
     ) {
         PageResult<TreeOptionVO> result = operationLogService.getOperationTypeList(search);

@@ -1,5 +1,6 @@
 package com.vben.admin.controller;
 
+import io.swagger.annotations.Api;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,7 @@ import java.util.Map;
  *
  * @author vben
  */
+@Api(tags = "密码测试")
 @RestController
 @RequestMapping("/test")
 public class PasswordTestController {

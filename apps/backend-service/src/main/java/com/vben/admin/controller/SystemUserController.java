@@ -6,8 +6,10 @@ import com.vben.admin.model.dto.UserDTO;
 import com.vben.admin.model.dto.UserOptionQueryDTO;
 import com.vben.admin.model.vo.UserVO;
 import com.vben.admin.service.UserService;
+import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -24,7 +26,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Tag(name = "系统用户管理", description = "系统用户管理接口")
+@Api(tags = "系统用户管理")
 @RestController
 @RequestMapping("/system/user")
 @RequiredArgsConstructor
@@ -35,14 +37,23 @@ public class SystemUserController {
     @Operation(summary = "获取用户列表", description = "获取用户列表（支持分页和搜索）")
     @GetMapping
     public BaseResult<PageResult<UserVO>> getList(
+            @Parameter(description = "页码，从1开始", example = "1")
             @RequestParam(required = false, defaultValue = "1") Integer page,
+            @Parameter(description = "每页大小", example = "20")
             @RequestParam(required = false, defaultValue = "20") Integer pageSize,
+            @Parameter(description = "搜索关键词（模糊查询用户名和真实姓名，优先级高于 username/realName）")
             @RequestParam(required = false) String search,
+            @Parameter(description = "用户名（模糊查询，与 search 互斥）")
             @RequestParam(required = false) String username,
+            @Parameter(description = "真实姓名（模糊查询，与 search 互斥）")
             @RequestParam(required = false) String realName,
+            @Parameter(description = "部门ID")
             @RequestParam(required = false) String deptId,
+            @Parameter(description = "状态（0-禁用，1-启用）")
             @RequestParam(required = false) Integer status,
+            @Parameter(description = "开始时间（格式：yyyy-MM-dd）")
             @RequestParam(required = false) String startTime,
+            @Parameter(description = "结束时间（格式：yyyy-MM-dd）")
             @RequestParam(required = false) String endTime) {
         PageResult<UserVO> result = userService.getUserList(page, pageSize, search, username, realName, deptId, status, startTime, endTime);
         return new BaseResult<>(result);
@@ -105,7 +116,9 @@ public class SystemUserController {
      * 更新状态DTO
      */
     @Data
+    @Schema(description = "更新状态DTO")
     public static class UpdateStatusDTO {
+        @Schema(description = "状态：0-禁用，1-启用", example = "1")
         @NotNull(message = "状态不能为空")
         private Integer status;
     }
@@ -114,7 +127,9 @@ public class SystemUserController {
      * 重置密码DTO
      */
     @Data
+    @Schema(description = "重置密码DTO")
     public static class ResetPasswordDTO {
+        @Schema(description = "新密码", example = "newpassword123")
         @NotBlank(message = "密码不能为空")
         @Size(min = 6, max = 50, message = "密码长度必须在6-50之间")
         private String password;
