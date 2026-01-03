@@ -67,8 +67,9 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
-    const resp = await refreshTokenApi();
-    const newToken = resp.data;
+    // requestClient 配置了 responseReturn: 'data'，会自动提取 BaseResult 中的 data 字段
+    // 所以 refreshTokenApi() 直接返回 token 字符串，而不是 { data: "token" }
+    const newToken = await refreshTokenApi();
     accessStore.setAccessToken(newToken);
     return newToken;
   }
