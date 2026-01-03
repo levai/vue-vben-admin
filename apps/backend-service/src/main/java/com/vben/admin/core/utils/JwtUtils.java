@@ -2,11 +2,11 @@ package com.vben.admin.core.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.impl.DefaultClaims;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
 
@@ -58,13 +58,13 @@ public class JwtUtils {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
-        Claims jwtClaims = new DefaultClaims(claims);
-        jwtClaims.setIssuedAt(now);
-        jwtClaims.setExpiration(expiryDate);
+        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
 
         return Jwts.builder()
-                .setClaims(jwtClaims)
-                .signWith(SignatureAlgorithm.HS512, secret.getBytes())
+                .claims(claims)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key, Jwts.SIG.HS512)
                 .compact();
     }
 
@@ -75,10 +75,12 @@ public class JwtUtils {
      * @return Claims
      */
     public Claims getClaimsFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
         return Jwts.parser()
-                .setSigningKey(secret.getBytes())
-                .parseClaimsJws(token)
-                .getBody();
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /**

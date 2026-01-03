@@ -5,10 +5,10 @@ import com.vben.admin.model.dto.BatchMenuOrderDTO;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.service.MenuService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +19,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Api(tags = "系统菜单管理")
+@Tag(name = "系统菜单管理")
 @RestController
 @RequestMapping("/system/menu")
 @RequiredArgsConstructor

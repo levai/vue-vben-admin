@@ -1,23 +1,23 @@
 # Vben Admin 后端服务
 
-基于 Spring Boot 2.7.18 + Java 11 的后端服务，提供完整的用户、角色、菜单、部门管理功能。
+基于 Spring Boot 3.2.0 + Java 17 的后端服务，提供完整的用户、角色、菜单、部门管理功能。
 
 ## 📋 技术栈
 
-- **框架**: Spring Boot 2.7.18
-- **Java**: 11
+- **框架**: Spring Boot 3.2.0
+- **Java**: 17 (LTS)
 - **数据库**: MySQL 8.0+
-- **ORM**: MyBatis Plus 3.5.9
-- **安全**: Spring Security + JWT
-- **API 文档**: Knife4j (Swagger)
-- **连接池**: Druid
-- **构建工具**: Maven
+- **ORM**: MyBatis Plus 3.5.7 (Spring Boot 3 专用版本)
+- **安全**: Spring Security 3.2.0 + JWT (jjwt 0.12.5)
+- **API 文档**: Knife4j 4.4.0 (SpringDoc OpenAPI 3)
+- **连接池**: Druid 1.2.23
+- **构建工具**: Maven 3.6+
 
 ## 🚀 快速开始
 
 ### 1. 环境要求
 
-- Java 11+
+- Java 17+ (推荐使用 jenv 管理 Java 版本，项目包含 `.java-version` 文件)
 - Maven 3.6+
 - MySQL 8.0+（或 Docker MySQL）
 
@@ -47,30 +47,40 @@ mysql -uroot -proot --default-character-set=utf8mb4 vben_admin < src/main/resour
 ```yaml
 spring:
   datasource:
+    url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
     druid:
-      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      username: root
-      password: root
+      # Druid 连接池配置
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
 ```
 
 ### 4. 启动应用
 
-#### 前台启动（开发调试）
+#### 使用 pnpm 启动（推荐）
 
 ```bash
 cd apps/backend-service
-JAVA_HOME=/path/to/java11
-JAVA_HOME=$JAVA_HOME mvn spring-boot:run
+eval "$(jenv init -)"  # 初始化 jenv（自动读取 .java-version）
+pnpm run dev
 ```
 
-#### 后台启动（生产环境）
+#### 直接使用 Maven 启动
 
 ```bash
 cd apps/backend-service
-JAVA_HOME=/path/to/java11
-nohup JAVA_HOME=$JAVA_HOME mvn spring-boot:run > target/app.log 2>&1 &
-echo $! > target/app.pid
+eval "$(jenv init -)"  # 初始化 jenv（自动读取 .java-version）
+mvn spring-boot:run
 ```
+
+**注意**：
+
+- 项目使用 `.java-version` 文件配合 jenv 管理 Java 版本
+- 启动前会自动清理 8080 端口（如果被占用）
+- 确保 jenv 中已配置 Java 17：`jenv add /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`
 
 详细启动说明请参考：[启动说明文档](启动说明.md)
 
@@ -184,7 +194,7 @@ apps/backend-service/
 
 项目已配置 UTF-8 编码：
 
-- 数据库连接：`characterEncoding=utf8mb4`
+- 数据库连接：`characterEncoding=UTF-8`（注意：Spring Boot 3 使用 `UTF-8` 而不是 `utf8mb4`）
 - JVM 参数：`-Dfile.encoding=UTF-8`
 - Tomcat：`uri-encoding: UTF-8`
 
@@ -208,12 +218,33 @@ apps/backend-service/
 
 ## 📖 相关文档
 
-- [启动说明](启动说明.md)
-- [数据库初始化说明](src/main/resources/db/README.md)
+### 技术栈与开发规范
+
+- **[技术栈与开发规范分析](docs/技术栈与开发规范分析.md)** - 详细的技术栈分析、代码规范和开发模式
+  - 技术栈版本说明（Spring Boot 3.2.0 + Java 17）
+  - 代码规范总结
+  - 架构设计模式
+  - 后续开发模式
+  - 最佳实践建议
+
+### 最佳实践
+
+- **[Token 最佳实践](docs/TOKEN_BEST_PRACTICES.md)** - JWT Token 使用最佳实践
+  - Token 设计原则
+  - 安全建议
+  - 实现示例
+
+### 数据库
+
+- **[数据库初始化说明](src/main/resources/db/README.md)** - 数据库初始化指南
+
+> 💡 **提示**：更多详细文档请查看 [`docs/`](docs/) 目录
 
 ## 🐛 常见问题
 
 ### 1. 端口被占用
+
+项目启动脚本已自动处理端口清理，如果手动启动遇到端口占用：
 
 ```bash
 # 查找占用 8080 端口的进程
@@ -221,7 +252,12 @@ lsof -ti:8080
 
 # 停止进程
 kill $(lsof -ti:8080)
+
+# 或者使用强制清理（推荐）
+lsof -ti:8080 | xargs kill -9 2>/dev/null
 ```
+
+**注意**：使用 `pnpm run dev` 启动时，会自动清理 8080 端口。
 
 ### 2. 数据库连接失败
 
@@ -237,7 +273,7 @@ kill $(lsof -ti:8080)
 
 - 数据库字符集为 `utf8mb4`
 - 执行 `data.sql` 时使用 `--default-character-set=utf8mb4`
-- 应用配置中字符编码设置正确
+- 应用配置中字符编码设置为 `UTF-8`（注意：Spring Boot 3 使用 `UTF-8` 而不是 `utf8mb4`）
 
 ### 4. 登录失败
 
@@ -254,6 +290,8 @@ kill $(lsof -ti:8080)
 - 统一响应格式：`{ code: 0, data: T, message: "ok" }`
 - 使用 MyBatis Plus 进行数据库操作
 - 使用 JWT 进行身份认证
+- 使用 `.java-version` 文件配合 jenv 管理 Java 版本
+- 所有 `javax.*` 包已迁移到 `jakarta.*`（Spring Boot 3 要求）
 
 ## 📄 License
 

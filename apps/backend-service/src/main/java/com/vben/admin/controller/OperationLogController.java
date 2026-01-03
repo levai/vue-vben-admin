@@ -6,7 +6,7 @@ import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.vo.TreeOptionVO;
 import com.vben.admin.model.vo.OperationLogVO;
 import com.vben.admin.service.OperationLogService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Api(tags = "系统操作日志管理")
+@Tag(name = "系统操作日志管理")
 @RestController
 @RequestMapping("/system/operation-log")
 @RequiredArgsConstructor

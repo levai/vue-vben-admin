@@ -170,7 +170,7 @@ SET CHARACTER SET utf8mb4;
 spring:
   datasource:
     druid:
-      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
 ```
 
 ## ✅ 验证初始化
