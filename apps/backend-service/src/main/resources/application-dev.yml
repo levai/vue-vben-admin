@@ -1,11 +1,16 @@
 spring:
   datasource:
-    druid:
-      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      username: root
-      password: root
+    url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
 
 logging:
   level:
     root: INFO
     com.vben.admin: DEBUG
+
+jwt:
+  # AccessToken 过期时间（毫秒）
+  # 测试环境：1分钟（60000）- 便于测试 token 刷新功能
+  # 生产环境建议：15分钟(900000) - 2小时(7200000)
+  access-token-expiration: 60000 # 1分钟（测试用）
