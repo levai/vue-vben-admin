@@ -3,7 +3,7 @@ package com.vben.admin.controller;
 import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.model.vo.MenuVO;
 import com.vben.admin.service.MenuService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +15,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Api(tags = "菜单路由")
+@Tag(name = "菜单路由")
 @RestController
 @RequestMapping("/menu")
 @RequiredArgsConstructor

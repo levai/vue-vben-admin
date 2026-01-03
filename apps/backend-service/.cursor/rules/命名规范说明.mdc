@@ -139,7 +139,7 @@ com.vben.admin/
 **当前实现示例**:
 ```java
 // ✅ 用户管理（CRUD）
-@Api(tags = "系统用户管理")
+@Tag(name = "系统用户管理")
 @RestController
 @RequestMapping("/system/user")
 @RequiredArgsConstructor
@@ -149,7 +149,7 @@ public class UserController {
 }
 
 // ✅ 用户个人中心
-@Api(tags = "用户个人中心")
+@Tag(name = "用户个人中心")
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -194,7 +194,7 @@ controller/
 **示例**:
 ```java
 // 管理端：controller/admin/UserController.java
-@Api(tags = "系统用户管理")
+@Tag(name = "系统用户管理")
 @RestController
 @RequestMapping("/system/user")
 public class UserController {
@@ -202,7 +202,7 @@ public class UserController {
 }
 
 // 用户端：controller/user/UserController.java
-@Api(tags = "用户个人中心")
+@Tag(name = "用户个人中心")
 @RestController
 @RequestMapping("/user")
 public class UserController {
@@ -518,9 +518,9 @@ public class UserVO {
 ### Controller 类注解
 
 ```java
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Api(tags = "系统用户管理")  // ✅ 使用 @Api（Springfox 原生支持）
+@Tag(name = "系统用户管理")  // ✅ 使用 @Tag（SpringDoc OpenAPI 3）
 @RestController
 @RequestMapping("/system/user")
 public class UserController {
@@ -529,8 +529,8 @@ public class UserController {
 ```
 
 **说明**:
-- ✅ 使用 `@Api(tags = "...")` 注解（Springfox 原生支持）
-- ❌ 不使用 `@Tag` 注解（Springfox 对 OpenAPI 3.0 的 `@Tag` 支持有限）
+- ✅ 使用 `@Tag(name = "...")` 注解（SpringDoc OpenAPI 3）
+- ✅ 从 Springfox 迁移到 SpringDoc OpenAPI 3
 
 ### Controller 方法注解
 
@@ -563,7 +563,7 @@ private String username;
 ```
 
 **统一规范**:
-- **Controller 类**: `@Api(tags = "...")`（Springfox）
+- **Controller 类**: `@Tag(name = "...")`（SpringDoc OpenAPI 3，替代 Springfox 的 `@Api`）
 - **Controller 方法**: `@Operation(summary = "...")`（OpenAPI 3.0）
 - **Controller 参数**: `@Parameter(description = "...")`（OpenAPI 3.0）
 - **DTO/VO 字段**: `@Schema(description = "...")`（OpenAPI 3.0）
@@ -649,11 +649,13 @@ apps/backend-service/src/main/java/com/vben/admin/core/utils/
    - ✅ Entity 有表前缀（如 `Sys`），这是合理的
    - ✅ 通过 `@RequestMapping` 路径区分功能，而不是类名前缀
    - ✅ 特殊 Controller（如 `UserProfileController`）使用描述性名称避免冲突
-8. **Swagger 注解**：
-   - Controller 类使用 `@Api(tags = "...")`
+8. **Swagger 注解**（SpringDoc OpenAPI 3）：
+   - Controller 类使用 `@Tag(name = "...")`（替代 Springfox 的 `@Api`）
    - DTO/VO 字段使用 `@Schema(description = "...")`
    - Controller 参数使用 `@Parameter(description = "...")`
 
 ## 📖 相关文档
 
 - [项目 README](../../README.md)
+- [技术栈与开发规范分析](../../docs/技术栈与开发规范分析.md) - 详细的技术栈分析和开发规范
+- [Token 最佳实践](../../docs/TOKEN_BEST_PRACTICES.md) - JWT Token 使用最佳实践

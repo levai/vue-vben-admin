@@ -4,24 +4,24 @@ import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.model.vo.UserVO;
 import com.vben.admin.service.AuthService;
 import com.vben.admin.service.UserService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 /**
  * 用户个人中心控制器（管理端）
  *
  * @author vben
  */
-@Api(tags = "用户个人中心")
+@Tag(name = "用户个人中心")
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor

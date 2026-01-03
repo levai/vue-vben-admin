@@ -11,11 +11,11 @@ spring:
       matching-strategy: ant_path_matcher
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useOldAliasMetadataBehavior=true&zeroDateTimeBehavior=convertToNull&autoReconnect=true
+    username: root
+    password: root
     druid:
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/vben_admin?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useOldAliasMetadataBehavior=true&zeroDateTimeBehavior=convertToNull&autoReconnect=true
-      username: root
-      password: root
       initial-size: 1
       min-idle: 1
       max-active: 20
@@ -81,7 +81,20 @@ jwt:
   # 当前：7天（符合业界标准，安全性较高）
   refresh-token-expiration: 604800000 # 7天
 
+# SpringDoc (OpenAPI 3) 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.vben.admin.controller
+
 # Knife4j 配置
 knife4j:
   enable: true
   production: false
+  setting:
+    language: zh_cn

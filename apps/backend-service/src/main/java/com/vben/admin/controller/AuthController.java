@@ -5,11 +5,11 @@ import com.vben.admin.core.utils.CookieUtils;
 import com.vben.admin.model.dto.LoginDTO;
 import com.vben.admin.model.vo.LoginResultVO;
 import com.vben.admin.service.AuthService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +20,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Api(tags = "认证管理")
+@Tag(name = "认证管理")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor

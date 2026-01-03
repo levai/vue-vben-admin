@@ -76,8 +76,8 @@ RefreshToken: 7-30天
 
 ```yaml
 jwt:
-  access-token-expiration: 900000    # 15分钟（高安全）或 3600000（1小时，平衡）
-  refresh-token-expiration: 2592000000  # 30天（604800000 = 7天，更安全）
+  access-token-expiration: 900000 # 15分钟（高安全）或 3600000（1小时，平衡）
+  refresh-token-expiration: 2592000000 # 30天（604800000 = 7天，更安全）
 ```
 
 ### Cookie 名称建议
@@ -98,8 +98,8 @@ private static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
 
 ## 总结
 
-| 项目 | 当前值 | 业界推荐 | 建议 |
-|------|--------|----------|------|
-| AccessToken | 2 小时 | 15分钟-2小时 | ✅ 符合标准 |
-| RefreshToken | 7 天 | 7-30 天 | ✅ 符合标准 |
-| Cookie 名称 | `jwt` | `refreshToken` | ⚠️ 建议改进 |
+| 项目         | 当前值 | 业界推荐       | 建议        |
+| ------------ | ------ | -------------- | ----------- |
+| AccessToken  | 2 小时 | 15分钟-2小时   | ✅ 符合标准 |
+| RefreshToken | 7 天   | 7-30 天        | ✅ 符合标准 |
+| Cookie 名称  | `jwt`  | `refreshToken` | ⚠️ 建议改进 |

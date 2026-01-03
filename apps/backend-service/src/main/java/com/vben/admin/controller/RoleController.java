@@ -6,10 +6,10 @@ import com.vben.admin.model.dto.RoleDTO;
 import com.vben.admin.model.dto.RoleOptionQueryDTO;
 import com.vben.admin.model.vo.RoleVO;
 import com.vben.admin.service.RoleService;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +21,7 @@ import java.util.List;
  *
  * @author vben
  */
-@Api(tags = "系统角色管理")
+@Tag(name = "系统角色管理")
 @RestController
 @RequestMapping("/system/role")
 @RequiredArgsConstructor
