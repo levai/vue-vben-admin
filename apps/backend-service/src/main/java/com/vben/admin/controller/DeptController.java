@@ -1,6 +1,7 @@
 package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.DeptDTO;
 import com.vben.admin.model.vo.DeptVO;
 import com.vben.admin.service.DeptService;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.List;
 @Tag(name = "系统部门管理")
 @RestController
 @RequestMapping("/system/dept")
+@Validated
 @RequiredArgsConstructor
 public class DeptController {
 
@@ -41,14 +44,14 @@ public class DeptController {
 
     @Operation(summary = "更新部门", description = "更新部门信息")
     @PutMapping("/{id}")
-    public BaseResult<Boolean> update(@PathVariable String id, @Valid @RequestBody DeptDTO deptDTO) {
+    public BaseResult<Boolean> update(@ValidId(message = "部门ID不能为空或无效值") @PathVariable String id, @Valid @RequestBody DeptDTO deptDTO) {
         deptService.updateDept(id, deptDTO);
         return new BaseResult<>(true);
     }
 
     @Operation(summary = "删除部门", description = "删除部门")
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(@ValidId(message = "部门ID不能为空或无效值") @PathVariable String id) {
         deptService.deleteDept(id);
         return new BaseResult<>(true);
     }

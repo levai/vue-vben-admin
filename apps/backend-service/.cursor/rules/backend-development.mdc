@@ -1027,7 +1027,34 @@ if (count > 0) {
 
 ## 参数校验设计
 
-### 1. Bean Validation
+### 1. 验证架构概览
+
+项目采用**分层验证架构**，符合 Spring Boot 3 和 Bean Validation 最佳实践：
+
+```
+Controller 层
+  ├─ @Validated（类级别）
+  ├─ @ValidId（路径参数、请求参数）
+  └─ @Valid（请求体）
+
+Service 接口层
+  └─ @ValidId（方法参数，在接口中定义）
+
+Service 实现层
+  └─ @Validated（类级别，启用方法参数验证）
+
+DTO 层
+  ├─ @NotBlank, @Size, @Pattern（标准注解）
+  └─ @ValidId（自定义注解，用于 ID 字段）
+```
+
+**验证原则**：
+- ✅ **验证注解在接口中定义**：Service 接口方法参数上定义 `@ValidId`，实现类继承
+- ✅ **Controller 层验证路径参数**：使用 `@ValidId` 验证 `@PathVariable` 和 `@RequestParam`
+- ✅ **Service 层验证方法参数**：使用 `@Validated` 启用方法参数验证
+- ✅ **DTO 层验证字段**：使用标准注解和自定义注解验证字段
+
+### 2. Bean Validation 标准注解
 
 **DTO 中使用校验注解**：
 
@@ -1045,7 +1072,60 @@ public class UserDTO {
 }
 ```
 
-### 2. 分组校验
+### 3. 自定义验证注解 @ValidId
+
+**位置**：`apps/backend-service/src/main/java/com/vben/admin/core/validation/ValidId.java`
+
+**用途**：专门用于校验 ID 字段，拦截 "null"、"undefined"、空格等无效字符串
+
+**使用场景**：
+- Controller 层的 `@PathVariable` 和 `@RequestParam` 参数
+- Service 接口层的方法参数
+- DTO 中的 ID 字段
+
+**使用示例**：
+
+```java
+// Controller 层
+@RestController
+@Validated
+public class UserController {
+
+    @GetMapping("/{id}")
+    public BaseResult<UserVO> getById(
+        @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id
+    ) {
+        // ...
+    }
+}
+
+// Service 接口层
+public interface UserService {
+    UserVO getUserById(@ValidId(message = "用户ID不能为空或无效值") String id);
+    void updateUser(@ValidId(message = "用户ID不能为空或无效值") String id, UserDTO userDTO);
+    void deleteUser(@ValidId(message = "用户ID不能为空或无效值") String id);
+}
+
+// Service 实现层（继承接口的验证注解，无需重复定义）
+@Service
+@Validated
+public class UserServiceImpl implements UserService {
+    @Override
+    public UserVO getUserById(String id) {  // 继承接口的 @ValidId 验证
+        // ...
+    }
+}
+
+// DTO 层
+public class MenuOrderDTO {
+    @ValidId(message = "菜单ID不能为空或无效值")
+    private String id;
+}
+```
+
+**验证器实现**：`ValidIdValidator` 使用 `ValidationUtils.isInvalidId()` 统一校验逻辑
+
+### 4. 分组校验
 
 **创建和更新使用不同校验规则**：
 
@@ -1069,8 +1149,94 @@ public BaseResult<String> create(@Validated(UserDTO.Create.class) @RequestBody U
 }
 
 @PutMapping("/{id}")
-public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+public BaseResult<Boolean> update(
+    @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id,
+    @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO
+) {
     // ...
+}
+```
+
+### 5. 验证异常处理
+
+**全局异常处理器**（`GlobalExceptionHandler`）：
+
+```java
+// 处理 @RequestBody 验证失败（MethodArgumentNotValidException）
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public BaseResult<Boolean> methodArgumentNotValidExceptionHandler(
+    MethodArgumentNotValidException e
+) {
+    String message = e.getBindingResult().getAllErrors().stream()
+            .map(DefaultMessageSourceResolvable::getDefaultMessage)
+            .collect(Collectors.joining("; "));
+    return new BaseResult<>(HttpStatus.BAD_REQUEST.value(), message);
+}
+
+// 处理方法参数验证失败（ConstraintViolationException）
+@ExceptionHandler(ConstraintViolationException.class)
+public BaseResult<Boolean> constraintViolationExceptionHandler(
+    ConstraintViolationException e
+) {
+    String message = e.getConstraintViolations().stream()
+            .map(ConstraintViolation::getMessage)
+            .collect(Collectors.joining("; "));
+    return new BaseResult<>(HttpStatus.BAD_REQUEST.value(), message);
+}
+```
+
+### 6. ValidationUtils 工具类
+
+**位置**：`apps/backend-service/src/main/java/com/vben/admin/core/utils/ValidationUtils.java`
+
+**用途**：统一处理字符串校验，拦截 "null"、"undefined"、空格等无效字符串
+
+**常用方法**：
+
+```java
+// 检查字符串是否有效
+boolean isValidString(String str);
+
+// 检查字符串是否无效
+boolean isInvalidString(String str);
+
+// 清理字符串（去除首尾空格，如果是无效字符串则返回 null）
+String cleanString(String str);
+
+// 检查 ID 是否有效
+boolean isValidId(String id);
+
+// 检查 ID 是否无效
+boolean isInvalidId(String id);
+```
+
+**使用场景**：
+- 验证器实现（`ValidIdValidator` 使用 `isInvalidId()`）
+- 业务逻辑验证（唯一性检查、数据清理、条件判断）
+- 查询条件构建（判断是否添加查询条件）
+
+**使用示例**：
+
+```java
+// 业务逻辑验证
+private void checkUsernameNotExists(String username, String id) {
+    if (ValidationUtils.isInvalidString(username)) {
+        throw new BusinessException("用户名不能为空或无效值");
+    }
+    // ...
+}
+
+// 数据清理
+String cleanedName = ValidationUtils.cleanString(menuDTO.getName());
+
+// 条件判断
+if (ValidationUtils.isValidString(userDTO.getUsername())) {
+    user.setUsername(ValidationUtils.cleanString(userDTO.getUsername()));
+}
+
+// 查询条件构建
+if (ValidationUtils.isValidId(queryDTO.getUserId())) {
+    queryWrapper.eq(SysOperationLog::getUserId, queryDTO.getUserId());
 }
 ```
 
@@ -1101,11 +1267,50 @@ int maxLimit = QueryHelper.getValidLimit(limit);
 public static final int DEFAULT_LIMIT = 1000;
 ```
 
-### 2. 其他工具类
+### 2. ValidationUtils 工具类
+
+**位置**：`apps/backend-service/src/main/java/com/vben/admin/core/utils/ValidationUtils.java`
+
+**用途**：统一处理字符串校验，拦截 "null"、"undefined"、空格等无效字符串
+
+**常用方法**：
+
+```java
+// 检查字符串是否有效
+boolean isValidString(String str);
+
+// 检查字符串是否无效
+boolean isInvalidString(String str);
+
+// 清理字符串（去除首尾空格，如果是无效字符串则返回 null）
+String cleanString(String str);
+
+// 检查 ID 是否有效
+boolean isValidId(String id);
+
+// 检查 ID 是否无效
+boolean isInvalidId(String id);
+
+// 验证字符串是否有效，如果无效则抛出异常
+void requireValidString(String str, String fieldName);
+
+// 验证 ID 是否有效，如果无效则抛出异常
+void requireValidId(String id, String fieldName);
+```
+
+**使用场景**：
+- 验证器实现（`ValidIdValidator` 使用 `isInvalidId()`）
+- 业务逻辑验证（唯一性检查、数据清理、条件判断）
+- 查询条件构建（判断是否添加查询条件）
+
+**详细说明请参考 [参数校验设计 - ValidationUtils 工具类](#6-validationutils-工具类)**
+
+### 3. 其他工具类
 
 **位置**：`apps/backend-service/src/main/java/com/vben/admin/core/utils/`
 
 **工具类列表**：
+- `ValidationUtils` - 验证工具（字符串校验、ID 校验、数据清理）
 - `SecurityUtils` - 安全工具（获取当前用户信息）
 - `JwtUtils` - JWT 工具
 - `CookieUtils` - Cookie 工具
@@ -1143,7 +1348,9 @@ public class SystemUserController {
 
     // 详情查询
     @GetMapping("/{id}")
-    public BaseResult<UserVO> getById(@PathVariable String id) {
+    public BaseResult<UserVO> getById(
+        @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id
+    ) {
         UserVO user = userService.getUserById(id);
         return new BaseResult<>(user);
     }
@@ -1157,14 +1364,19 @@ public class SystemUserController {
 
     // 更新
     @PutMapping("/{id}")
-    public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+    public BaseResult<Boolean> update(
+        @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id,
+        @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO
+    ) {
         userService.updateUser(id, userDTO);
         return new BaseResult<>(true);
     }
 
     // 删除
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(
+        @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id
+    ) {
         userService.deleteUser(id);
         return new BaseResult<>(true);
     }

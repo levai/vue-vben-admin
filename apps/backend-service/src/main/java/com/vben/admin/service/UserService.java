@@ -1,6 +1,7 @@
 package com.vben.admin.service;
 
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.UserDTO;
 import com.vben.admin.model.dto.UserOptionQueryDTO;
 import com.vben.admin.model.vo.UserVO;
@@ -34,7 +35,7 @@ public interface UserService {
      * @param id 用户ID
      * @return 用户信息
      */
-    UserVO getUserById(String id);
+    UserVO getUserById(@ValidId(message = "用户ID不能为空或无效值") String id);
 
     /**
      * 创建用户
@@ -50,14 +51,14 @@ public interface UserService {
      * @param id      用户ID
      * @param userDTO 用户信息
      */
-    void updateUser(String id, UserDTO userDTO);
+    void updateUser(@ValidId(message = "用户ID不能为空或无效值") String id, UserDTO userDTO);
 
     /**
      * 删除用户
      *
      * @param id 用户ID
      */
-    void deleteUser(String id);
+    void deleteUser(@ValidId(message = "用户ID不能为空或无效值") String id);
 
     /**
      * 启用/禁用用户
@@ -65,7 +66,7 @@ public interface UserService {
      * @param id     用户ID
      * @param status 状态（0-禁用，1-启用）
      */
-    void updateUserStatus(String id, Integer status);
+    void updateUserStatus(@ValidId(message = "用户ID不能为空或无效值") String id, Integer status);
 
     /**
      * 重置用户密码
@@ -73,7 +74,7 @@ public interface UserService {
      * @param id       用户ID
      * @param password 新密码
      */
-    void resetPassword(String id, String password);
+    void resetPassword(@ValidId(message = "用户ID不能为空或无效值") String id, String password);
 
     /**
      * 修改当前用户密码

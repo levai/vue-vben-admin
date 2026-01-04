@@ -1,6 +1,7 @@
 package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.BatchMenuOrderDTO;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.vo.MenuVO;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.List;
 @Tag(name = "系统菜单管理")
 @RestController
 @RequestMapping("/system/menu")
+@Validated
 @RequiredArgsConstructor
 public class MenuController {
 
@@ -42,7 +45,7 @@ public class MenuController {
             @Parameter(description = "菜单名称", required = true)
             @RequestParam String name,
             @Parameter(description = "菜单ID（更新时传入，用于排除自己）")
-            @RequestParam(required = false) String id) {
+            @ValidId(message = "菜单ID不能为空或无效值") @RequestParam(required = false) String id) {
         boolean exists = menuService.isNameExists(name, id);
         return new BaseResult<>(exists);
     }
@@ -53,7 +56,7 @@ public class MenuController {
             @Parameter(description = "菜单路径", required = true)
             @RequestParam String path,
             @Parameter(description = "菜单ID（更新时传入，用于排除自己）")
-            @RequestParam(required = false) String id) {
+            @ValidId(message = "菜单ID不能为空或无效值") @RequestParam(required = false) String id) {
         boolean exists = menuService.isPathExists(path, id);
         return new BaseResult<>(exists);
     }
@@ -67,14 +70,14 @@ public class MenuController {
 
     @Operation(summary = "更新菜单", description = "更新菜单信息")
     @PutMapping("/{id}")
-    public BaseResult<Boolean> update(@PathVariable String id, @Valid @RequestBody MenuDTO menuDTO) {
+    public BaseResult<Boolean> update(@ValidId(message = "菜单ID不能为空或无效值") @PathVariable String id, @Valid @RequestBody MenuDTO menuDTO) {
         menuService.updateMenu(id, menuDTO);
         return new BaseResult<>(true);
     }
 
     @Operation(summary = "删除菜单", description = "删除菜单")
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(@ValidId(message = "菜单ID不能为空或无效值") @PathVariable String id) {
         menuService.deleteMenu(id);
         return new BaseResult<>(true);
     }

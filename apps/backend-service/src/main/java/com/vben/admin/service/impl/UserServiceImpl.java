@@ -9,6 +9,7 @@ import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
 import com.vben.admin.core.utils.SearchQueryConfig;
 import com.vben.admin.core.utils.SecurityUtils;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.RoleMapper;
 import com.vben.admin.mapper.UserMapper;
@@ -26,6 +27,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
  * @author vben
  */
 @Service
+@Validated
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
@@ -48,19 +51,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
-        // 构建基础查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = buildBaseQueryWrapper(
                 search, username, realName, deptId, status, startTime, endTime
         );
-
-        // List 接口：按创建时间倒序
         queryWrapper.orderByDesc(SysUser::getCreateTime);
 
-        // 分页查询
         Page<SysUser> pageParam = new Page<>(page, pageSize);
         IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
 
-        // 转换为VO
         List<UserVO> voList = pageResult.getRecords().stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
@@ -77,14 +75,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createUser(UserDTO userDTO) {
-        // 验证用户唯一性
         validateUserUniqueness(userDTO, null);
-
-        // 创建用户实体
         SysUser user = buildUserEntity(userDTO, null);
         userMapper.insert(user);
 
-        // 保存用户角色关联
         if (userDTO.getRoleIds() != null && !userDTO.getRoleIds().isEmpty()) {
             saveUserRoles(user.getId(), userDTO.getRoleIds());
         }
@@ -95,27 +89,19 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(String id, UserDTO userDTO) {
-        // 查询用户
         SysUser user = getUserByIdOrThrow(id);
 
-        // 验证用户唯一性（只验证变更的字段）
         validateUserUniquenessForUpdate(user, userDTO, id);
-
-        // 更新用户基本信息
         updateUserBasicInfo(user, userDTO);
         userMapper.updateById(user);
-
-        // 更新用户角色关联
         updateUserRoles(id, userDTO.getRoleIds());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteUser(String id) {
-        // 查询用户（验证存在性）
         getUserByIdOrThrow(id);
 
-        // 检查是否是超级管理员（超级管理员不允许被删除）
         List<String> roleIds = userRoleMapper.selectList(
                 new LambdaQueryWrapper<SysUserRole>()
                         .eq(SysUserRole::getUserId, id)
@@ -125,29 +111,20 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("超级管理员不能被删除");
         }
 
-        // 不删除用户角色关联（方案2：保留关联数据，查询时通过用户状态过滤）
-        // 这样设计的好处：
-        // 1. 保留关联数据，支持恢复用户
-        // 2. 查询时自动过滤已删除和已禁用的用户（在 MenuMapper 和 PermissionMapper 中已处理）
-        // 3. 已删除或已禁用的用户无法访问菜单和权限，确保安全性
-        // userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
-
-        // 逻辑删除用户
+        // 不删除用户角色关联，保留关联数据以支持恢复用户
+        // 查询时通过用户状态过滤，已删除或已禁用的用户无法访问菜单和权限
         userMapper.deleteById(id);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUserStatus(String id, Integer status) {
-        // 查询用户
         SysUser user = getUserByIdOrThrow(id);
 
-        // 验证状态值
         if (status == null || (status != 0 && status != 1)) {
             throw new BusinessException("状态值无效，必须为0或1");
         }
 
-        // 检查是否是超级管理员（超级管理员不允许被禁用）
         if (status == 0) {
             List<String> roleIds = userRoleMapper.selectList(
                     new LambdaQueryWrapper<SysUserRole>()
@@ -159,7 +136,6 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // 更新状态
         user.setStatus(status);
         userMapper.updateById(user);
     }
@@ -167,13 +143,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void resetPassword(String id, String password) {
-        // 查询用户
         SysUser user = getUserByIdOrThrow(id);
-
-        // 验证密码
         validatePassword(password);
-
-        // 更新密码
         user.setPassword(passwordEncoder.encode(password));
         userMapper.updateById(user);
     }
@@ -181,24 +152,19 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(String oldPassword, String newPassword) {
-        // 获取当前用户
         String userId = getCurrentUserIdOrThrow();
         SysUser user = getUserByIdOrThrow(userId);
 
-        // 验证旧密码
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new BusinessException("旧密码错误");
         }
 
-        // 验证新密码
         validatePassword(newPassword);
 
-        // 检查新旧密码是否相同
         if (passwordEncoder.matches(newPassword, user.getPassword())) {
             throw new BusinessException("新密码不能与旧密码相同");
         }
 
-        // 更新密码
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
     }
@@ -206,11 +172,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateCurrentUserInfo(UserDTO userDTO) {
-        // 获取当前用户
         String userId = getCurrentUserIdOrThrow();
         SysUser user = getUserByIdOrThrow(userId);
-
-        // 更新用户基本信息（只允许更新部分字段）
         updateCurrentUserBasicInfo(user, userDTO);
         userMapper.updateById(user);
     }
@@ -252,16 +215,13 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果用户名、手机号或工号已存在
      */
     private void validateUserUniqueness(UserDTO userDTO, String id) {
-        // 检查用户名
-        if (StringUtils.hasText(userDTO.getUsername())) {
+        if (ValidationUtils.isValidString(userDTO.getUsername())) {
             checkUsernameNotExists(userDTO.getUsername(), id);
         }
-        // 检查手机号
-        if (StringUtils.hasText(userDTO.getPhone())) {
+        if (ValidationUtils.isValidString(userDTO.getPhone())) {
             checkPhoneNotExists(userDTO.getPhone(), id);
         }
-        // 检查工号
-        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
+        if (ValidationUtils.isValidString(userDTO.getEmployeeNo())) {
             checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
         }
     }
@@ -275,16 +235,13 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果用户名、手机号或工号已存在
      */
     private void validateUserUniquenessForUpdate(SysUser user, UserDTO userDTO, String id) {
-        // 检查用户名（如果变更了）
-        if (StringUtils.hasText(userDTO.getUsername()) && !userDTO.getUsername().equals(user.getUsername())) {
+        if (ValidationUtils.isValidString(userDTO.getUsername()) && !userDTO.getUsername().equals(user.getUsername())) {
             checkUsernameNotExists(userDTO.getUsername(), id);
         }
-        // 检查手机号（如果变更了）
-        if (StringUtils.hasText(userDTO.getPhone()) && !userDTO.getPhone().equals(user.getPhone())) {
+        if (ValidationUtils.isValidString(userDTO.getPhone()) && !userDTO.getPhone().equals(user.getPhone())) {
             checkPhoneNotExists(userDTO.getPhone(), id);
         }
-        // 检查工号（如果变更了）
-        if (StringUtils.hasText(userDTO.getEmployeeNo()) && !userDTO.getEmployeeNo().equals(user.getEmployeeNo())) {
+        if (ValidationUtils.isValidString(userDTO.getEmployeeNo()) && !userDTO.getEmployeeNo().equals(user.getEmployeeNo())) {
             checkEmployeeNoNotExists(userDTO.getEmployeeNo(), id);
         }
     }
@@ -297,6 +254,10 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果用户名已存在
      */
     private void checkUsernameNotExists(String username, String id) {
+        if (ValidationUtils.isInvalidString(username)) {
+            throw new BusinessException("用户名不能为空或无效值");
+        }
+
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username);
         if (id != null) {
@@ -316,6 +277,10 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果手机号已存在
      */
     private void checkPhoneNotExists(String phone, String id) {
+        if (ValidationUtils.isInvalidString(phone)) {
+            throw new BusinessException("手机号不能为空或无效值");
+        }
+
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getPhone, phone);
         if (id != null) {
@@ -335,6 +300,10 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果工号已存在
      */
     private void checkEmployeeNoNotExists(String employeeNo, String id) {
+        if (ValidationUtils.isInvalidString(employeeNo)) {
+            throw new BusinessException("工号不能为空或无效值");
+        }
+
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getEmployeeNo, employeeNo);
         if (id != null) {
@@ -353,7 +322,11 @@ public class UserServiceImpl implements UserService {
      * @throws BusinessException 如果密码格式不正确
      */
     private void validatePassword(String password) {
-        if (!StringUtils.hasText(password) || password.length() < 6) {
+        if (ValidationUtils.isInvalidString(password)) {
+            throw new BusinessException("密码不能为空或无效值");
+        }
+        String cleanedPassword = ValidationUtils.cleanString(password);
+        if (cleanedPassword == null || cleanedPassword.length() < 6) {
             throw new BusinessException("密码长度不能少于6位");
         }
     }
@@ -368,8 +341,7 @@ public class UserServiceImpl implements UserService {
     private SysUser buildUserEntity(UserDTO userDTO, String id) {
         SysUser user = new SysUser();
         user.setUsername(userDTO.getUsername());
-        // 密码处理：如果未提供密码，则使用默认密码88888888
-        String password = StringUtils.hasText(userDTO.getPassword())
+        String password = ValidationUtils.isValidString(userDTO.getPassword())
                 ? userDTO.getPassword()
                 : "88888888";
         user.setPassword(passwordEncoder.encode(password));
@@ -379,7 +351,7 @@ public class UserServiceImpl implements UserService {
         user.setGender(userDTO.getGender());
         user.setEmployeeNo(userDTO.getEmployeeNo());
         user.setDeptId(userDTO.getDeptId());
-        user.setStatus(userDTO.getStatus() != null ? userDTO.getStatus() : 1); // 默认启用
+        user.setStatus(userDTO.getStatus() != null ? userDTO.getStatus() : 1);
         return user;
     }
 
@@ -390,47 +362,38 @@ public class UserServiceImpl implements UserService {
      * @param userDTO 用户DTO
      */
     private void updateUserBasicInfo(SysUser user, UserDTO userDTO) {
-        // 更新用户名
-        if (StringUtils.hasText(userDTO.getUsername())) {
-            user.setUsername(userDTO.getUsername());
+        if (ValidationUtils.isValidString(userDTO.getUsername())) {
+            user.setUsername(ValidationUtils.cleanString(userDTO.getUsername()));
         }
 
-        // 更新密码（如果提供了新密码）
-        if (StringUtils.hasText(userDTO.getPassword())) {
+        if (ValidationUtils.isValidString(userDTO.getPassword())) {
             user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
 
-        // 更新真实姓名
-        if (StringUtils.hasText(userDTO.getRealName())) {
-            user.setRealName(userDTO.getRealName());
+        if (ValidationUtils.isValidString(userDTO.getRealName())) {
+            user.setRealName(ValidationUtils.cleanString(userDTO.getRealName()));
         }
 
-        // 更新昵称
-        if (StringUtils.hasText(userDTO.getNickname())) {
-            user.setNickname(userDTO.getNickname());
+        if (ValidationUtils.isValidString(userDTO.getNickname())) {
+            user.setNickname(ValidationUtils.cleanString(userDTO.getNickname()));
         }
 
-        // 更新手机号
-        if (StringUtils.hasText(userDTO.getPhone())) {
-            user.setPhone(userDTO.getPhone());
+        if (ValidationUtils.isValidString(userDTO.getPhone())) {
+            user.setPhone(ValidationUtils.cleanString(userDTO.getPhone()));
         }
 
-        // 更新性别
         if (userDTO.getGender() != null) {
             user.setGender(userDTO.getGender());
         }
 
-        // 更新工号
-        if (StringUtils.hasText(userDTO.getEmployeeNo())) {
-            user.setEmployeeNo(userDTO.getEmployeeNo());
+        if (ValidationUtils.isValidString(userDTO.getEmployeeNo())) {
+            user.setEmployeeNo(ValidationUtils.cleanString(userDTO.getEmployeeNo()));
         }
 
-        // 更新部门ID
-        if (StringUtils.hasText(userDTO.getDeptId())) {
+        if (ValidationUtils.isValidId(userDTO.getDeptId())) {
             user.setDeptId(userDTO.getDeptId());
         }
 
-        // 更新状态
         if (userDTO.getStatus() != null) {
             user.setStatus(userDTO.getStatus());
         }
@@ -443,25 +406,22 @@ public class UserServiceImpl implements UserService {
      * @param userDTO 用户DTO
      */
     private void updateCurrentUserBasicInfo(SysUser user, UserDTO userDTO) {
-        // 更新真实姓名
-        if (StringUtils.hasText(userDTO.getRealName())) {
-            user.setRealName(userDTO.getRealName());
+        if (ValidationUtils.isValidString(userDTO.getRealName())) {
+            user.setRealName(ValidationUtils.cleanString(userDTO.getRealName()));
         }
 
-        // 更新昵称
-        if (StringUtils.hasText(userDTO.getNickname())) {
-            user.setNickname(userDTO.getNickname());
+        if (ValidationUtils.isValidString(userDTO.getNickname())) {
+            user.setNickname(ValidationUtils.cleanString(userDTO.getNickname()));
         }
 
-        // 更新手机号（需要检查是否重复）
-        if (StringUtils.hasText(userDTO.getPhone())) {
-            if (!userDTO.getPhone().equals(user.getPhone())) {
-                checkPhoneNotExists(userDTO.getPhone(), user.getId());
+        if (ValidationUtils.isValidString(userDTO.getPhone())) {
+            String cleanedPhone = ValidationUtils.cleanString(userDTO.getPhone());
+            if (!cleanedPhone.equals(user.getPhone())) {
+                checkPhoneNotExists(cleanedPhone, user.getId());
             }
-            user.setPhone(userDTO.getPhone());
+            user.setPhone(cleanedPhone);
         }
 
-        // 更新性别
         if (userDTO.getGender() != null) {
             user.setGender(userDTO.getGender());
         }
@@ -474,12 +434,8 @@ public class UserServiceImpl implements UserService {
      * @param roleIds  角色ID列表
      */
     private void updateUserRoles(String userId, List<String> roleIds) {
-        // 如果传了 roleIds，则更新；如果传了空数组，则清空；如果不传，则保持原样
         if (roleIds != null) {
-            // 删除原有关联
             userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
-
-            // 保存新的关联（如果角色列表不为空）
             if (!roleIds.isEmpty()) {
                 saveUserRoles(userId, roleIds);
             }
@@ -508,14 +464,12 @@ public class UserServiceImpl implements UserService {
         UserVO vo = new UserVO();
         BeanUtils.copyProperties(user, vo);
 
-        // 查询用户关联的角色ID列表
         List<String> roleIds = userRoleMapper.selectList(
                 new LambdaQueryWrapper<SysUserRole>()
                         .eq(SysUserRole::getUserId, user.getId())
         ).stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
         vo.setRoles(roleIds);
 
-        // 查询角色名称列表
         if (!roleIds.isEmpty()) {
             List<SysRole> roles = roleMapper.selectBatchIds(roleIds);
             List<String> roleNames = roles.stream()
@@ -526,7 +480,6 @@ public class UserServiceImpl implements UserService {
             vo.setRoleNames(List.of());
         }
 
-        // 查询部门名称
         if (StringUtils.hasText(user.getDeptId())) {
             SysDept dept = deptMapper.selectById(user.getDeptId());
             if (dept != null) {
@@ -534,12 +487,10 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // 查询创建人名称
         if (StringUtils.hasText(user.getCreateBy())) {
             vo.setCreateByName(getUserName(user.getCreateBy()));
         }
 
-        // 查询更新人名称
         if (StringUtils.hasText(user.getUpdateBy())) {
             vo.setUpdateByName(getUserName(user.getUpdateBy()));
         }
@@ -549,42 +500,33 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO) {
-        // 构建基础查询条件
         LambdaQueryWrapper<SysUser> queryWrapper = buildBaseQueryWrapper(
                 queryDTO.getSearch(), queryDTO.getUsername(), queryDTO.getRealName(),
                 queryDTO.getDeptId(), queryDTO.getStatus(), queryDTO.getStartTime(), queryDTO.getEndTime()
         );
 
-        // Options 接口：明确过滤已删除的记录，按用户名正序
         queryWrapper.eq(SysUser::getDeleted, 0);
         queryWrapper.orderByAsc(SysUser::getUsername);
 
-        // 判断是否使用分页查询
         if (queryDTO.getPage() != null && queryDTO.getPageSize() != null) {
-            // 使用分页查询
             Page<SysUser> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getPageSize());
             IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
 
-            // 转换为VO
             List<UserVO> voList = pageResult.getRecords().stream()
                     .map(this::convertToVO)
                     .collect(Collectors.toList());
 
             return PageResult.of(voList, pageResult.getTotal());
         } else {
-            // 使用 limit 限制（默认行为）
             int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
             queryWrapper.last("LIMIT " + maxLimit);
 
-            // 查询数据（已限制数量）
             List<SysUser> users = userMapper.selectList(queryWrapper);
 
-            // 转换为VO
             List<UserVO> options = users.stream()
                     .map(this::convertToVO)
                     .collect(Collectors.toList());
 
-            // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
             return new PageResult<>(options, (long) options.size());
         }
     }
@@ -608,7 +550,6 @@ public class UserServiceImpl implements UserService {
     ) {
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 搜索关键词处理（优先级高于 username/realName）
         QueryHelper.applySearch(
                 queryWrapper,
                 SearchQueryConfig.<SysUser>of(search)
@@ -618,15 +559,13 @@ public class UserServiceImpl implements UserService {
                         .fallbackField(SysUser::getRealName, realName)
         );
 
-        // 其他查询条件
-        if (StringUtils.hasText(deptId)) {
+        if (ValidationUtils.isValidId(deptId)) {
             queryWrapper.eq(SysUser::getDeptId, deptId);
         }
         if (status != null) {
             queryWrapper.eq(SysUser::getStatus, status);
         }
 
-        // 时间范围查询
         QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
 
         return queryWrapper;

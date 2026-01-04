@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.utils.SecurityUtils;
 import com.vben.admin.core.utils.TreeHelper;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.MenuMapper;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.dto.MenuOrderDTO;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
  * @author vben
  */
 @Service
+@Validated
 @RequiredArgsConstructor
 public class MenuServiceImpl implements MenuService {
 
@@ -161,7 +164,6 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateMenu(String id, MenuDTO menuDTO) {
-        // 查询菜单
         SysMenu menu = getMenuByIdOrThrow(id);
 
         // 校验菜单基本信息
@@ -183,7 +185,6 @@ public class MenuServiceImpl implements MenuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMenu(String id) {
-        // 查询菜单（验证存在性）
         getMenuByIdOrThrow(id);
 
         // 检查是否有子菜单
@@ -201,9 +202,9 @@ public class MenuServiceImpl implements MenuService {
             throw new BusinessException("菜单列表不能为空");
         }
 
-        // 检查是否有重复的菜单ID
+        // 检查是否有重复的菜单ID（过滤掉无效ID）
         long distinctCount = menus.stream()
-                .filter(menu -> menu.getId() != null)
+                .filter(menu -> ValidationUtils.isValidId(menu.getId()))
                 .map(MenuOrderDTO::getId)
                 .distinct()
                 .count();
@@ -212,22 +213,21 @@ public class MenuServiceImpl implements MenuService {
         }
 
         for (MenuOrderDTO menuOrderDTO : menus) {
-            // 参数校验
-            if (menuOrderDTO.getId() == null || menuOrderDTO.getId().trim().isEmpty()) {
-                throw new BusinessException("菜单ID不能为空");
-            }
-
             if (menuOrderDTO.getMeta() == null) {
                 throw new BusinessException("菜单元数据不能为空，菜单ID: " + menuOrderDTO.getId());
             }
 
-            // 检查菜单是否存在
             SysMenu menu = getMenuByIdOrThrow(menuOrderDTO.getId());
 
-            // 处理父级ID
+            // 处理父级ID（拦截 "null"、"undefined"、空格等无效字符串）
             String pid = menuOrderDTO.getPid();
-            if (pid == null || pid.isEmpty() || "null".equalsIgnoreCase(pid)) {
+            if (ValidationUtils.isInvalidString(pid)) {
                 pid = TreeHelper.ROOT_ID;
+            } else {
+                pid = ValidationUtils.cleanString(pid);
+                if (pid == null) {
+                    pid = TreeHelper.ROOT_ID;
+                }
             }
 
             // 校验：防止菜单成为自己的父级（循环引用）
@@ -434,21 +434,22 @@ public class MenuServiceImpl implements MenuService {
      * @param id      菜单ID（更新时传入，创建时传入null）
      */
     private void validateMenuBasicInfo(MenuDTO menuDTO, String id) {
-        // 校验菜单名称
-        if (menuDTO.getName() == null || menuDTO.getName().trim().isEmpty()) {
-            throw new BusinessException("菜单名称不能为空");
+        // 校验菜单名称（拦截 "null"、"undefined"、空格等无效字符串）
+        if (ValidationUtils.isInvalidString(menuDTO.getName())) {
+            throw new BusinessException("菜单名称不能为空或无效值");
         }
-        if (menuDTO.getName().length() < MENU_NAME_MIN_LENGTH || menuDTO.getName().length() > MENU_NAME_MAX_LENGTH) {
+        String cleanedName = ValidationUtils.cleanString(menuDTO.getName());
+        if (cleanedName == null || cleanedName.length() < MENU_NAME_MIN_LENGTH || cleanedName.length() > MENU_NAME_MAX_LENGTH) {
             throw new BusinessException("菜单名称长度必须在" + MENU_NAME_MIN_LENGTH + "-" + MENU_NAME_MAX_LENGTH + "之间");
         }
         // 检查名称是否已存在
-        if (isNameExists(menuDTO.getName(), id)) {
+        if (isNameExists(cleanedName, id)) {
             throw new BusinessException("菜单名称已存在");
         }
 
-        // 校验菜单类型
-        if (menuDTO.getType() == null || menuDTO.getType().trim().isEmpty()) {
-            throw new BusinessException("菜单类型不能为空");
+        // 校验菜单类型（拦截 "null"、"undefined"、空格等无效字符串）
+        if (ValidationUtils.isInvalidString(menuDTO.getType())) {
+            throw new BusinessException("菜单类型不能为空或无效值");
         }
     }
 
@@ -468,8 +469,9 @@ public class MenuServiceImpl implements MenuService {
                 validatePath(menuDTO.getPath(), id);
                 break;
             case MENU_TYPE_BUTTON:
-                if (menuDTO.getAuthCode() == null || menuDTO.getAuthCode().trim().isEmpty()) {
-                    throw new BusinessException("按钮类型菜单的权限标识不能为空");
+                // 校验权限标识是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+                if (ValidationUtils.isInvalidString(menuDTO.getAuthCode())) {
+                    throw new BusinessException("按钮类型菜单的权限标识不能为空或无效值");
                 }
                 break;
             case MENU_TYPE_LINK:
@@ -483,8 +485,9 @@ public class MenuServiceImpl implements MenuService {
 
         // menu 类型需要 component
         if (MENU_TYPE_MENU.equals(menuType)) {
-            if (menuDTO.getComponent() == null || menuDTO.getComponent().trim().isEmpty()) {
-                throw new BusinessException("菜单类型必须指定组件路径");
+            // 校验组件路径是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+            if (ValidationUtils.isInvalidString(menuDTO.getComponent())) {
+                throw new BusinessException("菜单类型必须指定组件路径，且不能为空或无效值");
             }
         }
 
@@ -501,17 +504,19 @@ public class MenuServiceImpl implements MenuService {
      * @param id   菜单ID（更新时传入，创建时传入null）
      */
     private void validatePath(String path, String id) {
-        if (path == null || path.trim().isEmpty()) {
-            throw new BusinessException("路由路径不能为空");
+        // 校验路径是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+        if (ValidationUtils.isInvalidString(path)) {
+            throw new BusinessException("路由路径不能为空或无效值");
         }
-        if (path.length() < PATH_MIN_LENGTH || path.length() > PATH_MAX_LENGTH) {
+        String cleanedPath = ValidationUtils.cleanString(path);
+        if (cleanedPath == null || cleanedPath.length() < PATH_MIN_LENGTH || cleanedPath.length() > PATH_MAX_LENGTH) {
             throw new BusinessException("路由路径长度必须在" + PATH_MIN_LENGTH + "-" + PATH_MAX_LENGTH + "之间");
         }
-        if (!path.startsWith("/")) {
+        if (!cleanedPath.startsWith("/")) {
             throw new BusinessException("路由路径必须以'/'开头");
         }
         // 检查路径是否已存在
-        if (isPathExists(path, id)) {
+        if (isPathExists(cleanedPath, id)) {
             throw new BusinessException("菜单路径已存在");
         }
     }
@@ -529,8 +534,9 @@ public class MenuServiceImpl implements MenuService {
         String linkSrc = MENU_TYPE_EMBEDDED.equals(menuType)
                 ? (String) menuDTO.getMeta().get("iframeSrc")
                 : (String) menuDTO.getMeta().get("link");
-        if (linkSrc == null || linkSrc.trim().isEmpty()) {
-            throw new BusinessException("链接地址不能为空");
+        // 校验链接地址是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+        if (ValidationUtils.isInvalidString(linkSrc)) {
+            throw new BusinessException("链接地址不能为空或无效值");
         }
         // URL 格式校验
         if (!linkSrc.startsWith("http://") && !linkSrc.startsWith("https://")) {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.utils.JwtUtils;
 import com.vben.admin.core.utils.SecurityUtils;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.PermissionMapper;
 import com.vben.admin.mapper.UserMapper;
 import com.vben.admin.mapper.UserRoleMapper;
@@ -96,6 +97,14 @@ public class AuthServiceImpl implements AuthService {
      * @throws BusinessException 如果用户不存在、密码错误或用户被禁用
      */
     private SysUser findAndValidateUser(String username, String password) {
+        // 校验用户名和密码是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+        if (ValidationUtils.isInvalidString(username)) {
+            throw new BusinessException("用户名不能为空或无效值");
+        }
+        if (ValidationUtils.isInvalidString(password)) {
+            throw new BusinessException("密码不能为空或无效值");
+        }
+
         // 查询用户（排除已删除的用户）
         SysUser user = userMapper.selectOne(
                 new LambdaQueryWrapper<SysUser>()

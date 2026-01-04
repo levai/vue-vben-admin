@@ -17,6 +17,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.nio.file.AccessDeniedException;
 import java.util.stream.Collectors;
 
@@ -121,10 +123,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
     public BaseResult<Boolean> methodArgumentNotValidExceptionHandler(HttpServletRequest request, MethodArgumentNotValidException e) {
+        this.logDebug(request, e);
         String message = e.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining());
-        return new BaseResult<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), message);
+                .collect(Collectors.joining("; "));
+        return new BaseResult<>(HttpStatus.BAD_REQUEST.value(), message);
+    }
+
+    /**
+     * 处理方法参数验证异常 @PathVariable、@RequestParam 上使用验证注解失败后抛出的异常是ConstraintViolationException异常
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseBody
+    public BaseResult<Boolean> constraintViolationExceptionHandler(HttpServletRequest request, ConstraintViolationException e) {
+        this.logDebug(request, e);
+        String message = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining("; "));
+        return new BaseResult<>(HttpStatus.BAD_REQUEST.value(), message);
     }
 
     private void logError(HttpServletRequest request, Throwable throwable) {

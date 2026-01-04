@@ -2,6 +2,7 @@ package com.vben.admin.service.impl;
 
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.utils.TreeHelper;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.DeptMapper;
 import com.vben.admin.mapper.UserMapper;
 import com.vben.admin.model.dto.DeptDTO;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
  * @author vben
  */
 @Service
+@Validated
 @RequiredArgsConstructor
 public class DeptServiceImpl implements DeptService {
 
@@ -51,10 +54,7 @@ public class DeptServiceImpl implements DeptService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateDept(String id, DeptDTO deptDTO) {
-        SysDept dept = deptMapper.selectById(id);
-        if (dept == null) {
-            throw new BusinessException("部门不存在");
-        }
+        SysDept dept = getDeptByIdOrThrow(id);
 
         // 如果修改了名称，检查新名称是否已存在
         if (deptDTO.getName() != null && !deptDTO.getName().equals(dept.getName())) {
@@ -72,7 +72,6 @@ public class DeptServiceImpl implements DeptService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteDept(String id) {
-        // 查询部门
         SysDept dept = getDeptByIdOrThrow(id);
 
         // 检查是否有子部门
@@ -134,6 +133,10 @@ public class DeptServiceImpl implements DeptService {
      * @throws BusinessException 如果名称已存在
      */
     private void validateNameNotExists(String name, String id) {
+        if (ValidationUtils.isInvalidString(name)) {
+            throw new BusinessException("部门名称不能为空或无效值");
+        }
+
         if (isNameExists(name, id)) {
             throw new BusinessException("部门名称已存在");
         }

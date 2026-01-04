@@ -1,6 +1,7 @@
 package com.vben.admin.service;
 
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.entity.SysOperationLog;
 import com.vben.admin.model.vo.TreeOptionVO;
@@ -44,14 +45,14 @@ public interface OperationLogService {
      * @param id 日志ID
      * @return 操作日志VO
      */
-    OperationLogVO getOperationLogDetail(String id);
+    OperationLogVO getOperationLogDetail(@ValidId(message = "操作日志ID不能为空或无效值") String id);
 
     /**
      * 删除操作日志
      *
      * @param id 日志ID
      */
-    void deleteOperationLog(String id);
+    void deleteOperationLog(@ValidId(message = "操作日志ID不能为空或无效值") String id);
 
     /**
      * 批量删除操作日志

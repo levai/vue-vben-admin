@@ -1,5 +1,6 @@
 package com.vben.admin.service;
 
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.DeptDTO;
 import com.vben.admin.model.vo.DeptVO;
 
@@ -33,14 +34,14 @@ public interface DeptService {
      * @param id      部门ID
      * @param deptDTO 部门信息
      */
-    void updateDept(String id, DeptDTO deptDTO);
+    void updateDept(@ValidId(message = "部门ID不能为空或无效值") String id, DeptDTO deptDTO);
 
     /**
      * 删除部门
      *
      * @param id 部门ID
      */
-    void deleteDept(String id);
+    void deleteDept(@ValidId(message = "部门ID不能为空或无效值") String id);
 
     /**
      * 检查部门名称是否存在
@@ -49,5 +50,5 @@ public interface DeptService {
      * @param id   部门ID（更新时排除自己）
      * @return 是否存在
      */
-    boolean isNameExists(String name, String id);
+    boolean isNameExists(String name, @ValidId(message = "部门ID不能为空或无效值") String id);
 }

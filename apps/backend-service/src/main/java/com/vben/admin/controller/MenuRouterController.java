@@ -6,6 +6,7 @@ import com.vben.admin.service.MenuService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.List;
 @Tag(name = "菜单路由")
 @RestController
 @RequestMapping("/menu")
+@Validated
 @RequiredArgsConstructor
 public class MenuRouterController {
 

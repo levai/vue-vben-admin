@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ import jakarta.validation.constraints.Size;
 @Tag(name = "用户个人中心")
 @RestController
 @RequestMapping("/user")
+@Validated
 @RequiredArgsConstructor
 public class UserProfileController {
 

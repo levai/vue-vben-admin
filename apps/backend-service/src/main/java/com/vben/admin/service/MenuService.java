@@ -1,5 +1,6 @@
 package com.vben.admin.service;
 
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.MenuDTO;
 import com.vben.admin.model.dto.MenuOrderDTO;
 import com.vben.admin.model.vo.MenuVO;
@@ -35,7 +36,7 @@ public interface MenuService {
      * @param id   菜单ID（可选，用于更新时排除自己）
      * @return 是否存在
      */
-    boolean isNameExists(String name, String id);
+    boolean isNameExists(String name, @ValidId(message = "菜单ID不能为空或无效值") String id);
 
     /**
      * 检查菜单路径是否存在
@@ -44,7 +45,7 @@ public interface MenuService {
      * @param id   菜单ID（可选，用于更新时排除自己）
      * @return 是否存在
      */
-    boolean isPathExists(String path, String id);
+    boolean isPathExists(String path, @ValidId(message = "菜单ID不能为空或无效值") String id);
 
     /**
      * 创建菜单
@@ -60,14 +61,14 @@ public interface MenuService {
      * @param id      菜单ID
      * @param menuDTO 菜单信息
      */
-    void updateMenu(String id, MenuDTO menuDTO);
+    void updateMenu(@ValidId(message = "菜单ID不能为空或无效值") String id, MenuDTO menuDTO);
 
     /**
      * 删除菜单
      *
      * @param id 菜单ID
      */
-    void deleteMenu(String id);
+    void deleteMenu(@ValidId(message = "菜单ID不能为空或无效值") String id);
 
     /**
      * 批量更新菜单排序

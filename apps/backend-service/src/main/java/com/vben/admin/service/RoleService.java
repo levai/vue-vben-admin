@@ -1,6 +1,7 @@
 package com.vben.admin.service;
 
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.RoleDTO;
 import com.vben.admin.model.dto.RoleOptionQueryDTO;
 import com.vben.admin.model.vo.RoleVO;
@@ -44,14 +45,14 @@ public interface RoleService {
      * @param id      角色ID
      * @param roleDTO 角色信息
      */
-    void updateRole(String id, RoleDTO roleDTO);
+    void updateRole(@ValidId(message = "角色ID不能为空或无效值") String id, RoleDTO roleDTO);
 
     /**
      * 删除角色
      *
      * @param id 角色ID
      */
-    void deleteRole(String id);
+    void deleteRole(@ValidId(message = "角色ID不能为空或无效值") String id);
 
     /**
      * 获取角色选项列表（用于下拉选项，支持分页或 limit 限制）

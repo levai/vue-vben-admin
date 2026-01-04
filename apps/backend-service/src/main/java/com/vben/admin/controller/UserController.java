@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.vben.admin.core.validation.ValidId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,6 +30,7 @@ import java.util.List;
 @Tag(name = "系统用户管理")
 @RestController
 @RequestMapping("/system/user")
+@Validated
 @RequiredArgsConstructor
 public class UserController {
 
@@ -61,7 +63,7 @@ public class UserController {
 
     @Operation(summary = "获取用户信息", description = "根据ID获取用户详细信息")
     @GetMapping("/{id}")
-    public BaseResult<UserVO> getById(@PathVariable String id) {
+    public BaseResult<UserVO> getById(@ValidId(message = "用户ID不能为空或无效值") @PathVariable String id) {
         UserVO user = userService.getUserById(id);
         return new BaseResult<>(user);
     }
@@ -75,14 +77,14 @@ public class UserController {
 
     @Operation(summary = "更新用户", description = "更新用户信息")
     @PutMapping("/{id}")
-    public BaseResult<Boolean> update(@PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
+    public BaseResult<Boolean> update(@ValidId(message = "用户ID不能为空或无效值") @PathVariable String id, @Validated(UserDTO.Update.class) @RequestBody UserDTO userDTO) {
         userService.updateUser(id, userDTO);
         return new BaseResult<>(true);
     }
 
     @Operation(summary = "删除用户", description = "删除用户（逻辑删除）")
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(@ValidId(message = "用户ID不能为空或无效值") @PathVariable String id) {
         userService.deleteUser(id);
         return new BaseResult<>(true);
     }
@@ -90,7 +92,7 @@ public class UserController {
     @Operation(summary = "启用/禁用用户", description = "更新用户状态")
     @PutMapping("/{id}/status")
     public BaseResult<Boolean> updateStatus(
-            @PathVariable String id,
+            @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id,
             @Valid @RequestBody UpdateStatusDTO statusDTO) {
         userService.updateUserStatus(id, statusDTO.getStatus());
         return new BaseResult<>(true);
@@ -99,7 +101,7 @@ public class UserController {
     @Operation(summary = "重置密码", description = "重置用户密码")
     @PutMapping("/{id}/password")
     public BaseResult<Boolean> resetPassword(
-            @PathVariable String id,
+            @ValidId(message = "用户ID不能为空或无效值") @PathVariable String id,
             @Valid @RequestBody ResetPasswordDTO passwordDTO) {
         userService.resetPassword(id, passwordDTO.getPassword());
         return new BaseResult<>(true);

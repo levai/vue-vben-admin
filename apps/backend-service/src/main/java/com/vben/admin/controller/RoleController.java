@@ -2,6 +2,7 @@ package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.RoleDTO;
 import com.vben.admin.model.dto.RoleOptionQueryDTO;
 import com.vben.admin.model.vo.RoleVO;
@@ -24,6 +25,7 @@ import java.util.List;
 @Tag(name = "系统角色管理")
 @RestController
 @RequestMapping("/system/role")
+@Validated
 @RequiredArgsConstructor
 public class RoleController {
 
@@ -63,14 +65,14 @@ public class RoleController {
 
     @Operation(summary = "更新角色", description = "更新角色信息")
     @PutMapping("/{id}")
-    public BaseResult<Boolean> update(@PathVariable String id, @Validated(RoleDTO.Update.class) @RequestBody RoleDTO roleDTO) {
+    public BaseResult<Boolean> update(@ValidId(message = "角色ID不能为空或无效值") @PathVariable String id, @Validated(RoleDTO.Update.class) @RequestBody RoleDTO roleDTO) {
         roleService.updateRole(id, roleDTO);
         return new BaseResult<>(true);
     }
 
     @Operation(summary = "删除角色", description = "删除角色")
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(@ValidId(message = "角色ID不能为空或无效值") @PathVariable String id) {
         roleService.deleteRole(id);
         return new BaseResult<>(true);
     }

@@ -8,6 +8,7 @@ import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
 import com.vben.admin.core.utils.SearchQueryConfig;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.RoleMapper;
 import com.vben.admin.mapper.RoleMenuMapper;
 import com.vben.admin.mapper.UserRoleMapper;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
  * @author vben
  */
 @Service
+@Validated
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
 
@@ -83,7 +86,6 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateRole(String id, RoleDTO roleDTO) {
-        // 查询角色信息
         SysRole role = getRoleByIdOrThrow(id);
         boolean isAdminRole = isAdminRole(role.getId());
 
@@ -98,15 +100,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRole(String id) {
-        // 参数校验
-        if (!StringUtils.hasText(id)) {
-            throw new BusinessException("角色ID不能为空");
-        }
-
-        String trimmedId = id.trim();
-
-        // 查询角色信息
-        SysRole role = getRoleByIdOrThrow(trimmedId);
+        SysRole role = getRoleByIdOrThrow(id);
 
         // 检查是否是超级管理员
         if (isAdminRole(role.getId())) {
@@ -114,13 +108,13 @@ public class RoleServiceImpl implements RoleService {
         }
 
         // 检查是否有关联用户
-        checkRoleHasUsers(trimmedId);
+        checkRoleHasUsers(id);
 
         // 删除角色菜单关联
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, trimmedId));
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, id));
 
         // 删除角色（逻辑删除）
-        roleMapper.deleteById(trimmedId);
+        roleMapper.deleteById(id);
     }
 
     /**
@@ -156,12 +150,12 @@ public class RoleServiceImpl implements RoleService {
      * @param isAdminRole 是否是超级管理员
      */
     private void updateRoleBasicInfo(SysRole role, RoleDTO roleDTO, boolean isAdminRole) {
-        // 更新名称（超级管理员不允许修改）
-        if (StringUtils.hasText(roleDTO.getName())) {
+        // 更新名称（超级管理员不允许修改，统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(roleDTO.getName())) {
             if (isAdminRole) {
                 throw new BusinessException("超级管理员角色不能修改");
             }
-            role.setName(roleDTO.getName());
+            role.setName(ValidationUtils.cleanString(roleDTO.getName()));
         }
 
         // 更新状态（超级管理员不允许禁用）
@@ -172,9 +166,9 @@ public class RoleServiceImpl implements RoleService {
             role.setStatus(roleDTO.getStatus());
         }
 
-        // 更新备注（允许修改）
-        if (StringUtils.hasText(roleDTO.getRemark())) {
-            role.setRemark(roleDTO.getRemark());
+        // 更新备注（允许修改，统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(roleDTO.getRemark())) {
+            role.setRemark(ValidationUtils.cleanString(roleDTO.getRemark()));
         } else if (roleDTO.getRemark() != null) {
             // 允许清空备注
             role.setRemark(null);
@@ -300,8 +294,8 @@ public class RoleServiceImpl implements RoleService {
                         .fallbackField(SysRole::getName, name)
         );
 
-        // 其他查询条件
-        if (StringUtils.hasText(remark)) {
+        // 其他查询条件（统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(remark)) {
             queryWrapper.like(SysRole::getRemark, remark);
         }
         if (status != null) {

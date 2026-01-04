@@ -3,13 +3,12 @@ package com.vben.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.vben.admin.core.enums.OperationType;
+import com.vben.admin.core.exception.BusinessException;
+import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
 import com.vben.admin.core.utils.SearchQueryConfig;
-import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.utils.ValidationUtils;
 import com.vben.admin.mapper.OperationLogMapper;
 import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.entity.SysOperationLog;
@@ -24,6 +23,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@Validated
 @RequiredArgsConstructor
 public class OperationLogServiceImpl implements OperationLogService {
 
@@ -110,6 +111,13 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Transactional(rollbackFor = Exception.class)
     public void batchDeleteOperationLog(List<String> ids) {
         if (ids != null && !ids.isEmpty()) {
+            // 校验所有ID是否有效（拦截 "null"、"undefined"、空格等无效字符串）
+            // 注意：操作日志ID是系统生成的雪花ID（纯数字），理论上不会包含空格
+            // 但保留校验作为防御性编程，确保数据安全
+            for (String id : ids) {
+                ValidationUtils.requireValidId(id, "操作日志ID");
+            }
+            // 操作日志ID是系统生成的纯数字，无需清理，直接使用
             operationLogMapper.deleteBatchIds(ids);
         }
     }
@@ -123,23 +131,23 @@ public class OperationLogServiceImpl implements OperationLogService {
     private LambdaQueryWrapper<SysOperationLog> buildQueryWrapper(OperationLogQueryDTO queryDTO) {
         LambdaQueryWrapper<SysOperationLog> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 用户ID精确查询
-        if (StringUtils.hasText(queryDTO.getUserId())) {
+        // 用户ID精确查询（统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidId(queryDTO.getUserId())) {
             queryWrapper.eq(SysOperationLog::getUserId, queryDTO.getUserId());
         }
 
-        // 用户名模糊查询
-        if (StringUtils.hasText(queryDTO.getUsername())) {
+        // 用户名模糊查询（统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(queryDTO.getUsername())) {
             queryWrapper.like(SysOperationLog::getUsername, queryDTO.getUsername());
         }
 
-        // 操作类型精确查询
-        if (StringUtils.hasText(queryDTO.getOperationType())) {
+        // 操作类型精确查询（统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(queryDTO.getOperationType())) {
             queryWrapper.eq(SysOperationLog::getOperationType, queryDTO.getOperationType());
         }
 
-        // 操作模块查询（需要转换为中文名称）
-        if (StringUtils.hasText(queryDTO.getOperationModule())) {
+        // 操作模块查询（需要转换为中文名称，统一使用 ValidationUtils 校验）
+        if (ValidationUtils.isValidString(queryDTO.getOperationModule())) {
             applyOperationModuleQuery(queryWrapper, queryDTO.getOperationModule());
         }
 

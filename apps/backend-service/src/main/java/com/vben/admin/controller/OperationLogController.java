@@ -2,6 +2,7 @@ package com.vben.admin.controller;
 
 import com.vben.admin.core.model.BaseResult;
 import com.vben.admin.core.model.PageResult;
+import com.vben.admin.core.validation.ValidId;
 import com.vben.admin.model.dto.OperationLogQueryDTO;
 import com.vben.admin.model.vo.TreeOptionVO;
 import com.vben.admin.model.vo.OperationLogVO;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.List;
 @Tag(name = "系统操作日志管理")
 @RestController
 @RequestMapping("/system/operation-log")
+@Validated
 @RequiredArgsConstructor
 public class OperationLogController {
 
@@ -36,14 +39,14 @@ public class OperationLogController {
 
     @Operation(summary = "获取操作日志详情", description = "根据ID获取操作日志详细信息")
     @GetMapping("/{id}")
-    public BaseResult<OperationLogVO> getById(@PathVariable String id) {
+    public BaseResult<OperationLogVO> getById(@ValidId(message = "操作日志ID不能为空或无效值") @PathVariable String id) {
         OperationLogVO operationLog = operationLogService.getOperationLogDetail(id);
         return new BaseResult<>(operationLog);
     }
 
     @Operation(summary = "删除操作日志", description = "删除操作日志")
     @DeleteMapping("/{id}")
-    public BaseResult<Boolean> delete(@PathVariable String id) {
+    public BaseResult<Boolean> delete(@ValidId(message = "操作日志ID不能为空或无效值") @PathVariable String id) {
         operationLogService.deleteOperationLog(id);
         return new BaseResult<>(true);
     }
