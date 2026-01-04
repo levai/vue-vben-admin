@@ -67,9 +67,8 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
-    // requestClient 配置了 responseReturn: 'data'，会自动提取 BaseResult 中的 data 字段
-    // 所以 refreshTokenApi() 直接返回 token 字符串，而不是 { data: "token" }
-    const newToken = await refreshTokenApi();
+    const resp = await refreshTokenApi();
+    const newToken = resp;
     accessStore.setAccessToken(newToken);
     return newToken;
   }
@@ -137,7 +136,19 @@ export const requestClient = createRequestClient(apiURL, {
   responseReturn: 'data',
 });
 
-export const baseRequestClient = new RequestClient({ baseURL: apiURL });
+export const baseRequestClient = new RequestClient({
+  baseURL: apiURL,
+  responseReturn: 'data',
+});
+
+// 为 baseRequestClient 添加 defaultResponseInterceptor，使 responseReturn: 'data' 生效
+baseRequestClient.addResponseInterceptor(
+  defaultResponseInterceptor({
+    codeField: 'code',
+    dataField: 'data',
+    successCode: 0,
+  }),
+);
 
 export interface PageFetchParams {
   [key: string]: any;
