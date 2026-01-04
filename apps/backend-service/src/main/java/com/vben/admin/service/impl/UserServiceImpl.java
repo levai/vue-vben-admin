@@ -3,6 +3,7 @@ package com.vben.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.vben.admin.core.constants.SystemConstants;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
@@ -114,8 +115,22 @@ public class UserServiceImpl implements UserService {
         // 查询用户（验证存在性）
         getUserByIdOrThrow(id);
 
-        // 删除用户角色关联
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        // 检查是否是超级管理员（超级管理员不允许被删除）
+        List<String> roleIds = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getUserId, id)
+        ).stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+
+        if (roleIds.contains(SystemConstants.ADMIN_ROLE_ID)) {
+            throw new BusinessException("超级管理员不能被删除");
+        }
+
+        // 不删除用户角色关联（方案2：保留关联数据，查询时通过用户状态过滤）
+        // 这样设计的好处：
+        // 1. 保留关联数据，支持恢复用户
+        // 2. 查询时自动过滤已删除和已禁用的用户（在 MenuMapper 和 PermissionMapper 中已处理）
+        // 3. 已删除或已禁用的用户无法访问菜单和权限，确保安全性
+        // userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
 
         // 逻辑删除用户
         userMapper.deleteById(id);
@@ -130,6 +145,18 @@ public class UserServiceImpl implements UserService {
         // 验证状态值
         if (status == null || (status != 0 && status != 1)) {
             throw new BusinessException("状态值无效，必须为0或1");
+        }
+
+        // 检查是否是超级管理员（超级管理员不允许被禁用）
+        if (status == 0) {
+            List<String> roleIds = userRoleMapper.selectList(
+                    new LambdaQueryWrapper<SysUserRole>()
+                            .eq(SysUserRole::getUserId, id)
+            ).stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+
+            if (roleIds.contains(SystemConstants.ADMIN_ROLE_ID)) {
+                throw new BusinessException("超级管理员不能被禁用");
+            }
         }
 
         // 更新状态

@@ -3,6 +3,7 @@ package com.vben.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.vben.admin.core.constants.SystemConstants;
 import com.vben.admin.core.exception.BusinessException;
 import com.vben.admin.core.model.PageResult;
 import com.vben.admin.core.utils.QueryHelper;
@@ -33,11 +34,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
-
-    /**
-     * 超级管理员角色ID（不允许删除、修改名称、禁用）
-     */
-    private static final String ADMIN_ROLE_ID = "1";
 
     private final RoleMapper roleMapper;
     private final RoleMenuMapper roleMenuMapper;
@@ -134,7 +130,7 @@ public class RoleServiceImpl implements RoleService {
      * @return 是否是超级管理员
      */
     private boolean isAdminRole(String roleId) {
-        return ADMIN_ROLE_ID.equals(roleId);
+        return SystemConstants.ADMIN_ROLE_ID.equals(roleId);
     }
 
     /**
