@@ -67,8 +67,13 @@ public class UserOptionQueryDTO {
     private Integer pageSize;
 
     /**
-     * 最大返回数量（默认 1000，防止数据量过大。仅在未传 page 和 pageSize 时生效）
+     * 最大返回数量（默认 300，防止数据量过大）
+     * - 普通下拉：300（默认）
+     * - 需要全部数据：传 -1（实际最多返回 10000 条，有上限保护）
+     * - 自定义数量：传具体数值（最大 10000）
+     * 
+     * 仅在未传 page 和 pageSize 时生效
      */
-    @Schema(description = "最大返回数量（默认 1000，防止数据量过大。仅在未传 page 和 pageSize 时生效）", example = "1000")
-    private Integer limit = 1000;
+    @Schema(description = "最大返回数量（默认 300。传 -1 表示获取全部，实际最多 10000 条。仅在未传 page 和 pageSize 时生效）", example = "300")
+    private Integer limit = 300;
 }

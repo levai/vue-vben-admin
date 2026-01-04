@@ -21,9 +21,19 @@ import java.util.List;
 public class QueryHelper {
 
     /**
-     * 默认的 limit 值
+     * 默认的 limit 值（下拉场景推荐）
      */
-    public static final int DEFAULT_LIMIT = 1000;
+    public static final int DEFAULT_LIMIT = 300;
+
+    /**
+     * 最大允许的 limit 值（防止恶意请求）
+     */
+    public static final int MAX_ALLOWED_LIMIT = 10000;
+
+    /**
+     * 特殊值：表示获取全部数据（实际会被限制为 MAX_ALLOWED_LIMIT）
+     */
+    public static final int UNLIMITED = -1;
 
     /**
      * 应用时间范围查询条件
@@ -87,10 +97,21 @@ public class QueryHelper {
      * 获取有效的 limit 值
      *
      * @param limit 输入的 limit 值
-     * @return 有效的 limit 值（如果输入无效，返回默认值）
+     * @return 有效的 limit 值
+     *         - null 或 <= 0：返回默认值 DEFAULT_LIMIT
+     *         - -1：返回 MAX_ALLOWED_LIMIT（表示获取全部，但有上限保护）
+     *         - 其他：返回原值（但不超过 MAX_ALLOWED_LIMIT）
      */
     public static int getValidLimit(Integer limit) {
-        return (limit != null && limit > 0) ? limit : DEFAULT_LIMIT;
+        if (limit == null || limit <= 0) {
+            return DEFAULT_LIMIT;
+        }
+        // -1 表示获取全部数据（但有上限保护）
+        if (limit == UNLIMITED) {
+            return MAX_ALLOWED_LIMIT;
+        }
+        // 限制最大值为 MAX_ALLOWED_LIMIT
+        return Math.min(limit, MAX_ALLOWED_LIMIT);
     }
 
     /**
