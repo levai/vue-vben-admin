@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file */
 /**
  * 通用组件共同的使用的基础组件，原先放在 adapter/form 内部，限制了使用范围，这里提取出来，方便其他地方使用
  * 可用于 vben-form、vben-modal、vben-drawer 等组件使用,
@@ -15,6 +16,7 @@ import type { BaseFormComponentType } from '@vben/common-ui';
 import type { Recordable } from '@vben/types';
 
 import {
+  computed,
   defineAsyncComponent,
   defineComponent,
   h,
@@ -29,6 +31,7 @@ import { IconifyIcon } from '@vben/icons';
 import { $t } from '@vben/locales';
 import { isEmpty } from '@vben/utils';
 
+import { useDebounceFn } from '@vueuse/core';
 import { notification } from 'ant-design-vue';
 
 const AutoComplete = defineAsyncComponent(
@@ -123,6 +126,246 @@ const withDefaultPlaceholder = <T extends Component>(
           { ...componentProps, placeholder, ...props, ...attrs, ref: innerRef },
           slots,
         );
+    },
+  });
+};
+
+/**
+ * Ant Design Vue Select 后端搜索包装器
+ * Ant Design Vue Select 使用 onSearch 事件
+ * 此包装器将 enableBackendSearch 转换为 onSearch 事件处理
+ */
+const withAntDesignBackendSearch = (
+  baseComponent: Component,
+  baseProps: Recordable<any> = {},
+) => {
+  return defineComponent({
+    name: 'ApiSelectWithAntDesignBackendSearch',
+    inheritAttrs: false,
+    setup: (props: any, { attrs, expose, slots }) => {
+      const wrapperRef = ref<any>();
+      const searchKeyword = ref<string>('');
+
+      // 检查是否启用后端搜索
+      const enableBackendSearch =
+        props?.enableBackendSearch ?? attrs?.enableBackendSearch ?? false;
+
+      // 获取搜索参数字段名，默认为 'search'
+      const searchFieldName =
+        props?.searchFieldName ?? attrs?.searchFieldName ?? 'search';
+
+      // 获取防抖延迟时间，默认为 300ms
+      const searchDebounce =
+        props?.searchDebounce ?? attrs?.searchDebounce ?? 300;
+
+      // 获取 updateParam 方法
+      const getUpdateParam = () => {
+        if (!wrapperRef.value) return null;
+        try {
+          const updateParam = wrapperRef.value.updateParam;
+          return typeof updateParam === 'function' ? updateParam : null;
+        } catch {
+          return null;
+        }
+      };
+
+      // 维护当前搜索参数状态，避免不必要的更新
+      const currentSearchParam = ref<null | string>(null);
+
+      // 更新搜索参数
+      const updateSearchParam = (value: string) => {
+        if (!enableBackendSearch) return;
+
+        const trimmedValue = value?.trim() || '';
+        searchKeyword.value = trimmedValue;
+
+        // 如果搜索关键词没有变化，不更新参数（避免重复请求）
+        if (currentSearchParam.value === trimmedValue) {
+          return;
+        }
+
+        currentSearchParam.value = trimmedValue;
+
+        const updateParamFn = getUpdateParam();
+        if (updateParamFn) {
+          if (trimmedValue) {
+            // 有搜索关键词，设置参数
+            updateParamFn({ [searchFieldName]: trimmedValue });
+          } else {
+            // 搜索关键词为空，直接清除参数
+            // 如果之前没有搜索参数，不需要更新
+            if (currentSearchParam.value !== null) {
+              updateParamFn({});
+            }
+          }
+        }
+      };
+
+      // 处理后端搜索（带防抖）
+      const handleSearch = useDebounceFn((value: string) => {
+        if (!enableBackendSearch) {
+          // 如果未启用后端搜索，调用原有的 onSearch 事件
+          if (typeof attrs?.onSearch === 'function') {
+            attrs.onSearch(value);
+          }
+          return;
+        }
+
+        updateSearchParam(value);
+      }, searchDebounce);
+
+      // 处理下拉框打开/关闭事件
+      const handleVisibleChange = (visible: boolean) => {
+        // 如果关闭下拉框且搜索关键词为空，清除搜索参数
+        if (
+          !visible &&
+          !searchKeyword.value &&
+          enableBackendSearch &&
+          currentSearchParam.value !== null
+        ) {
+          currentSearchParam.value = null;
+          const updateParamFn = getUpdateParam();
+          if (updateParamFn) {
+            updateParamFn({});
+          }
+        }
+
+        // 调用原有的 onVisibleChange 事件
+        if (typeof attrs?.onVisibleChange === 'function') {
+          attrs.onVisibleChange(visible);
+        }
+      };
+
+      // 处理值变化事件（清除时重新获取数据）
+      const handleChange = (val: any, ...args: any[]) => {
+        // 调用原有的 onChange 事件
+        if (typeof attrs?.onChange === 'function') {
+          attrs.onChange(val, ...args);
+        }
+
+        // 如果值被清除，清除搜索参数
+        if (
+          enableBackendSearch &&
+          (val === undefined || val === null || val === '')
+        ) {
+          searchKeyword.value = '';
+          // 重置搜索参数状态
+          if (currentSearchParam.value !== null) {
+            currentSearchParam.value = null;
+            const updateParamFn = getUpdateParam();
+            if (updateParamFn) {
+              updateParamFn({});
+            }
+          }
+        }
+      };
+
+      // 透传组件暴露的方法
+      const innerRef = ref();
+      expose(
+        new Proxy(
+          {},
+          {
+            get: (_target, key) => {
+              if (wrapperRef.value && key in wrapperRef.value) {
+                return (wrapperRef.value as any)[key];
+              }
+              return innerRef.value?.[key];
+            },
+            has: (_target, key) =>
+              (wrapperRef.value && key in wrapperRef.value) ||
+              key in (innerRef.value || {}),
+          },
+        ),
+      );
+
+      // 合并属性
+      const mergedAttrs = computed(() => {
+        // 先提取需要保留的事件（如 onUpdate:value, onChange 等）
+        const preservedEvents: Record<string, any> = {};
+        const eventKeys = [
+          'onUpdate:value',
+          'onUpdate:modelValue',
+          'onChange',
+          'onBlur',
+          'onFocus',
+        ];
+        for (const key of eventKeys) {
+          if (attrs?.[key]) {
+            preservedEvents[key] = attrs[key];
+          }
+        }
+
+        const merged = {
+          ...baseProps,
+          ...props,
+          ...attrs,
+        };
+
+        // 如果启用后端搜索，配置 Ant Design Vue Select 的搜索功能
+        if (enableBackendSearch) {
+          // 确保启用搜索功能
+          if (merged.showSearch === undefined) {
+            merged.showSearch = true;
+          }
+
+          // 合并 onSearch 事件
+          const existingSearchHandler = attrs?.onSearch;
+          merged.onSearch = (value: string) => {
+            if (typeof existingSearchHandler === 'function') {
+              existingSearchHandler(value);
+            }
+            handleSearch(value);
+          };
+
+          // 禁用前端过滤
+          if (merged.filterOption === undefined) {
+            merged.filterOption = false;
+          }
+
+          // 绑定 onVisibleChange
+          const existingVisibleChangeHandler = attrs?.onVisibleChange;
+          merged.onVisibleChange = (visible: boolean) => {
+            if (typeof existingVisibleChangeHandler === 'function') {
+              existingVisibleChangeHandler(visible);
+            }
+            handleVisibleChange(visible);
+          };
+
+          // 绑定 onChange
+          const existingChangeHandler = attrs?.onChange;
+          merged.onChange = (val: any, ...args: any[]) => {
+            if (typeof existingChangeHandler === 'function') {
+              existingChangeHandler(val, ...args);
+            }
+            handleChange(val, ...args);
+          };
+        }
+
+        // 最后保留重要的事件，确保不被覆盖
+        Object.assign(merged, preservedEvents);
+
+        // 移除 enableBackendSearch、searchFieldName、searchDebounce，不传递给底层组件
+        delete merged.enableBackendSearch;
+        delete merged.searchFieldName;
+        delete merged.searchDebounce;
+
+        return merged;
+      });
+
+      return () => {
+        return h(
+          baseComponent,
+          {
+            ...mergedAttrs.value,
+            ref: (el: any) => {
+              wrapperRef.value = el;
+              innerRef.value = el;
+            },
+          },
+          slots,
+        );
+      };
     },
   });
 };
@@ -380,12 +623,14 @@ async function initComponentAdapter() {
       modelPropName: 'value',
       visibleEvent: 'onVisibleChange',
     }),
-    ApiSelect: withDefaultPlaceholder(ApiComponent, 'select', {
-      component: Select,
-      loadingSlot: 'suffixIcon',
-      modelPropName: 'value',
-      visibleEvent: 'onVisibleChange',
-    }),
+    ApiSelect: withAntDesignBackendSearch(
+      withDefaultPlaceholder(ApiComponent, 'select', {
+        component: Select,
+        loadingSlot: 'suffixIcon',
+        modelPropName: 'value',
+        visibleEvent: 'onVisibleChange',
+      }),
+    ),
     ApiTreeSelect: withDefaultPlaceholder(ApiComponent, 'select', {
       component: TreeSelect,
       fieldNames: { label: 'label', value: 'value', children: 'children' },

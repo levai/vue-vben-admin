@@ -10,11 +10,12 @@ import type { Component } from 'vue';
 import type { BaseFormComponentType } from '@vben/common-ui';
 import type { Recordable } from '@vben/types';
 
-import { defineAsyncComponent, defineComponent, h, ref } from 'vue';
+import { computed, defineAsyncComponent, defineComponent, h, ref } from 'vue';
 
 import { ApiComponent, globalShareState, IconPicker } from '@vben/common-ui';
 import { $t } from '@vben/locales';
 
+import { useDebounceFn } from '@vueuse/core';
 import { ElNotification } from 'element-plus';
 
 const ElAutocomplete = defineAsyncComponent(() =>
@@ -195,6 +196,221 @@ const withDefaultPlaceholder = <T extends Component>(
   });
 };
 
+/**
+ * Element Plus Select 后端搜索包装器
+ * Element Plus Select 使用 remote-method prop 而不是 onSearch 事件
+ * 此包装器将 enableBackendSearch 转换为 remote-method 处理
+ */
+const withElementPlusBackendSearch = (
+  baseComponent: Component,
+  baseProps: Recordable<any> = {},
+) => {
+  return defineComponent({
+    name: 'ApiSelectWithElementPlusBackendSearch',
+    inheritAttrs: false,
+    setup: (props: any, { attrs, expose, slots }) => {
+      const wrapperRef = ref<any>();
+      const searchKeyword = ref<string>('');
+
+      // 检查是否启用后端搜索
+      const enableBackendSearch =
+        props?.enableBackendSearch ?? attrs?.enableBackendSearch ?? false;
+
+      // 获取搜索参数字段名，默认为 'search'
+      const searchFieldName =
+        props?.searchFieldName ?? attrs?.searchFieldName ?? 'search';
+
+      // 获取防抖延迟时间，默认为 300ms
+      const searchDebounce =
+        props?.searchDebounce ?? attrs?.searchDebounce ?? 300;
+
+      // 获取 updateParam 方法
+      const getUpdateParam = () => {
+        if (!wrapperRef.value) return null;
+        try {
+          const updateParam = wrapperRef.value.updateParam;
+          return typeof updateParam === 'function' ? updateParam : null;
+        } catch {
+          return null;
+        }
+      };
+
+      // 维护当前搜索参数状态，避免不必要的更新
+      const currentSearchParam = ref<null | string>(null);
+
+      // 更新搜索参数
+      const updateSearchParam = (value: string) => {
+        if (!enableBackendSearch) return;
+
+        const trimmedValue = value?.trim() || '';
+        searchKeyword.value = trimmedValue;
+
+        // 如果搜索关键词没有变化，不更新参数（避免重复请求）
+        if (currentSearchParam.value === trimmedValue) {
+          return;
+        }
+
+        currentSearchParam.value = trimmedValue;
+
+        const updateParamFn = getUpdateParam();
+        if (updateParamFn) {
+          if (trimmedValue) {
+            // 有搜索关键词，设置参数
+            updateParamFn({ [searchFieldName]: trimmedValue });
+          } else {
+            // 搜索关键词为空，直接清除参数
+            // 如果之前没有搜索参数，不需要更新
+            if (currentSearchParam.value !== null) {
+              updateParamFn({});
+            }
+          }
+        }
+      };
+
+      // 处理后端搜索（带防抖）
+      const handleRemoteMethod = useDebounceFn((value: string) => {
+        if (!enableBackendSearch) return;
+        updateSearchParam(value);
+      }, searchDebounce);
+
+      // 处理下拉框打开/关闭事件
+      const handleVisibleChange = (visible: boolean) => {
+        // 如果关闭下拉框且搜索关键词为空，清除搜索参数
+        if (
+          !visible &&
+          !searchKeyword.value &&
+          enableBackendSearch && // 重置搜索参数状态
+          currentSearchParam.value !== null
+        ) {
+          currentSearchParam.value = null;
+          const updateParamFn = getUpdateParam();
+          if (updateParamFn) {
+            updateParamFn({});
+          }
+        }
+
+        // 调用原有的 onVisibleChange 事件
+        if (typeof attrs?.onVisibleChange === 'function') {
+          attrs.onVisibleChange(visible);
+        }
+      };
+
+      // 处理值变化事件（清除时重新获取数据）
+      const handleChange = (val: any) => {
+        // 调用原有的 onChange 事件
+        if (typeof attrs?.onChange === 'function') {
+          attrs.onChange(val);
+        }
+
+        // 如果值被清除，清除搜索参数
+        if (
+          enableBackendSearch &&
+          (val === undefined || val === null || val === '')
+        ) {
+          searchKeyword.value = '';
+          // 重置搜索参数状态
+          if (currentSearchParam.value !== null) {
+            currentSearchParam.value = null;
+            const updateParamFn = getUpdateParam();
+            if (updateParamFn) {
+              updateParamFn({});
+            }
+          }
+        }
+      };
+
+      // 透传组件暴露的方法
+      const innerRef = ref();
+      expose(
+        new Proxy(
+          {},
+          {
+            get: (_target, key) => {
+              if (wrapperRef.value && key in wrapperRef.value) {
+                return (wrapperRef.value as any)[key];
+              }
+              return innerRef.value?.[key];
+            },
+            has: (_target, key) =>
+              (wrapperRef.value && key in wrapperRef.value) ||
+              key in (innerRef.value || {}),
+          },
+        ),
+      );
+
+      // 合并属性
+      const mergedAttrs = computed(() => {
+        const merged = {
+          ...baseProps,
+          ...props,
+          ...attrs,
+        };
+
+        // 如果启用后端搜索，配置 Element Plus Select 的 remote-method
+        if (enableBackendSearch) {
+          // 确保启用 remote 和 filterable
+          if (merged.remote === undefined) {
+            merged.remote = true;
+          }
+          if (merged.filterable === undefined) {
+            merged.filterable = true;
+          }
+
+          // 合并 remote-method
+          const existingRemoteMethod = attrs?.remoteMethod;
+          merged.remoteMethod = (value: string) => {
+            // 先调用原有的 remote-method（如果存在）
+            if (typeof existingRemoteMethod === 'function') {
+              existingRemoteMethod(value);
+            }
+            // 然后处理后端搜索（防抖已内置）
+            handleRemoteMethod(value);
+          };
+
+          // 绑定 onVisibleChange
+          const existingVisibleChangeHandler = attrs?.onVisibleChange;
+          merged.onVisibleChange = (visible: boolean) => {
+            if (typeof existingVisibleChangeHandler === 'function') {
+              existingVisibleChangeHandler(visible);
+            }
+            handleVisibleChange(visible);
+          };
+
+          // 绑定 onChange
+          const existingChangeHandler = attrs?.onChange;
+          merged.onChange = (val: any, ...args: any[]) => {
+            if (typeof existingChangeHandler === 'function') {
+              existingChangeHandler(val, ...args);
+            }
+            handleChange(val);
+          };
+        }
+
+        // 移除 enableBackendSearch、searchFieldName、searchDebounce，不传递给底层组件
+        delete merged.enableBackendSearch;
+        delete merged.searchFieldName;
+        delete merged.searchDebounce;
+
+        return merged;
+      });
+
+      return () => {
+        return h(
+          baseComponent,
+          {
+            ...mergedAttrs.value,
+            ref: (el: any) => {
+              wrapperRef.value = el;
+              innerRef.value = el;
+            },
+          },
+          slots,
+        );
+      };
+    },
+  });
+};
+
 // 这里需要自行根据业务组件库进行适配，需要用到的组件都需要在这里类型说明
 export type ComponentType =
   | 'ApiCascader'
@@ -244,18 +460,20 @@ async function initComponentAdapter() {
         visibleEvent: 'onVisibleChange',
       },
     ),
-    ApiSelect: withDefaultPlaceholder(
-      {
-        ...ApiComponent,
-        name: 'ApiSelect',
-      },
-      'select',
-      {
-        clearable: true,
-        component: ElSelectV2,
-        loadingSlot: 'loading',
-        visibleEvent: 'onVisibleChange',
-      },
+    ApiSelect: withElementPlusBackendSearch(
+      withDefaultPlaceholder(
+        {
+          ...ApiComponent,
+          name: 'ApiSelect',
+        },
+        'select',
+        {
+          clearable: true,
+          component: ElSelectV2,
+          loadingSlot: 'loading',
+          visibleEvent: 'onVisibleChange',
+        },
+      ),
     ),
     ApiTreeSelect: withDefaultPlaceholder(
       {
