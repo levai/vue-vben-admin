@@ -154,9 +154,6 @@
                         -Dfile.encoding=UTF-8
                         -Duser.timezone=Asia/Shanghai
                     </jvmArguments>
-                    <environmentVariables>
-                        <JAVA_HOME>/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home</JAVA_HOME>
-                    </environmentVariables>
                 </configuration>
             </plugin>
             <plugin>
