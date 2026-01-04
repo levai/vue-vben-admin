@@ -567,19 +567,21 @@ public class UserServiceImpl implements UserService {
 
         queryWrapper.orderByAsc(SysUser::getUsername);
 
-        // 查询数据（应用 limit 限制）
+        // 在数据库层面应用 limit 限制（防止数据量过大，提升性能）
+        int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
+        queryWrapper.last("LIMIT " + maxLimit);
+
+        // 查询数据（已限制数量）
         List<SysUser> users = userMapper.selectList(queryWrapper);
-        long total = users.size();
 
-        // 应用 limit 限制（防止数据量过大）
-        users = QueryHelper.applyLimit(users, queryDTO.getLimit());
-
+        // 转换为VO
         List<UserVO> options = users.stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
 
-        // total 表示实际总数（可能 > items.length，如果被 limit 截断）
-        return new PageResult<>(options, total);
+        // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
+        // 如果需要准确的总数，需要单独查询 COUNT，但 Options 接口通常不需要
+        return new PageResult<>(options, (long) options.size());
     }
 
     /**
