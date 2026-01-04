@@ -22,7 +22,7 @@ public class BaseResult<E> implements Serializable {
     public int code;
 
     /**
-     * 成功为ok，其他为失败原因
+     * 成功为success，其他为失败原因
      */
     public String message;
 

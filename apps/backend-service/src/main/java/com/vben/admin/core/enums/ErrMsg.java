@@ -15,7 +15,7 @@ public interface ErrMsg {
     /**
      * 默认成功MESSAGE
      */
-    String DEFAULT_SUCCESS_MESSAGE = "ok";
+    String DEFAULT_SUCCESS_MESSAGE = "success";
 
     /**
      * 错误码

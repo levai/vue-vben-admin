@@ -10,7 +10,7 @@ public enum BaseErrMsg implements ErrMsg {
     /**
      * 操作成功
      */
-    OK(0, "ok"),
+    OK(0, "success"),
 
     /**
      * 参数校验不通过

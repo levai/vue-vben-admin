@@ -287,7 +287,7 @@ lsof -ti:8080 | xargs kill -9 2>/dev/null
 
 - 统一使用 UTF-8 编码
 - 所有表支持逻辑删除
-- 统一响应格式：`{ code: 0, data: T, message: "ok" }`
+- 统一响应格式：`{ code: 0, data: T, message: "success" }`
 - 使用 MyBatis Plus 进行数据库操作
 - 使用 JWT 进行身份认证
 - 使用 `.java-version` 文件配合 jenv 管理 Java 版本
