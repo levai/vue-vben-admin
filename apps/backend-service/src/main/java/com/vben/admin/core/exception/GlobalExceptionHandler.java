@@ -122,8 +122,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
-    public BaseResult<Boolean> methodArgumentNotValidExceptionHandler(HttpServletRequest request, MethodArgumentNotValidException e) {
+    public BaseResult<Boolean> methodArgumentNotValidExceptionHandler(HttpServletRequest request, HttpServletResponse response, MethodArgumentNotValidException e) {
         this.logDebug(request, e);
+        response.setStatus(HttpStatus.BAD_REQUEST.value());
         String message = e.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining("; "));
@@ -135,8 +136,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseBody
-    public BaseResult<Boolean> constraintViolationExceptionHandler(HttpServletRequest request, ConstraintViolationException e) {
+    public BaseResult<Boolean> constraintViolationExceptionHandler(HttpServletRequest request, HttpServletResponse response, ConstraintViolationException e) {
         this.logDebug(request, e);
+        response.setStatus(HttpStatus.BAD_REQUEST.value());
         String message = e.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining("; "));

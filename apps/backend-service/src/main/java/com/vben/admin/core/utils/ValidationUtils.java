@@ -25,7 +25,7 @@ public class ValidationUtils {
     };
 
     /**
-     * 检查字符串是否有效（不为 null、不为空、不是无效字符串）
+     * 检查字符串是否有效（不为 null、不为空、不是无效字符串、不包含空格）
      *
      * <p>使用 Apache Commons Lang3 的 StringUtils.isBlank() 检查空白字符串</p>
      *
@@ -42,6 +42,11 @@ public class ValidationUtils {
         String trimmed = StringUtils.trim(str);
         // trimmed 不会为 null（因为 isBlank 已经检查过），但为了代码健壮性保留检查
         if (StringUtils.isBlank(trimmed)) {
+            return false;
+        }
+
+        // 检查是否包含空格（ID 不应该包含空格）
+        if (trimmed.contains(" ")) {
             return false;
         }
 
