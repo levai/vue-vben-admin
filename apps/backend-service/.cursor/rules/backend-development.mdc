@@ -411,7 +411,7 @@ public class PageResult<T> {
     /**
      * 数据列表
      */
-    private List<T> items;
+    private List<T> list;
 
     /**
      * 总记录数
@@ -421,8 +421,8 @@ public class PageResult<T> {
     /**
      * 创建分页结果
      */
-    public static <T> PageResult<T> of(List<T> items, Long total) {
-        return new PageResult<>(items, total);
+    public static <T> PageResult<T> of(List<T> list, Long total) {
+        return new PageResult<>(list, total);
     }
 }
 ```
@@ -433,7 +433,7 @@ public class PageResult<T> {
   "code": 0,
   "message": "ok",
   "data": {
-    "items": List<T>,
+    "list": List<T>,
     "total": 100
   }
 }

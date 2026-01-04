@@ -31,7 +31,7 @@ export namespace SystemUserApi {
  */
 async function getUserList(params: Recordable<any>) {
   return requestClient.get<{
-    items: SystemUserApi.SystemUser[];
+    list: SystemUserApi.SystemUser[];
     total: number;
   }>('/system/user', { params });
 }
@@ -120,7 +120,7 @@ async function getUserOptions(params?: {
   username?: string;
 }) {
   return requestClient.get<{
-    items: UserOption[];
+    list: UserOption[];
     total: number;
   }>('/system/user/options', {
     params,

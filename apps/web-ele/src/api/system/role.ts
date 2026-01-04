@@ -70,7 +70,7 @@ async function getRoleOptions(params?: {
   status?: number;
 }) {
   return requestClient.get<{
-    items: SystemRoleApi.SystemRole[];
+    list: SystemRoleApi.SystemRole[];
     total: number;
   }>('/system/role/options', {
     params,

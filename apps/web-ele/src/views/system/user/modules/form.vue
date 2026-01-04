@@ -109,7 +109,7 @@ async function loadRoles() {
   loadingRoles.value = true;
   try {
     const res = await getRoleOptions({ status: 1 });
-    const roles = res.items || [];
+    const roles = res.list || [];
     roleOptions.value = roles.map((role: any) => ({
       label: role.name,
       value: role.id,

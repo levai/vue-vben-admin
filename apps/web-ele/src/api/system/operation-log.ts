@@ -68,7 +68,7 @@ async function getOperationLogList(
   params?: SystemOperationLogApi.OperationLogQueryParams,
 ) {
   return requestClient.get<{
-    items: SystemOperationLogApi.SystemOperationLog[];
+    list: SystemOperationLogApi.SystemOperationLog[];
     total: number;
   }>('/system/operation-log', {
     params,
@@ -118,7 +118,7 @@ export interface Option {
  */
 async function getOperationModuleList(params?: { search?: string }) {
   return requestClient.get<{
-    items: Option[];
+    list: Option[];
     total: number;
   }>('/system/operation-log/modules', {
     params,
@@ -131,7 +131,7 @@ async function getOperationModuleList(params?: { search?: string }) {
  */
 async function getOperationTypeList(params?: { search?: string }) {
   return requestClient.get<{
-    items: Option[];
+    list: Option[];
     total: number;
   }>('/system/operation-log/types', {
     params,

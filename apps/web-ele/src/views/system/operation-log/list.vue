@@ -118,7 +118,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 
           const result = await getOperationLogList(params);
           return {
-            items: result.items || [],
+            list: result.list || [],
             total: result.total || 0,
           };
         },

@@ -20,7 +20,7 @@ public class PageResult<T> {
     /**
      * 数据列表
      */
-    private List<T> items;
+    private List<T> list;
 
     /**
      * 总记录数
@@ -30,12 +30,12 @@ public class PageResult<T> {
     /**
      * 创建分页结果
      *
-     * @param items  数据列表
+     * @param list  数据列表
      * @param total  总记录数
      * @param <T>    数据类型
      * @return 分页结果
      */
-    public static <T> PageResult<T> of(List<T> items, Long total) {
-        return new PageResult<>(items, total);
+    public static <T> PageResult<T> of(List<T> list, Long total) {
+        return new PageResult<>(list, total);
     }
 }

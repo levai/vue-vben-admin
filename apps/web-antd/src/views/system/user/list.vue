@@ -59,7 +59,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
             ...formValues,
           });
           return {
-            items: res.items || res || [],
+            list: res.list || [],
             total: res.total || (Array.isArray(res) ? res.length : 0),
           };
         },

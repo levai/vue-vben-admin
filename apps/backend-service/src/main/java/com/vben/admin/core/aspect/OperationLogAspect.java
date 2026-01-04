@@ -448,7 +448,7 @@ public class OperationLogAspect {
                             if (data instanceof PageResult) {
                                 PageResult<?> pageResult = (PageResult<?>) data;
                                 Map<String, Object> pageResultMap = new HashMap<>();
-                                pageResultMap.put("items", pageResult.getItems());
+                                pageResultMap.put("list", pageResult.getList());
                                 pageResultMap.put("total", pageResult.getTotal());
                                 map.put("data", pageResultMap);
                             } else {
