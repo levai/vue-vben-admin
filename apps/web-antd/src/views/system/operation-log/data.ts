@@ -23,6 +23,10 @@ export function useSearchSchema(): VbenFormSchema[] {
       componentProps: {
         allowClear: true,
         api: getUserOptions,
+        enableBackendSearch: true,
+        params: {
+          limit: -1,
+        },
         labelField: 'username',
         resultField: 'list',
         valueField: 'id',
@@ -36,6 +40,7 @@ export function useSearchSchema(): VbenFormSchema[] {
         allowClear: true,
         api: getOperationTypeList,
         resultField: 'list',
+        showSearch: true,
       },
       fieldName: 'operationType',
       label: $t('system.operationLog.operationType'),
@@ -89,7 +94,7 @@ export function useSearchSchema(): VbenFormSchema[] {
  */
 export function useColumns(
   onActionClick: OnActionClickFn<SystemOperationLogApi.SystemOperationLog>,
-): VxeTableGridOptions<SystemOperationLogApi.SystemOperationLog>['columns'] {
+): VxeTableGridOptions['columns'] {
   const { hasPermission } = usePermissions(
     SYSTEM_PERMISSION_CODES.OPERATION_LOG,
   );

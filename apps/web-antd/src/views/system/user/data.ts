@@ -101,6 +101,7 @@ export function useFormSchema(isEdit = false): VbenFormSchema[] {
         class: 'w-full',
         mode: 'multiple',
         options: [],
+        showSearch: true,
       },
       fieldName: 'roleIds',
       label: $t('system.user.setRoles'),

@@ -89,7 +89,7 @@ function onActionClick({
   }
 }
 
-const [Grid, gridApi] = useVbenVxeGrid({
+const [Grid, gridApi] = useVbenVxeGrid<SystemDeptApi.SystemDept>({
   gridEvents: {},
   gridOptions: {
     columns: useColumns(onActionClick),

@@ -1,10 +1,7 @@
 <script lang="ts" setup>
 import type { Recordable } from '@vben/types';
 
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams } from '#/adapter/vxe-table';
 import type { SystemUserApi } from '#/api/system/user';
 
 import { ref } from 'vue';
@@ -43,7 +40,7 @@ const [ResetPasswordModal, resetPasswordModalApi] = useVbenModal({
   class: 'w-[400px]',
 });
 
-const [Grid, gridApi] = useVbenVxeGrid({
+const [Grid, gridApi] = useVbenVxeGrid<SystemUserApi.SystemUser>({
   formOptions: {
     fieldMappingTime: [['createTime', ['startTime', 'endTime']]],
     schema: useGridFormSchema(),
@@ -58,16 +55,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     },
     proxyConfig: {
       ajax: {
-        query: async ({ page }, formValues) => {
-          const res = await getUserList({
+        query: async ({ page }: any, formValues: Recordable<any>) => {
+          return await getUserList({
             page: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
           });
-          return {
-            list: res.list || [],
-            total: res.total || (Array.isArray(res) ? res.length : 0),
-          };
         },
       },
     },
@@ -82,7 +75,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       search: true,
       zoom: true,
     },
-  } as VxeTableGridOptions<SystemUserApi.SystemUser>,
+  },
 });
 
 function onActionClick(e: OnActionClickParams<SystemUserApi.SystemUser>) {

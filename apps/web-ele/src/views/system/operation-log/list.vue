@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import type {
-  OnActionClickParams,
-  VxeTableGridOptions,
-} from '#/adapter/vxe-table';
+import type { OnActionClickParams } from '#/adapter/vxe-table';
 import type { SystemOperationLogApi } from '#/api/system/operation-log';
 
 import { Page, useVbenDrawer } from '@vben/common-ui';
@@ -73,71 +70,56 @@ function onActionClick({
   }
 }
 
-const [Grid, gridApi] = useVbenVxeGrid({
-  gridEvents: {},
-  gridOptions: {
-    columns: useColumns(onActionClick),
-    height: 'auto',
-    keepSource: true,
-    pagerConfig: {
-      enabled: true,
-      pageSizes: [10, 20, 50, 100],
+const [Grid, gridApi] =
+  useVbenVxeGrid<SystemOperationLogApi.SystemOperationLog>({
+    gridEvents: {},
+    formOptions: {
+      fieldMappingTime: [['createTime', ['startTime', 'endTime']]],
+      schema: useSearchSchema(),
+      submitOnChange: true,
     },
-    proxyConfig: {
-      ajax: {
-        query: async ({ page }, formValues) => {
-          const params: SystemOperationLogApi.OperationLogQueryParams = {
-            page: page.currentPage,
-            pageSize: page.pageSize,
-          };
+    gridOptions: {
+      columns: useColumns(onActionClick),
+      height: 'auto',
+      keepSource: true,
+      pagerConfig: {
+        enabled: true,
+        pageSizes: [10, 20, 50, 100],
+      },
+      proxyConfig: {
+        ajax: {
+          query: async (
+            { page }: any,
+            formValues: SystemOperationLogApi.OperationLogQueryParams,
+          ) => {
+            const params: SystemOperationLogApi.OperationLogQueryParams = {
+              page: page.currentPage,
+              pageSize: page.pageSize,
+              ...formValues,
+            };
 
-          // 只传递非空值
-          if (formValues?.username?.trim()) {
-            params.username = formValues.username.trim();
-          }
-          if (formValues?.operationType?.trim()) {
-            params.operationType = formValues.operationType.trim();
-          }
-          if (formValues?.operationModule?.trim()) {
-            params.operationModule = formValues.operationModule.trim();
-          }
-          if (formValues?.status !== undefined && formValues?.status !== null) {
-            params.status = formValues.status;
-          }
-          if (formValues?.search?.trim()) {
-            params.search = formValues.search.trim();
-          }
-
-          // 日期范围已通过 fieldMappingTime 自动映射为 startTime 和 endTime
-          if (formValues?.startTime) {
-            params.startTime = formValues.startTime;
-          }
-          if (formValues?.endTime) {
-            params.endTime = formValues.endTime;
-          }
-
-          const result = await getOperationLogList(params);
-          return {
-            list: result.list || [],
-            total: result.total || 0,
-          };
+            const result = await getOperationLogList(params).catch(() => {
+              return {
+                list: [],
+                total: 0,
+              };
+            });
+            return result;
+          },
         },
       },
+      rowConfig: {
+        keyField: 'id',
+      },
+      toolbarConfig: {
+        custom: true,
+        export: false,
+        refresh: true,
+        search: true,
+        zoom: true,
+      },
     },
-    toolbarConfig: {
-      custom: true,
-      export: false,
-      refresh: true,
-      search: true,
-      zoom: true,
-    },
-  } as VxeTableGridOptions,
-  formOptions: {
-    fieldMappingTime: [['createTime', ['startTime', 'endTime']]],
-    schema: useSearchSchema(),
-    submitOnChange: true,
-  },
-});
+  });
 
 /**
  * 刷新表格
@@ -168,14 +150,19 @@ function getOperationTypeLabel(type: string): string {
 /**
  * 获取操作类型标签颜色
  */
-function getOperationTypeColor(type: string) {
-  const colorMap: Record<string, string> = {
+function getOperationTypeColor(
+  type: string,
+): 'danger' | 'info' | 'primary' | 'success' | 'warning' {
+  const colorMap: Record<
+    string,
+    'danger' | 'info' | 'primary' | 'success' | 'warning'
+  > = {
     view: 'info',
     add: 'success',
     edit: 'warning',
     delete: 'danger',
     export: 'primary',
-    import: '',
+    import: 'info',
     login: 'success',
     logout: 'info',
     download: 'primary',
@@ -187,7 +174,10 @@ function getOperationTypeColor(type: string) {
 /**
  * 格式化状态标签
  */
-function getStatusTag(status: number) {
+function getStatusTag(status: number): {
+  text: string;
+  type: 'danger' | 'info' | 'primary' | 'success' | 'warning';
+} {
   return status === 1
     ? { type: 'success', text: $t('system.operationLog.status.success') }
     : { type: 'danger', text: $t('system.operationLog.status.failed') };

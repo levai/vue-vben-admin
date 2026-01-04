@@ -50,7 +50,7 @@ function onActionClick({
   }
 }
 
-const [Grid, gridApi] = useVbenVxeGrid({
+const [Grid, gridApi] = useVbenVxeGrid<SystemMenuApi.SystemMenu>({
   gridEvents: {},
   gridOptions: {
     columns: useColumns(onActionClick),

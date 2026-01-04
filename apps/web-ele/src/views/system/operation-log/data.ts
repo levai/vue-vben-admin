@@ -23,6 +23,10 @@ export function useSearchSchema(): VbenFormSchema[] {
       componentProps: {
         allowClear: true,
         api: getUserOptions,
+        enableBackendSearch: true,
+        params: {
+          limit: -1,
+        },
         labelField: 'username',
         resultField: 'list',
         valueField: 'id',
