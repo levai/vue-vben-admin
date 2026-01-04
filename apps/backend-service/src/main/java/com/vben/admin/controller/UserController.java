@@ -105,7 +105,7 @@ public class UserController {
         return new BaseResult<>(true);
     }
 
-    @Operation(summary = "获取用户选项列表", description = "获取用户选项列表（用于下拉选项，支持 limit 限制，支持条件查询，返回完整用户信息，前端自行处理 label 和 value）")
+    @Operation(summary = "获取用户选项列表", description = "获取用户选项列表（用于下拉选项，支持分页或 limit 限制，支持条件查询，返回完整用户信息，前端自行处理 label 和 value）。如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制（默认 1000）")
     @GetMapping("/options")
     public BaseResult<PageResult<UserVO>> getOptions(UserOptionQueryDTO queryDTO) {
         PageResult<UserVO> result = userService.getUserOptions(queryDTO);

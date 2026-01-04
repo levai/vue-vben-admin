@@ -47,30 +47,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<UserVO> getUserList(Integer page, Integer pageSize, String search, String username, String realName, String deptId, Integer status, String startTime, String endTime) {
-        // 构建查询条件
-        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
-
-        // 搜索关键词处理（优先级高于 username/realName）
-        QueryHelper.applySearch(
-                queryWrapper,
-                SearchQueryConfig.<SysUser>of(search)
-                        .searchField(SysUser::getUsername)
-                        .searchField(SysUser::getRealName)
-                        .fallbackField(SysUser::getUsername, username)
-                        .fallbackField(SysUser::getRealName, realName)
+        // 构建基础查询条件
+        LambdaQueryWrapper<SysUser> queryWrapper = buildBaseQueryWrapper(
+                search, username, realName, deptId, status, startTime, endTime
         );
 
-        // 其他查询条件
-        if (StringUtils.hasText(deptId)) {
-            queryWrapper.eq(SysUser::getDeptId, deptId);
-        }
-        if (status != null) {
-            queryWrapper.eq(SysUser::getStatus, status);
-        }
-
-        // 时间范围查询
-        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
-
+        // List 接口：按创建时间倒序
         queryWrapper.orderByDesc(SysUser::getCreateTime);
 
         // 分页查询
@@ -540,48 +522,87 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO) {
-        // 构建查询条件（查询所有字段）
-        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+        // 构建基础查询条件
+        LambdaQueryWrapper<SysUser> queryWrapper = buildBaseQueryWrapper(
+                queryDTO.getSearch(), queryDTO.getUsername(), queryDTO.getRealName(),
+                queryDTO.getDeptId(), queryDTO.getStatus(), queryDTO.getStartTime(), queryDTO.getEndTime()
+        );
+
+        // Options 接口：明确过滤已删除的记录，按用户名正序
         queryWrapper.eq(SysUser::getDeleted, 0);
+        queryWrapper.orderByAsc(SysUser::getUsername);
+
+        // 判断是否使用分页查询
+        if (queryDTO.getPage() != null && queryDTO.getPageSize() != null) {
+            // 使用分页查询
+            Page<SysUser> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getPageSize());
+            IPage<SysUser> pageResult = userMapper.selectPage(pageParam, queryWrapper);
+
+            // 转换为VO
+            List<UserVO> voList = pageResult.getRecords().stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
+
+            return PageResult.of(voList, pageResult.getTotal());
+        } else {
+            // 使用 limit 限制（默认行为）
+            int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
+            queryWrapper.last("LIMIT " + maxLimit);
+
+            // 查询数据（已限制数量）
+            List<SysUser> users = userMapper.selectList(queryWrapper);
+
+            // 转换为VO
+            List<UserVO> options = users.stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
+
+            // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
+            return new PageResult<>(options, (long) options.size());
+        }
+    }
+
+    /**
+     * 构建基础查询条件（公共逻辑）
+     * 用于 List 和 Options 接口
+     *
+     * @param search    搜索关键词
+     * @param username  用户名
+     * @param realName  真实姓名
+     * @param deptId    部门ID
+     * @param status    状态
+     * @param startTime 开始时间
+     * @param endTime   结束时间
+     * @return 查询条件包装器
+     */
+    private LambdaQueryWrapper<SysUser> buildBaseQueryWrapper(
+            String search, String username, String realName,
+            String deptId, Integer status, String startTime, String endTime
+    ) {
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
 
         // 搜索关键词处理（优先级高于 username/realName）
         QueryHelper.applySearch(
                 queryWrapper,
-                SearchQueryConfig.<SysUser>of(queryDTO.getSearch())
+                SearchQueryConfig.<SysUser>of(search)
                         .searchField(SysUser::getUsername)
                         .searchField(SysUser::getRealName)
-                        .fallbackField(SysUser::getUsername, queryDTO.getUsername())
-                        .fallbackField(SysUser::getRealName, queryDTO.getRealName())
+                        .fallbackField(SysUser::getUsername, username)
+                        .fallbackField(SysUser::getRealName, realName)
         );
 
         // 其他查询条件
-        if (StringUtils.hasText(queryDTO.getDeptId())) {
-            queryWrapper.eq(SysUser::getDeptId, queryDTO.getDeptId());
+        if (StringUtils.hasText(deptId)) {
+            queryWrapper.eq(SysUser::getDeptId, deptId);
         }
-        if (queryDTO.getStatus() != null) {
-            queryWrapper.eq(SysUser::getStatus, queryDTO.getStatus());
+        if (status != null) {
+            queryWrapper.eq(SysUser::getStatus, status);
         }
 
         // 时间范围查询
-        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysUser::getCreateTime);
+        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysUser::getCreateTime);
 
-        queryWrapper.orderByAsc(SysUser::getUsername);
-
-        // 在数据库层面应用 limit 限制（防止数据量过大，提升性能）
-        int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
-        queryWrapper.last("LIMIT " + maxLimit);
-
-        // 查询数据（已限制数量）
-        List<SysUser> users = userMapper.selectList(queryWrapper);
-
-        // 转换为VO
-        List<UserVO> options = users.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
-
-        // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
-        // 如果需要准确的总数，需要单独查询 COUNT，但 Options 接口通常不需要
-        return new PageResult<>(options, (long) options.size());
+        return queryWrapper;
     }
 
     /**

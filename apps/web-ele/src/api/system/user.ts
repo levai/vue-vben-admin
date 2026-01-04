@@ -96,23 +96,16 @@ async function resetUserPassword(id: string, password: string) {
 }
 
 /**
- * 用户选项（包含所有用户字段 + label 和 value）
- */
-export interface UserOption extends SystemUserApi.SystemUser {
-  /** 显示标签（用于下拉选项显示） */
-  label: string;
-  /** 选项值（用于下拉选项值） */
-  value: string;
-}
-
-/**
- * 获取用户选项列表（用于下拉选项，支持 limit 限制）
- * @param params 查询参数（支持条件查询和 limit 限制）
+ * 获取用户选项列表（用于下拉选项，支持分页或 limit 限制）
+ * @param params 查询参数（支持条件查询、分页或 limit 限制）
+ * @returns 返回完整的用户对象列表，前端自行处理 label 和 value
  */
 async function getUserOptions(params?: {
   deptId?: string;
   endTime?: string;
   limit?: number;
+  page?: number;
+  pageSize?: number;
   realName?: string;
   search?: string;
   startTime?: string;
@@ -120,7 +113,7 @@ async function getUserOptions(params?: {
   username?: string;
 }) {
   return requestClient.get<{
-    list: UserOption[];
+    list: SystemUserApi.SystemUser[];
     total: number;
   }>('/system/user/options', {
     params,

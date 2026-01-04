@@ -56,14 +56,16 @@ async function deleteRole(id: string) {
 }
 
 /**
- * 获取角色选项列表（用于下拉选项，支持 limit 限制）
- * @param params 查询参数（支持条件查询和 limit 限制）
+ * 获取角色选项列表（用于下拉选项，支持分页或 limit 限制）
+ * @param params 查询参数（支持条件查询、分页或 limit 限制）
  */
 async function getRoleOptions(params?: {
   endTime?: string;
   id?: string;
   limit?: number;
   name?: string;
+  page?: number;
+  pageSize?: number;
   remark?: string;
   search?: string;
   startTime?: string;

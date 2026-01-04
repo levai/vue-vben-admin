@@ -52,16 +52,4 @@ public class RoleVO {
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime createTime;
-
-    /**
-     * 显示标签（用于下拉选项显示，自动设置）
-     */
-    @Schema(description = "显示标签（用于下拉选项显示，自动设置）")
-    private String label;
-
-    /**
-     * 选项值（用于下拉选项值，自动设置）
-     */
-    @Schema(description = "选项值（用于下拉选项值，自动设置）")
-    private String value;
 }

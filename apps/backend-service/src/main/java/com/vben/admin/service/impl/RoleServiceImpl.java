@@ -45,29 +45,12 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public PageResult<RoleVO> getRoleList(Integer page, Integer pageSize, String search, String name, String id, String remark, Integer status, String startTime, String endTime) {
-        // 构建查询条件
-        LambdaQueryWrapper<SysRole> queryWrapper = new LambdaQueryWrapper<>();
-
-        // 搜索关键词处理（优先级高于 name/id，ID 使用精确匹配）
-        QueryHelper.applySearch(
-                queryWrapper,
-                SearchQueryConfig.<SysRole>of(search)
-                        .searchField(SysRole::getName)
-                        .exactIdField(SysRole::getId, id)
-                        .fallbackField(SysRole::getName, name)
+        // 构建基础查询条件
+        LambdaQueryWrapper<SysRole> queryWrapper = buildBaseQueryWrapper(
+                search, name, id, remark, status, startTime, endTime
         );
 
-        // 其他查询条件
-        if (StringUtils.hasText(remark)) {
-            queryWrapper.like(SysRole::getRemark, remark);
-        }
-        if (status != null) {
-            queryWrapper.eq(SysRole::getStatus, status);
-        }
-
-        // 时间范围查询
-        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysRole::getCreateTime);
-
+        // List 接口：按创建时间倒序
         queryWrapper.orderByDesc(SysRole::getCreateTime);
 
         // 分页查询
@@ -254,46 +237,85 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public PageResult<RoleVO> getRoleOptions(RoleOptionQueryDTO queryDTO) {
-        // 构建查询条件（查询所有字段）
+        // 构建基础查询条件
+        LambdaQueryWrapper<SysRole> queryWrapper = buildBaseQueryWrapper(
+                queryDTO.getSearch(), queryDTO.getName(), queryDTO.getId(),
+                queryDTO.getRemark(), queryDTO.getStatus(), queryDTO.getStartTime(), queryDTO.getEndTime()
+        );
+
+        // Options 接口：按角色名称正序
+        queryWrapper.orderByAsc(SysRole::getName);
+
+        // 判断是否使用分页查询
+        if (queryDTO.getPage() != null && queryDTO.getPageSize() != null) {
+            // 使用分页查询
+            Page<SysRole> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getPageSize());
+            IPage<SysRole> pageResult = roleMapper.selectPage(pageParam, queryWrapper);
+
+            // 转换为VO
+            List<RoleVO> voList = pageResult.getRecords().stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
+
+            return PageResult.of(voList, pageResult.getTotal());
+        } else {
+            // 使用 limit 限制（默认行为）
+            int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
+            queryWrapper.last("LIMIT " + maxLimit);
+
+            // 查询数据（已限制数量）
+            List<SysRole> roles = roleMapper.selectList(queryWrapper);
+
+            // 转换为VO
+            List<RoleVO> options = roles.stream()
+                    .map(this::convertToVO)
+                    .collect(Collectors.toList());
+
+            // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
+            return new PageResult<>(options, (long) options.size());
+        }
+    }
+
+    /**
+     * 构建基础查询条件（公共逻辑）
+     * 用于 List 和 Options 接口
+     *
+     * @param search    搜索关键词
+     * @param name      角色名称
+     * @param id        角色ID
+     * @param remark    备注
+     * @param status    状态
+     * @param startTime 开始时间
+     * @param endTime   结束时间
+     * @return 查询条件包装器
+     */
+    private LambdaQueryWrapper<SysRole> buildBaseQueryWrapper(
+            String search, String name, String id, String remark,
+            Integer status, String startTime, String endTime
+    ) {
         LambdaQueryWrapper<SysRole> queryWrapper = new LambdaQueryWrapper<>();
 
         // 搜索关键词处理（优先级高于 name/id，ID 使用精确匹配）
         QueryHelper.applySearch(
                 queryWrapper,
-                SearchQueryConfig.<SysRole>of(queryDTO.getSearch())
+                SearchQueryConfig.<SysRole>of(search)
                         .searchField(SysRole::getName)
-                        .exactIdField(SysRole::getId, queryDTO.getId())
-                        .fallbackField(SysRole::getName, queryDTO.getName())
+                        .exactIdField(SysRole::getId, id)
+                        .fallbackField(SysRole::getName, name)
         );
 
         // 其他查询条件
-        if (StringUtils.hasText(queryDTO.getRemark())) {
-            queryWrapper.like(SysRole::getRemark, queryDTO.getRemark());
+        if (StringUtils.hasText(remark)) {
+            queryWrapper.like(SysRole::getRemark, remark);
         }
-        if (queryDTO.getStatus() != null) {
-            queryWrapper.eq(SysRole::getStatus, queryDTO.getStatus());
+        if (status != null) {
+            queryWrapper.eq(SysRole::getStatus, status);
         }
 
         // 时间范围查询
-        QueryHelper.applyTimeRange(queryWrapper, queryDTO.getStartTime(), queryDTO.getEndTime(), SysRole::getCreateTime);
+        QueryHelper.applyTimeRange(queryWrapper, startTime, endTime, SysRole::getCreateTime);
 
-        queryWrapper.orderByAsc(SysRole::getName);
-
-        // 在数据库层面应用 limit 限制（防止数据量过大，提升性能）
-        int maxLimit = QueryHelper.getValidLimit(queryDTO.getLimit());
-        queryWrapper.last("LIMIT " + maxLimit);
-
-        // 查询数据（已限制数量）
-        List<SysRole> roles = roleMapper.selectList(queryWrapper);
-
-        // 转换为VO
-        List<RoleVO> options = roles.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
-
-        // total 表示实际返回的数量（由于使用了 LIMIT，total = options.size()）
-        // 如果需要准确的总数，需要单独查询 COUNT，但 Options 接口通常不需要
-        return new PageResult<>(options, (long) options.size());
+        return queryWrapper;
     }
 
     /**

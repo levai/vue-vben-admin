@@ -91,10 +91,11 @@ public interface UserService {
     void updateCurrentUserInfo(UserDTO userDTO);
 
     /**
-     * 获取用户选项列表（用于下拉选项，支持 limit 限制）
+     * 获取用户选项列表（用于下拉选项，支持分页或 limit 限制）
      *
      * @param queryDTO 查询条件
      * @return 用户选项列表（包含所有用户字段，前端自行处理 label 和 value）
+     *         如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制（默认 1000）
      */
     PageResult<UserVO> getUserOptions(UserOptionQueryDTO queryDTO);
 }

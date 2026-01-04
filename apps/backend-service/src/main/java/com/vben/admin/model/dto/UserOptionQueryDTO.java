@@ -55,8 +55,20 @@ public class UserOptionQueryDTO {
     private String endTime;
 
     /**
-     * 最大返回数量（默认 1000，防止数据量过大）
+     * 页码（从1开始，可选。如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制）
      */
-    @Schema(description = "最大返回数量（默认 1000，防止数据量过大）", example = "1000")
+    @Schema(description = "页码（从1开始，可选。如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制）", example = "1")
+    private Integer page;
+
+    /**
+     * 每页大小（可选。如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制）
+     */
+    @Schema(description = "每页大小（可选。如果传了 page 和 pageSize，则使用分页查询；否则使用 limit 限制）", example = "20")
+    private Integer pageSize;
+
+    /**
+     * 最大返回数量（默认 1000，防止数据量过大。仅在未传 page 和 pageSize 时生效）
+     */
+    @Schema(description = "最大返回数量（默认 1000，防止数据量过大。仅在未传 page 和 pageSize 时生效）", example = "1000")
     private Integer limit = 1000;
 }

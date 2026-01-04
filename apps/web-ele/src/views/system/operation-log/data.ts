@@ -24,7 +24,7 @@ export function useSearchSchema(): VbenFormSchema[] {
         allowClear: true,
         api: getUserOptions,
         labelField: 'username',
-        resultField: 'items',
+        resultField: 'list',
         valueField: 'id',
       },
       fieldName: 'userId',
@@ -35,7 +35,7 @@ export function useSearchSchema(): VbenFormSchema[] {
       componentProps: {
         allowClear: true,
         api: getOperationTypeList,
-        resultField: 'items',
+        resultField: 'list',
       },
       fieldName: 'operationType',
       label: $t('system.operationLog.operationType'),
@@ -45,7 +45,7 @@ export function useSearchSchema(): VbenFormSchema[] {
       componentProps: {
         allowClear: true,
         api: getOperationModuleList,
-        resultField: 'items',
+        resultField: 'list',
         labelField: 'label',
         valueField: 'label',
         childrenField: 'children',
