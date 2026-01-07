@@ -1,0 +1,512 @@
+---
+alwaysApply: true
+---
+
+# Vue Vben Admin 全栈项目 - 全局开发规范
+
+> 本文档是 Vue Vben Admin 全栈项目的全局开发规范，适用于整个 Monorepo 项目。
+
+## 📋 项目概述
+
+### 项目信息
+
+- **项目名称**: Vue Vben Admin
+- **项目类型**: 全栈管理后台系统
+- **架构模式**: Monorepo (pnpm workspace + Turbo)
+- **版本管理**: Changesets
+
+### 技术栈
+
+#### 前端技术栈
+
+- **框架**: Vue 3.5+ (Composition API)
+- **构建工具**: Vite 6+
+- **语言**: TypeScript 5+
+- **UI 框架**: Ant Design Vue (主要应用)
+- **状态管理**: Pinia
+- **路由**: Vue Router
+- **样式方案**: TailwindCSS + PostCSS
+- **包管理**: pnpm 10+ (必须使用 pnpm)
+- **代码规范**: ESLint + Prettier + Stylelint
+
+#### 后端技术栈
+
+- **框架**: Spring Boot 3.2.0
+- **语言**: Java 17 (LTS)
+- **数据库**: MySQL 8.0+ + MyBatis Plus 3.5.7
+- **安全**: Spring Security 3.2.0 + JWT (jjwt 0.12.5)
+- **API 文档**: Knife4j 4.4.0 (SpringDoc OpenAPI 3)
+- **工具库**: Hutool 5.8.28
+- **连接池**: Druid 1.2.23
+
+### 项目结构
+
+```
+vue-vben-admin/
+├── backend/                    # 后端项目（Spring Boot）
+│   ├── src/main/java/         # Java 源代码
+│   │   └── com/vben/admin/
+│   │       ├── config/        # 配置类
+│   │       ├── controller/    # 控制器层
+│   │       ├── service/       # 服务层
+│   │       ├── mapper/        # 数据访问层
+│   │       ├── model/         # 数据模型（entity/dto/vo）
+│   │       ├── core/          # 核心功能（异常、工具、常量等）
+│   │       └── BackendServiceApplication.java
+│   └── src/main/resources/   # 资源文件（配置、SQL 等）
+├── frontend/                  # 前端 Monorepo
+│   ├── apps/                  # 应用目录
+│   │   ├── web-antd/         # Ant Design Vue 版本（主要）
+│   │   ├── web-ele/          # Element Plus 版本
+│   │   ├── web-naive/        # Naive UI 版本
+│   │   └── backend-mock/     # Mock API 服务
+│   ├── packages/             # 共享包
+│   │   ├── @core/            # 核心 UI 组件
+│   │   ├── effects/          # 业务效果包（access、layouts、request、common-ui）
+│   │   ├── stores/           # Pinia stores
+│   │   ├── locales/          # 国际化
+│   │   ├── utils/            # 工具函数
+│   │   └── types/            # 类型定义
+│   └── internal/             # 内部工具
+│       ├── vite-config/      # Vite 配置
+│       ├── lint-configs/    # Lint 配置
+│       └── tsconfig/         # TS 配置
+├── scripts/                   # 脚本目录
+│   └── start.js              # 一键启动脚本
+└── .cursor/                   # Cursor Rules
+    └── rules/                 # 规则文件
+```
+
+---
+
+## 🔧 开发环境要求
+
+### 必需工具
+
+- **Node.js**: >= 20.12.0
+- **pnpm**: >= 10.0.0 (必须使用 pnpm，禁止使用 npm/yarn)
+- **Java**: 17 (LTS)
+- **Maven**: 3.8+ (后端依赖管理)
+- **MySQL**: 8.0+ (数据库)
+
+### 环境检查
+
+```bash
+# 检查 Node.js 版本
+node --version  # 应 >= 20.12.0
+
+# 检查 pnpm 版本
+pnpm --version  # 应 >= 10.0.0
+
+# 检查 Java 版本
+java -version  # 应 >= 17
+
+# 检查 Maven 版本
+mvn --version  # 应 >= 3.8
+```
+
+---
+
+## 📦 包管理规范
+
+### pnpm Workspace
+
+项目使用 pnpm workspace 管理 Monorepo，所有依赖必须通过 pnpm 安装。
+
+```bash
+# ✅ 正确：在项目根目录安装依赖
+pnpm install
+
+# ✅ 正确：为特定包安装依赖
+pnpm --filter @vben/web-antd add ant-design-vue
+
+# ❌ 错误：禁止使用 npm/yarn
+npm install  # 禁止
+yarn install # 禁止
+```
+
+### Workspace 协议
+
+所有 workspace 包使用 `workspace:*` 协议：
+
+```json
+{
+  "dependencies": {
+    "@vben/utils": "workspace:*",
+    "@vben/stores": "workspace:*"
+  }
+}
+```
+
+### Catalog 依赖
+
+项目使用 catalog 管理公共依赖版本：
+
+```json
+{
+  "dependencies": {
+    "vue": "catalog:",
+    "ant-design-vue": "catalog:"
+  }
+}
+```
+
+---
+
+## 🗂️ 路径别名规范
+
+### 前端路径别名
+
+#### 应用级别别名（`#/*`）
+
+在 `apps/web-antd/package.json` 中配置：
+
+```json
+{
+  "imports": {
+    "#/*": "./src/*"
+  }
+}
+```
+
+使用示例：
+
+```typescript
+import { useUserStore } from '#/store/user'
+import UserList from '#/views/user/list.vue'
+```
+
+#### Workspace 包别名（`@vben/*`）
+
+```typescript
+import { usePreferences } from '@vben/preferences'
+import { requestClient } from '@vben/request'
+import { VbenButton } from '@vben/common-ui'
+```
+
+### 后端包结构
+
+Java 包结构遵循标准 Maven 约定：
+
+```
+com.vben.admin
+├── config          # 配置类
+├── controller      # 控制器
+├── service         # 服务层
+├── mapper          # 数据访问层
+├── model           # 数据模型
+│   ├── entity      # 实体类
+│   ├── dto         # 数据传输对象
+│   └── vo          # 视图对象
+└── core            # 核心功能
+```
+
+---
+
+## 📝 命名规范
+
+### 前端命名规范
+
+#### 文件命名
+
+- **组件文件**: PascalCase (`UserProfile.vue`, `DataTable.vue`)
+- **工具文件**: camelCase (`formatUtils.ts`, `dateHelper.ts`)
+- **常量文件**: UPPER_CASE (`API_BASE_URL.ts`, `PERMISSION_CODES.ts`)
+- **类型文件**: PascalCase (`UserInfo.ts`, `ApiResponse.ts`)
+
+#### 代码命名
+
+- **类型/接口**: PascalCase (`UserInfo`, `ApiResponse`)
+- **变量/函数**: camelCase (`userData`, `fetchUserList`)
+- **常量**: UPPER_SNAKE_CASE (`API_BASE_URL`, `MAX_RETRY_COUNT`)
+- **组件**: PascalCase (`UserProfile`, `DataTable`)
+
+### 后端命名规范
+
+#### Java 类命名
+
+- **Controller**: `*Controller` (`UserController`, `RoleController`)
+- **Service**: `*Service` (`UserService`, `RoleService`)
+- **ServiceImpl**: `*ServiceImpl` (`UserServiceImpl`)
+- **Mapper**: `*Mapper` (`UserMapper`, `RoleMapper`)
+- **Entity**: 实体名 (`User`, `Role`, `Menu`)
+- **DTO**: `*DTO` (`UserDTO`, `CreateUserDTO`)
+- **VO**: `*VO` (`UserVO`, `RoleVO`)
+
+#### 包命名
+
+- 全小写，使用点分隔 (`com.vben.admin.controller`)
+
+---
+
+## 🔄 Git 工作流规范
+
+### 提交格式
+
+提交格式: `<type>: <subject>`
+
+#### Type 类型
+
+- `feat`: 新功能
+- `fix`: 修复 Bug
+- `docs`: 文档更新
+- `style`: 代码格式调整（不影响功能）
+- `refactor`: 代码重构
+- `perf`: 性能优化
+- `test`: 测试相关
+- `build`: 构建系统或依赖更新
+- `ci`: CI/CD 配置修改
+- `chore`: 其他杂项修改
+
+#### 提交示例
+
+```bash
+feat: 添加用户批量导入功能
+fix: 修复登录状态丢失问题
+refactor: 重构用户列表查询逻辑
+perf: 优化表格渲染性能
+docs: 更新 API 文档
+```
+
+#### 提交原则
+
+- 一次提交只做一件事
+- Subject 不超过 50 字
+- 使用中文描述
+- 描述清晰、简洁
+
+---
+
+## 🚀 启动与构建
+
+### 一键启动脚本
+
+项目根目录提供了统一启动脚本：
+
+```bash
+# 启动所有服务（前端 + 后端）
+pnpm dev
+
+# 仅启动前端
+pnpm dev:frontend
+
+# 仅启动后端
+pnpm dev:backend
+
+# 启动所有服务（明确指定）
+pnpm dev:all
+```
+
+### 前端开发命令
+
+```bash
+# 进入前端目录
+cd frontend
+
+# 启动开发服务器（Ant Design Vue 版本）
+pnpm dev:antd
+# 或
+pnpm -F @vben/web-antd run dev
+
+# 构建生产版本
+pnpm build:antd
+
+# 类型检查
+pnpm -F @vben/web-antd run typecheck
+```
+
+### 后端开发命令
+
+```bash
+# 进入后端目录
+cd backend
+
+# 启动开发服务器
+mvn spring-boot:run
+
+# 或使用 IDE 运行 BackendServiceApplication
+```
+
+---
+
+## 📚 文档规范
+
+### 规则文件组织
+
+项目规则文件位于 `.cursor/rules/` 目录：
+
+- `global-rules.mdc` - 全局规则（本文档）
+- `frontend-development.mdc` - 前端开发规范
+- `backend-development.mdc` - 后端开发规范（引用文档）
+- `access-system.mdc` - 权限系统设计
+
+### 文档引用
+
+在代码注释或文档中引用规则文件：
+
+```markdown
+详细规范请参考：`.cursor/rules/frontend-development.mdc`
+```
+
+---
+
+## ⚠️ 通用禁止事项
+
+### 前端禁止事项
+
+- ❌ 禁止使用 `any` 类型（除非有充分理由）
+- ❌ 禁止使用 Options API（统一使用 Composition API）
+- ❌ 禁止直接修改 props
+- ❌ 禁止在 computed 中产生副作用
+- ❌ 禁止使用 `var` 声明变量
+- ❌ 禁止提交 console.log（生产环境）
+- ❌ 禁止使用内联样式（除非必要）
+- ❌ 禁止绕过 ESLint 规则（除非有充分理由并添加注释）
+- ❌ 禁止使用 npm/yarn（必须使用 pnpm）
+
+### 后端禁止事项
+
+- ❌ 禁止在 Controller 中直接操作数据库
+- ❌ 禁止在 Service 中直接返回 Entity（必须使用 DTO/VO）
+- ❌ 禁止使用 `@Autowired` 字段注入（使用构造函数注入）
+- ❌ 禁止硬编码配置值（使用配置文件）
+- ❌ 禁止忽略异常（必须正确处理）
+- ❌ 禁止使用 `System.out.println`（使用日志框架）
+
+---
+
+## 🎯 核心开发原则
+
+### 1. 代码质量标准
+
+- **类型安全优先**: 所有代码必须有完整的类型定义
+- **代码完整性**: 代码必须完整可运行，禁止使用 TODO、占位符
+- **最小改动原则**: 仅修改有问题的代码，避免牵连无关逻辑
+
+### 2. Bug 修复规范
+
+1. **定位根因**: 深入分析问题本质，不做表面修复
+2. **最小改动**: 仅修改有问题的代码，避免牵连无关逻辑
+3. **添加注释**: 说明修复原因和问题根源
+4. **类型安全**: 确保修复后的代码类型正确
+
+### 3. 代码变更流程
+
+- 改动前先简述修改方案，达成共识后再执行
+- 一次只改一个文件，避免大杂烩式提交
+- 仅修改与当前需求相关的内容，勿动无关文件
+
+---
+
+## 📖 详细规范文档
+
+### 前端开发规范
+
+详细的前端开发规范请参考：`.cursor/rules/frontend-development.mdc`
+
+包含内容：
+
+- Vue 3 Composition API 使用规范
+- Ant Design Vue 组件使用规范
+- Vben 组件系统使用规范
+- 表单、表格、模态框等组件使用
+- API 请求规范
+- 路由配置规范
+- 权限控制规范
+- 性能优化规范
+
+### 后端开发规范
+
+详细的后端开发规范请参考：`.cursor/rules/backend-development.mdc`
+
+包含内容：
+
+- Spring Boot 项目结构
+- Controller 层设计规范
+- Service 层设计规范
+- 数据库操作规范（MyBatis Plus）
+- API 设计规范
+- 异常处理设计
+- 参数校验设计
+- 工具类使用规范
+
+### 权限系统设计
+
+详细的权限系统设计请参考：`.cursor/rules/access-system.mdc`
+
+包含内容：
+
+- 权限系统架构概览
+- 权限码管理
+- 路由权限设计
+- 按钮权限设计
+- 角色权限设计
+- 权限码权限设计
+
+---
+
+## 🔍 问题排查
+
+### 常见问题
+
+#### 前端问题
+
+1. **依赖安装失败**: 使用 `pnpm install --force` 重新安装
+2. **路径别名错误**: 检查 `package.json` 中的 `imports` 配置和 `tsconfig.json` 中的 `paths` 配置
+3. **类型错误**: 检查导入路径和类型定义
+4. **构建失败**: 检查 TypeScript 错误和 ESLint 警告
+
+#### 后端问题
+
+1. **Maven 依赖下载失败**: 检查网络或配置 Maven 镜像
+2. **数据库连接失败**: 检查 `application.yml` 中的数据库配置
+3. **端口占用**: 检查 8080 端口是否被占用
+
+### 调试技巧
+
+- 使用 Vue Devtools 调试前端
+- 使用 Spring Boot Actuator 监控后端
+- 查看日志文件定位问题
+- 使用 IDE 断点调试
+
+---
+
+## 📞 获取帮助
+
+### 官方文档
+
+- **前端文档**: `frontend/docs/src/guide/` 目录
+- **后端文档**: `backend/docs/` 目录
+
+### 规则文件
+
+遇到问题时，优先查阅对应的规则文件：
+
+- 前端问题 → `frontend-development.mdc`
+- 后端问题 → `backend-development.mdc`
+- 权限问题 → `access-system.mdc`
+
+---
+
+## ✅ 总结
+
+### 核心要点
+
+1. **Monorepo 架构**: 使用 pnpm workspace 管理，必须使用 pnpm
+2. **类型安全**: 前后端都必须有完整的类型定义
+3. **代码规范**: 遵循项目命名规范和代码风格
+4. **文档优先**: 遇到问题优先查阅规则文档
+5. **最小改动**: 修复问题时仅修改有问题的代码
+
+### 开发流程
+
+1. **需求分析**: 明确需求和实现方案
+2. **技术设计**: 考虑类型定义、组件结构、状态管理
+3. **编码实现**: 遵循规范，编写完整可运行的代码
+4. **自测验证**: 测试功能、检查类型、运行 lint
+5. **代码审查**: 确保代码质量和规范性
+6. **提交代码**: 使用规范的 commit message
+
+---
+
+**最后更新**: 2024-12-19

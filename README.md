@@ -1,157 +1,240 @@
-<div align="center">
-  <a href="https://github.com/anncwb/vue-vben-admin">
-    <img alt="VbenAdmin Logo" width="215" src="https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp">
-  </a>
-  <br>
-  <br>
+# Vue Vben Admin 全栈项目
 
-[![license](https://img.shields.io/github/license/anncwb/vue-vben-admin.svg)](LICENSE)
+> 基于 Vue 3 + Spring Boot 的全栈管理系统
 
-  <h1>Vue Vben Admin</h1>
-</div>
+## 📋 项目结构
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=vbenjs_vue-vben-admin&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=vbenjs_vue-vben-admin) [![codeql](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml) [![build](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml) [![ci](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml) [![deploy](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml)
-
-**English** | [中文](./README.zh-CN.md) | [日本語](./README.ja-JP.md)
-
-## Introduction
-
-Vue Vben Admin is a free and open source middle and back-end template. Using the latest `vue3`, `vite`, `TypeScript` and other mainstream technology development, the out-of-the-box middle and back-end front-end solutions can also be used for learning reference.
-
-## Upgrade Notice
-
-This is the latest version, 5.0, and it is not compatible with previous versions. If you are starting a new project, it is recommended to use the latest version. If you wish to view the old version, please use the [v2 branch](https://github.com/vbenjs/vue-vben-admin/tree/v2).
-
-## Features
-
-- **Latest Technology Stack**: Developed with cutting-edge front-end technologies like Vue 3 and Vite
-- **TypeScript**: A language for application-scale JavaScript
-- **Themes**: Multiple theme colors available with customizable options
-- **Internationalization**: Comprehensive built-in internationalization support
-- **Permissions**: Built-in solution for dynamic route-based permission generation
-
-## Preview
-
-- [Vben Admin](https://vben.pro/) - Full version Chinese site
-
-Test Account: vben/123456
-
-<div align="center">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview1.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview2.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview3.png">
-</div>
-
-### Use Gitpod
-
-Open the project in Gitpod (free online dev environment for GitHub) and start coding immediately.
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vbenjs/vue-vben-admin)
-
-## Documentation
-
-[Document](https://doc.vben.pro/)
-
-## Install and Use
-
-1. Get the project code
-
-```bash
-git clone https://github.com/vbenjs/vue-vben-admin.git
+```
+vue-vben-admin/
+├── backend/              # 后端服务（Spring Boot 3.2.0 + Java 17）
+│   ├── src/
+│   ├── pom.xml
+│   └── README.md
+└── frontend/             # 前端 Monorepo（Vue 3 + Vite + TypeScript）
+    ├── apps/
+    │   ├── web-antd/     # Ant Design Vue 版本
+    │   ├── web-ele/      # Element Plus 版本
+    │   └── backend-mock/ # Mock API 服务
+    ├── packages/         # 共享包
+    └── internal/         # 内部工具
 ```
 
-2. Install dependencies
+## 🚀 快速开始
+
+### 环境要求
+
+- **Node.js**: >= 20.12.0
+- **pnpm**: >= 10.0.0
+- **Java**: 17+ (推荐使用 jenv 管理)
+- **Maven**: 3.6+
+- **MySQL**: 8.0+
+
+### 1. 安装依赖
 
 ```bash
-cd vue-vben-admin
-npm i -g corepack
-pnpm install
+# 方式一：使用 npm 脚本（推荐）
+npm run install
+
+# 方式二：直接使用 bash 脚本
+bash scripts/install.sh
+
+# 仅安装前端依赖
+npm run install:frontend
+# 或
+bash scripts/install.sh --frontend-only
 ```
 
-3. Run
+**注意**：
+- 根目录不使用 pnpm 管理依赖，所有依赖管理都在 `frontend` 目录进行
+- 后端依赖由 Maven 管理，无需单独安装
+- 安装脚本会自动检测环境并安装相应依赖
+
+### 2. 数据库初始化
 
 ```bash
+cd backend
+./src/main/resources/db/init.sh
+```
+
+详细说明请参考：[后端数据库文档](./backend/README.md#数据库初始化)
+
+### 3. 启动项目
+
+#### 一键启动（推荐）
+
+```bash
+# 同时启动前后端（跨平台支持 Windows/macOS/Linux）
 pnpm dev
 ```
 
-4. Build
+#### 分别启动
 
 ```bash
-pnpm build
+# 仅启动前端
+pnpm run dev:frontend
+
+# 仅启动后端
+pnpm run dev:backend
+
+# 启动前端（Ant Design Vue 版本，直接进入前端目录）
+pnpm run dev:antd
 ```
 
-## Change Log
+### 4. 访问应用
 
-[CHANGELOG](https://github.com/vbenjs/vue-vben-admin/releases)
+- **前端**: http://localhost:5173
+- **后端 API**: http://localhost:8080
+- **API 文档**: http://localhost:8080/doc.html
 
-## How to Contribute
+### 5. 默认账号
 
-You are very welcome to join! [Raise an issue](https://github.com/anncwb/vue-vben-admin/issues/new/choose) or submit a Pull Request.
+- **用户名**: `admin`
+- **密码**: `admin123`
 
-**Pull Request Process:**
+## 📚 项目文档
 
-1. Fork the code
-2. Create your branch: `git checkout -b feat/xxxx`
-3. Submit your changes: `git commit -am 'feat(function): add xxxxx'`
-4. Push your branch: `git push origin feat/xxxx`
-5. Submit `pull request`
+### 前端文档
 
-## Git Contribution Submission Specification
+- [前端开发规范](./frontend/.cursor/rules/frontend-development.mdc)
+- [权限系统设计](./frontend/.cursor/rules/access-system.mdc)
+- [前端 README](./frontend/README.md)
 
-Reference [vue](https://github.com/vuejs/vue/blob/dev/.github/COMMIT_CONVENTION.md) specification ([Angular](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular))
+### 后端文档
 
-- `feat` Add new features
-- `fix` Fix the problem/BUG
-- `style` The code style is related and does not affect the running result
-- `perf` Optimization/performance improvement
-- `refactor` Refactor
-- `revert` Undo edit
-- `test` Test related
-- `docs` Documentation/notes
-- `chore` Dependency update/scaffolding configuration modification etc.
-- `ci` Continuous integration
-- `types` Type definition file changes
+- [后端开发规范](./backend/.cursor/rules/backend-development.mdc)
+- [后端 README](./backend/README.md)
+- [技术栈分析](./backend/docs/技术栈与开发规范分析.md)
+- [Token 最佳实践](./backend/docs/TOKEN_BEST_PRACTICES.md)
 
-## Browser Support
+## 🛠️ 常用命令
 
-The `Chrome 80+` browser is recommended for local development
+### 开发命令
 
-Support modern browsers, not IE
+```bash
+# 启动开发服务器
+pnpm dev                    # 一键启动前后端（推荐）
+pnpm run dev:frontend       # 仅启动前端
+pnpm run dev:backend        # 仅启动后端
+pnpm run dev:antd          # 启动 Ant Design Vue 版本
+```
 
-| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Safari |
-| :-: | :-: | :-: | :-: |
-| last 2 versions | last 2 versions | last 2 versions | last 2 versions |
+### 构建命令
 
-## Maintainer
+```bash
+# 构建项目
+pnpm build                  # 构建前端（Ant Design Vue）
+pnpm run build:frontend     # 构建所有前端应用
+```
 
-[@Vben](https://github.com/anncwb)
+### 代码质量
 
-## Star History
+```bash
+# 代码检查
+pnpm lint                   # ESLint 检查
+pnpm format                 # 格式化代码
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vbenjs/vue-vben-admin&type=Date)](https://star-history.com/#vbenjs/vue-vben-admin&Date)
+# 清理
+pnpm clean                  # 清理构建产物
+```
 
-## Donate
+## 🏗️ 技术栈
 
-If you think this project is helpful to you, you can help the author buy a cup of coffee to show your support!
+### 前端
 
-![donate](https://unpkg.com/@vbenjs/static-source@0.1.7/source/sponsor.png)
+- **框架**: Vue 3.5+ (Composition API)
+- **构建工具**: Vite 6+
+- **语言**: TypeScript 5+
+- **UI 框架**: Ant Design Vue 4.x
+- **状态管理**: Pinia
+- **路由**: Vue Router
+- **样式**: TailwindCSS
+- **包管理**: pnpm (Monorepo)
 
-<a style="display: block;width: 100px;height: 50px;line-height: 50px; color: #fff;text-align: center; background: #408aee;border-radius: 4px;" href="https://www.paypal.com/paypalme/cvvben">Paypal Me</a>
+### 后端
 
-## Contributors
+- **框架**: Spring Boot 3.2.0
+- **语言**: Java 17 (LTS)
+- **数据库**: MySQL 8.0+
+- **ORM**: MyBatis Plus 3.5.7
+- **安全**: Spring Security + JWT
+- **API 文档**: Knife4j (SpringDoc OpenAPI 3)
+- **构建工具**: Maven
 
-<a href="https://openomy.app/github/vbenjs/vue-vben-admin" target="_blank" style="display: block; width: 100%;" align="center">
-  <img src="https://openomy.app/svg?repo=vbenjs/vue-vben-admin&chart=bubble&latestMonth=3" target="_blank" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
- </a>
+## 📖 开发指南
 
-<a href="https://github.com/vbenjs/vue-vben-admin/graphs/contributors">
-  <img alt="Contributors" src="https://contrib.rocks/image?repo=vbenjs/vue-vben-admin" />
-</a>
+### 前端开发
 
-## Discord
+1. 进入前端目录：`cd frontend`
+2. 查看前端文档：`frontend/.cursor/rules/frontend-development.mdc`
+3. 遵循 Vue 3 Composition API 规范
+4. 使用 TypeScript 类型定义
+5. 遵循项目代码规范
 
-- [Github Discussions](https://github.com/anncwb/vue-vben-admin/discussions)
+### 后端开发
 
-## License
+1. 进入后端目录：`cd backend`
+2. 查看后端文档：`backend/.cursor/rules/backend-development.mdc`
+3. 遵循 Spring Boot 3 规范
+4. 使用 MyBatis Plus 进行数据库操作
+5. 遵循 RESTful API 设计规范
 
-[MIT © Vben-2020](./LICENSE)
+## 🔧 配置说明
+
+### 前端配置
+
+- 路径别名：`#/*` 指向 `./src/*`
+- 环境变量：`.env.local`、`.env.development`、`.env.production`
+- Vite 配置：`frontend/apps/web-antd/vite.config.mts`
+
+### 后端配置
+
+- 数据库配置：`backend/src/main/resources/application.yml`
+- Java 版本：使用 `.java-version` 文件配合 jenv
+- Maven 配置：`backend/pom.xml`
+
+## 🐛 常见问题
+
+### 端口占用
+
+```bash
+# 清理 8080 端口（后端）
+lsof -ti:8080 | xargs kill -9 2>/dev/null
+
+# 清理 5173 端口（前端）
+lsof -ti:5173 | xargs kill -9 2>/dev/null
+```
+
+### 依赖问题
+
+```bash
+# 重新安装前端依赖
+cd frontend && pnpm install
+
+# 清理 Maven 缓存（后端）
+cd backend && mvn clean
+```
+
+### 数据库连接失败
+
+1. 检查 MySQL 是否启动
+2. 检查数据库配置是否正确
+3. 确认数据库已初始化
+
+## 📝 开发规范
+
+- **Git 提交**: 遵循 `<type>: <subject>` 格式
+- **代码风格**: 遵循项目 ESLint/Prettier 配置
+- **类型安全**: 禁止使用 `any`，确保类型完整
+- **组件规范**: 使用 Composition API，禁止 Options API
+
+## 📄 License
+
+MIT
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+**提示**：更多详细文档请查看各子目录的 README 文件。

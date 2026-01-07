@@ -1,0 +1,803 @@
+---
+alwaysApply: true
+globs:
+  - '**/api/**/*.ts'
+  - '**/api/**/*.vue'
+---
+
+# API 客户端开发规范
+
+> 本文档是 Vue Vben Admin 项目的 API 客户端开发规范，基于 `@vben/request` 包。
+
+## 📋 目录
+
+1. [HTTP 客户端架构](#http-客户端架构)
+2. [API 函数定义规范](#api-函数定义规范)
+3. [请求拦截器机制](#请求拦截器机制)
+4. [响应拦截器机制](#响应拦截器机制)
+5. [错误处理规范](#错误处理规范)
+6. [类型定义规范](#类型定义规范)
+7. [实际使用示例](#实际使用示例)
+8. [最佳实践](#最佳实践)
+
+---
+
+## HTTP 客户端架构
+
+### RequestClient 基础
+
+项目使用 `@vben/request` 包中的 `RequestClient`，基于 Axios 封装。
+
+**核心特性**：
+
+- ✅ 自动处理响应数据格式（`code`/`data`/`message`）
+- ✅ 自动添加认证 Token
+- ✅ 自动刷新 Token（401 错误时）
+- ✅ 统一错误处理
+- ✅ BigInt 支持（自动转换为字符串）
+- ✅ 参数序列化（RFC3986 格式）
+
+### 客户端实例
+
+项目提供两个客户端实例：
+
+```typescript
+// apps/web-antd/src/api/request.ts
+import { RequestClient } from '@vben/request';
+
+// 标准客户端（带完整拦截器）
+export const requestClient = createRequestClient(apiURL, {
+  responseReturn: 'data', // 直接返回 data 字段
+});
+
+// 基础客户端（仅基础拦截器，用于特殊场景）
+export const baseRequestClient = new RequestClient({
+  baseURL: apiURL,
+  responseReturn: 'data',
+});
+```
+
+**使用场景**：
+
+- `requestClient`: 常规 API 调用（推荐）
+- `baseRequestClient`: 需要原始响应的场景（如刷新 Token）
+
+---
+
+## API 函数定义规范
+
+### 标准 API 函数结构
+
+```typescript
+// apps/web-antd/src/api/system/user.ts
+import { requestClient } from '#/api/request';
+
+// 1. 定义命名空间和类型
+export namespace SystemUserApi {
+  export interface SystemUser {
+    id: string;
+    username: string;
+    realName?: string;
+    status: 0 | 1;
+    // ... 其他字段
+  }
+}
+
+// 2. 定义 API 函数（使用 async function）
+/**
+ * 获取用户列表数据
+ */
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get<{
+    list: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user', { params });
+}
+
+// 3. 导出函数
+export { getUserList };
+```
+
+### HTTP 方法使用
+
+```typescript
+// GET 请求
+async function getUserById(id: string) {
+  return requestClient.get<SystemUserApi.SystemUser>(`/system/user/${id}`);
+}
+
+// POST 请求
+async function createUser(data: Omit<SystemUserApi.SystemUser, 'id'>) {
+  return requestClient.post('/system/user', data);
+}
+
+// PUT 请求
+async function updateUser(id: string, data: Partial<SystemUserApi.SystemUser>) {
+  return requestClient.put(`/system/user/${id}`, data);
+}
+
+// DELETE 请求
+async function deleteUser(id: string) {
+  return requestClient.delete(`/system/user/${id}`);
+}
+```
+
+### 类型定义规范
+
+**✅ 正确：使用命名空间导出类型**
+
+```typescript
+export namespace SystemUserApi {
+  export interface SystemUser {
+    id: string;
+    username: string;
+  }
+
+  export interface CreateUserParams {
+    username: string;
+    password: string;
+  }
+}
+
+async function createUser(data: SystemUserApi.CreateUserParams) {
+  return requestClient.post('/system/user', data);
+}
+```
+
+**❌ 错误：直接导出接口**
+
+```typescript
+// 不推荐：类型命名可能冲突
+export interface User {
+  id: string;
+}
+```
+
+### 函数命名规范
+
+- **获取列表**: `get{Resource}List` (例: `getUserList`)
+- **获取详情**: `get{Resource}ById` (例: `getUserById`)
+- **创建资源**: `create{Resource}` (例: `createUser`)
+- **更新资源**: `update{Resource}` (例: `updateUser`)
+- **删除资源**: `delete{Resource}` (例: `deleteUser`)
+- **获取选项**: `get{Resource}Options` (例: `getUserOptions`)
+
+---
+
+## 请求拦截器机制
+
+### 自动添加的请求头
+
+请求拦截器会自动添加以下请求头：
+
+```typescript
+// apps/web-antd/src/api/request.ts
+client.addRequestInterceptor({
+  fulfilled: async (config) => {
+    const accessStore = useAccessStore();
+
+    // 1. 自动添加 Authorization Token
+    config.headers.Authorization = formatToken(accessStore.accessToken);
+
+    // 2. 自动添加语言标识
+    config.headers['Accept-Language'] = preferences.app.locale;
+
+    // 3. 自动添加当前页面 URL（用于操作日志）
+    if (typeof window !== 'undefined') {
+      const pageUrl = window.location.pathname;
+      if (pageUrl) {
+        config.headers['X-Page-Url'] = pageUrl;
+      }
+    }
+
+    return config;
+  },
+});
+```
+
+**说明**：
+
+- `Authorization`: Bearer Token，从 `useAccessStore` 获取
+- `Accept-Language`: 当前语言设置
+- `X-Page-Url`: 当前页面路径（用于后端记录操作日志）
+
+### 参数序列化
+
+项目使用 RFC3986 格式序列化参数，确保空格被编码为 `%20` 而不是 `+`：
+
+```typescript
+const client = new RequestClient({
+  baseURL,
+  paramsSerializer: 'rfc3986-repeat', // RFC3986 格式 + repeat 数组格式
+});
+```
+
+**参数序列化选项**：
+
+- `rfc3986-repeat`: 推荐使用，解决表单搜索时空格编码问题
+- `rfc3986`: RFC3986 格式，空格编码为 %20
+- `repeat`: 数组格式 `ids=1&ids=2&ids=3`
+- `brackets`: 数组格式 `ids[]=1&ids[]=2`
+- `comma`: 逗号分隔 `ids=1,2,3`
+
+---
+
+## 响应拦截器机制
+
+### 响应数据格式
+
+后端统一返回格式：
+
+```typescript
+interface HttpResponse<T = any> {
+  code: number;    // 0 表示成功，其他表示失败
+  data: T;         // 实际数据
+  message: string; // 错误信息（失败时）
+}
+```
+
+### 响应拦截器执行顺序
+
+1. **defaultResponseInterceptor**: 处理响应数据格式
+2. **authenticateResponseInterceptor**: 处理 Token 刷新
+3. **errorMessageResponseInterceptor**: 统一错误处理
+
+### defaultResponseInterceptor
+
+自动提取 `data` 字段，检查 `code` 是否为成功状态：
+
+```typescript
+client.addResponseInterceptor(
+  defaultResponseInterceptor({
+    codeField: 'code',      // 响应中的状态码字段
+    dataField: 'data',      // 响应中的数据字段
+    successCode: 0,         // 成功状态码
+  }),
+);
+```
+
+**响应返回模式**：
+
+- `responseReturn: 'data'`: 直接返回 `data` 字段（默认，推荐）
+- `responseReturn: 'body'`: 返回完整响应体
+- `responseReturn: 'raw'`: 返回原始 AxiosResponse
+
+### authenticateResponseInterceptor
+
+自动处理 Token 刷新逻辑：
+
+```typescript
+client.addResponseInterceptor(
+  authenticateResponseInterceptor({
+    client,
+    doReAuthenticate,      // 重新认证逻辑
+    doRefreshToken,        // 刷新 Token 逻辑
+    enableRefreshToken: preferences.app.enableRefreshToken,
+    formatToken,          // Token 格式化函数
+  }),
+);
+```
+
+**工作流程**：
+
+1. 检测到 401 错误
+2. 如果启用了 refreshToken，尝试刷新 Token
+3. 刷新成功后，自动重试原请求
+4. 刷新失败，跳转登录页面
+
+**Token 刷新队列**：
+
+- 多个请求同时遇到 401 时，只刷新一次 Token
+- 其他请求加入队列，等待刷新完成后重试
+
+---
+
+## 错误处理规范
+
+### 统一错误处理
+
+`errorMessageResponseInterceptor` 提供统一的错误处理：
+
+```typescript
+client.addResponseInterceptor(
+  errorMessageResponseInterceptor((msg: string, error) => {
+    // 优先使用后端返回的错误信息
+    const responseData = error?.response?.data ?? {};
+    const errorMessage = responseData?.error ?? responseData?.message ?? '';
+
+    // 如果没有错误信息，使用默认提示
+    message.error(errorMessage || msg);
+  }),
+);
+```
+
+### 错误类型处理
+
+拦截器会自动处理以下错误类型：
+
+```typescript
+// 网络错误
+if (err?.includes('Network Error')) {
+  errMsg = $t('ui.fallback.http.networkError');
+}
+
+// 超时错误
+if (error?.message?.includes?.('timeout')) {
+  errMsg = $t('ui.fallback.http.requestTimeout');
+}
+
+// HTTP 状态码错误
+switch (status) {
+  case 400:
+    errorMessage = $t('ui.fallback.http.badRequest');
+    break;
+  case 401:
+    errorMessage = $t('ui.fallback.http.unauthorized');
+    break;
+  case 403:
+    errorMessage = $t('ui.fallback.http.forbidden');
+    break;
+  case 404:
+    errorMessage = $t('ui.fallback.http.notFound');
+    break;
+  case 408:
+    errorMessage = $t('ui.fallback.http.requestTimeout');
+    break;
+  default:
+    errorMessage = $t('ui.fallback.http.internalServerError');
+}
+```
+
+### API 函数中的错误处理
+
+**✅ 推荐：让拦截器处理错误**
+
+```typescript
+// 拦截器会自动处理错误，无需手动 try-catch
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get('/system/user', { params });
+}
+```
+
+**✅ 特殊场景：需要自定义错误处理**
+
+```typescript
+async function getUserList(params: Recordable<any>) {
+  try {
+    return await requestClient.get('/system/user', { params });
+  } catch (error) {
+    // 自定义错误处理逻辑
+    console.error('获取用户列表失败:', error);
+    throw error; // 重新抛出，让拦截器处理
+  }
+}
+```
+
+---
+
+## 类型定义规范
+
+### 响应类型定义
+
+**✅ 正确：明确指定响应类型**
+
+```typescript
+// 单个对象
+async function getUserById(id: string) {
+  return requestClient.get<SystemUserApi.SystemUser>(`/system/user/${id}`);
+}
+
+// 列表数据
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get<{
+    list: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user', { params });
+}
+
+// 分页数据
+async function getUserList(params: PageFetchParams) {
+  return requestClient.get<{
+    list: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user', { params });
+}
+```
+
+**❌ 错误：不指定类型**
+
+```typescript
+// 不推荐：缺少类型定义
+async function getUserList(params: any) {
+  return requestClient.get('/system/user', { params });
+}
+```
+
+### 请求参数类型定义
+
+**✅ 正确：使用接口定义参数**
+
+```typescript
+export namespace SystemUserApi {
+  export interface CreateUserParams {
+    username: string;
+    password: string;
+    realName?: string;
+    status?: 0 | 1;
+  }
+}
+
+async function createUser(data: SystemUserApi.CreateUserParams) {
+  return requestClient.post('/system/user', data);
+}
+```
+
+**✅ 正确：使用 Omit/Partial 工具类型**
+
+```typescript
+// 创建时排除 id、createTime、updateTime
+async function createUser(
+  data: Omit<SystemUserApi.SystemUser, 'id' | 'createTime' | 'updateTime'>,
+) {
+  return requestClient.post('/system/user', data);
+}
+
+// 更新时使用 Partial
+async function updateUser(
+  id: string,
+  data: Partial<Omit<SystemUserApi.SystemUser, 'id'>>,
+) {
+  return requestClient.put(`/system/user/${id}`, data);
+}
+```
+
+---
+
+## 实际使用示例
+
+### 完整 API 文件示例
+
+```typescript
+// apps/web-antd/src/api/system/user.ts
+import type { Recordable } from '@vben/types';
+
+import { requestClient } from '#/api/request';
+
+// 1. 定义命名空间和类型
+export namespace SystemUserApi {
+  export interface SystemUser {
+    [key: string]: any;
+    id: string;
+    username: string;
+    realName?: string;
+    status: 0 | 1;
+    createTime?: string;
+    updateTime?: string;
+  }
+}
+
+// 2. 定义 API 函数
+
+/**
+ * 获取用户列表数据
+ */
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get<{
+    list: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user', { params });
+}
+
+/**
+ * 获取用户详情
+ * @param id 用户ID
+ */
+async function getUserById(id: string) {
+  return requestClient.get<SystemUserApi.SystemUser>(`/system/user/${id}`);
+}
+
+/**
+ * 创建用户
+ * @param data 用户数据
+ */
+async function createUser(
+  data: Omit<SystemUserApi.SystemUser, 'id' | 'createTime' | 'updateTime'>,
+) {
+  return requestClient.post('/system/user', data);
+}
+
+/**
+ * 更新用户
+ * @param id 用户ID
+ * @param data 用户数据
+ */
+async function updateUser(
+  id: string,
+  data: Partial<
+    Omit<SystemUserApi.SystemUser, 'id' | 'createTime' | 'updateTime'>
+  >,
+) {
+  return requestClient.put(`/system/user/${id}`, data);
+}
+
+/**
+ * 删除用户
+ * @param id 用户ID
+ */
+async function deleteUser(id: string) {
+  return requestClient.delete(`/system/user/${id}`);
+}
+
+/**
+ * 获取用户选项列表（用于下拉选项）
+ * @param params 查询参数（支持条件查询、分页或 limit 限制）
+ */
+async function getUserOptions(params?: {
+  limit?: number;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: number;
+}) {
+  return requestClient.get<{
+    list: SystemUserApi.SystemUser[];
+    total: number;
+  }>('/system/user/options', {
+    params,
+  });
+}
+
+// 3. 导出函数
+export {
+  createUser,
+  deleteUser,
+  getUserById,
+  getUserList,
+  getUserOptions,
+  updateUser,
+};
+```
+
+### 在组件中使用 API
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
+import { getUserList, createUser, deleteUser } from '#/api/system/user';
+import type { SystemUserApi } from '#/api/system/user';
+
+const loading = ref(false);
+const userList = ref<SystemUserApi.SystemUser[]>([]);
+const total = ref(0);
+
+// 获取用户列表
+const fetchUserList = async () => {
+  loading.value = true;
+  try {
+    const response = await getUserList({
+      page: 1,
+      pageSize: 10,
+    });
+    userList.value = response.list;
+    total.value = response.total;
+  } catch (error) {
+    // 错误已由拦截器处理，这里可以添加额外逻辑
+    console.error('获取用户列表失败:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 创建用户
+const handleCreate = async (data: SystemUserApi.SystemUser) => {
+  try {
+    await createUser(data);
+    message.success('创建成功');
+    await fetchUserList(); // 刷新列表
+  } catch (error) {
+    // 错误已由拦截器处理
+  }
+};
+
+// 删除用户
+const handleDelete = async (id: string) => {
+  try {
+    await deleteUser(id);
+    message.success('删除成功');
+    await fetchUserList(); // 刷新列表
+  } catch (error) {
+    // 错误已由拦截器处理
+  }
+};
+
+onMounted(() => {
+  fetchUserList();
+});
+</script>
+```
+
+### 特殊场景：刷新 Token
+
+```typescript
+// apps/web-antd/src/api/core/auth.ts
+import { baseRequestClient } from '#/api/request';
+
+/**
+ * 刷新accessToken
+ * 使用 baseRequestClient 避免触发 token 刷新循环
+ */
+export async function refreshTokenApi() {
+  return baseRequestClient.post<string>('/auth/refresh', null, {
+    withCredentials: true, // 携带 Cookie
+  });
+}
+```
+
+---
+
+## 最佳实践
+
+### 1. 类型安全
+
+**✅ 推荐：完整的类型定义**
+
+```typescript
+export namespace SystemUserApi {
+  export interface SystemUser {
+    id: string;
+    username: string;
+  }
+}
+
+async function getUserById(id: string) {
+  return requestClient.get<SystemUserApi.SystemUser>(`/system/user/${id}`);
+}
+```
+
+**❌ 避免：使用 any**
+
+```typescript
+// 不推荐
+async function getUserById(id: any) {
+  return requestClient.get<any>(`/system/user/${id}`);
+}
+```
+
+### 2. 函数命名
+
+**✅ 推荐：使用动词前缀**
+
+```typescript
+getUserList    // 获取列表
+getUserById   // 获取详情
+createUser     // 创建
+updateUser     // 更新
+deleteUser     // 删除
+getUserOptions // 获取选项
+```
+
+### 3. 错误处理
+
+**✅ 推荐：让拦截器处理错误**
+
+```typescript
+// 拦截器会自动处理错误并显示提示
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get('/system/user', { params });
+}
+```
+
+**✅ 特殊场景：需要自定义错误处理**
+
+```typescript
+async function getUserList(params: Recordable<any>) {
+  try {
+    return await requestClient.get('/system/user', { params });
+  } catch (error) {
+    // 自定义错误处理
+    if (error.response?.status === 403) {
+      // 权限不足的特殊处理
+    }
+    throw error; // 重新抛出，让拦截器处理
+  }
+}
+```
+
+### 4. 参数定义
+
+**✅ 推荐：使用可选参数和默认值**
+
+```typescript
+async function getUserOptions(params?: {
+  limit?: number;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
+  return requestClient.get('/system/user/options', { params });
+}
+```
+
+### 5. 文件组织
+
+**✅ 推荐：按模块组织 API 文件**
+
+```
+api/
+├── core/           # 核心 API（认证、用户信息等）
+│   ├── auth.ts
+│   └── user.ts
+├── system/         # 系统管理 API
+│   ├── user.ts
+│   ├── role.ts
+│   └── menu.ts
+└── index.ts        # 统一导出
+```
+
+### 6. 导出规范
+
+**✅ 推荐：使用命名导出**
+
+```typescript
+// 导出函数
+export { getUserList, createUser, updateUser, deleteUser };
+
+// 导出类型（通过命名空间）
+export namespace SystemUserApi {
+  export interface SystemUser { ... }
+}
+```
+
+### 7. BigInt 处理
+
+项目已自动处理 BigInt，无需手动转换：
+
+```typescript
+// 后端返回 BigInt 会自动转换为字符串
+const response = await getUserById('123');
+console.log(response.id); // 字符串类型，即使后端返回 BigInt
+```
+
+### 8. 请求取消
+
+**✅ 推荐：使用 AbortController 取消请求**
+
+```typescript
+const controller = new AbortController();
+
+async function getUserList(params: Recordable<any>) {
+  return requestClient.get('/system/user', {
+    params,
+    signal: controller.signal,
+  });
+}
+
+// 取消请求
+controller.abort();
+```
+
+---
+
+## 禁止事项
+
+- ❌ 禁止在 API 函数中使用 `any` 类型
+- ❌ 禁止直接使用 `axios`（使用 `requestClient`）
+- ❌ 禁止在 API 函数中手动处理错误提示（让拦截器处理）
+- ❌ 禁止在 API 函数中手动添加 Token（拦截器自动处理）
+- ❌ 禁止使用 `baseRequestClient` 进行常规 API 调用（除非特殊场景）
+
+---
+
+## 总结
+
+1. **使用 `requestClient`**: 所有 API 调用使用 `requestClient`
+2. **类型定义**: 使用命名空间导出类型，明确指定响应类型
+3. **错误处理**: 让拦截器统一处理错误，特殊场景才自定义
+4. **函数命名**: 使用动词前缀（get/create/update/delete）
+5. **文件组织**: 按模块组织 API 文件
+6. **类型安全**: 避免使用 `any`，提供完整的类型定义
+
+---
+
+**最后更新**: 2024-12-19

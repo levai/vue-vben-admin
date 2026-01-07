@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+
+# 后端开发规范
+
+> 📖 **本文档已迁移到项目目录**
+> 详细的后端开发规范请参考：[`apps/backend-service/.cursor/rules/backend-development.mdc`](../../apps/backend-service/.cursor/rules/backend-development.mdc)
+
+## 📋 快速导航
+
+### 主要文档
+
+- **[项目 README](../../apps/backend-service/README.md)** - 项目快速开始指南和文档索引
+- **[后端开发规范](../../apps/backend-service/.cursor/rules/backend-development.mdc)** - 详细的后端开发规范（本文档的完整版本）
+- **[命名规范说明](../../apps/backend-service/.cursor/rules/命名规范说明.mdc)** - 命名规范详细说明
+
+### 技术文档
+
+- **[技术栈与开发规范分析](../../apps/backend-service/docs/技术栈与开发规范分析.md)** - 详细的技术栈分析和开发规范
+- **[Token 最佳实践](../../apps/backend-service/docs/TOKEN_BEST_PRACTICES.md)** - JWT Token 使用最佳实践
+
+## 📌 技术栈概览
+
+- **框架**: Spring Boot 3.2.0
+- **Java**: 17 (LTS)
+- **数据库**: MySQL 8.0+ + MyBatis Plus 3.5.7
+- **安全**: Spring Security 3.2.0 + JWT (jjwt 0.12.5)
+- **API 文档**: Knife4j 4.4.0 (SpringDoc OpenAPI 3)
+
+## 🔗 完整文档
+
+请查看 [`apps/backend-service/.cursor/rules/backend-development.mdc`](../../apps/backend-service/.cursor/rules/backend-development.mdc) 获取完整的后端开发规范，包括：
+
+1. 技术栈分析
+2. 项目架构概览
+3. Controller 层设计
+4. Service 层设计
+5. 数据库操作设计
+6. API 设计规范
+7. 异常处理设计
+8. 参数校验设计
+9. 工具类使用规范
+10. 实际使用示例
+11. 后续开发模式
+12. 最佳实践建议
+
+---
+
+**注意**：本文档为引用文档，详细内容请参考项目目录下的完整文档。

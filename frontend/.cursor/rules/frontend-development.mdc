@@ -1,0 +1,1997 @@
+---
+alwaysApply: true
+---
+
+# Web-Antd 前端开发规范
+
+> 本文档是 **`apps/web-antd`** 项目的专用前端开发规范，基于 Ant Design Vue 框架。
+
+## 📋 目录
+
+1. [项目概述](#项目概述)
+2. [核心开发原则](#核心开发原则)
+3. [编码规范](#编码规范)
+4. [组件使用规范](#组件使用规范)
+5. [状态管理规范](#状态管理规范)
+6. [API 请求规范](#api-请求规范)
+7. [路由配置规范](#路由配置规范)
+8. [样式规范](#样式规范)
+9. [性能优化规范](#性能优化规范)
+10. [国际化规范](#国际化规范)
+11. [权限控制规范](#权限控制规范)
+12. [项目结构规范](#项目结构规范)
+13. [Git 提交规范](#git-提交规范)
+14. [最佳实践](#最佳实践)
+
+---
+
+## 项目概述
+
+- **项目名称**: `@vben/web-antd` (apps/web-antd)
+- **项目类型**: Vue Vben Admin 5.x - Ant Design Vue 版本
+- **架构**: Monorepo (pnpm workspace + Turbo)
+- **核心技术栈**:
+  - Vue 3.5+
+  - Vite 6+
+  - TypeScript 5+
+  - Pinia (状态管理)
+  - Vue Router (路由)
+  - **Ant Design Vue** (UI 框架)
+- **样式方案**: TailwindCSS + PostCSS
+- **包管理**: pnpm 10+ (必须使用 pnpm)
+- **路径别名**: `#/*` 指向 `./src/*`
+- **官方文档**: 遇到问题或需要了解详细功能时，可参考 `docs/src/guide/` 目录下的官方文档
+
+### 项目特点
+
+- ✅ 使用 **Ant Design Vue** 作为 UI 组件库
+- ✅ 使用 **Vben 组件系统** 作为统一组件抽象层
+- ✅ 支持 Ant Design Vue 的 `v-model:value` 绑定方式
+- ✅ 组件适配器位于 `src/adapter/component.ts`
+- ✅ 表单适配器位于 `src/adapter/form.ts`，配置了 Ant Design Vue 特定的模型属性映射
+
+---
+
+## 核心开发原则
+
+### 1. 代码质量标准
+
+- **类型安全优先**: 所有代码必须有完整的 TypeScript 类型定义，禁止使用 `any`
+- **组合式 API**: 统一使用 Vue 3 Composition API，禁止使用 Options API
+- **代码完整性**: 代码必须完整可运行，禁止使用 TODO、占位符或省略代码
+- **导入规范**: 确保所有导入路径正确，使用项目配置的路径别名
+
+### 2. 编码规范
+
+#### TypeScript 规范
+```typescript
+// ✅ 正确：使用明确的类型定义
+interface UserInfo {
+  id: string;
+  username: string;
+  roles: string[];
+}
+
+const fetchUser = async (id: string): Promise<UserInfo> => {
+  // ...
+}
+
+// ❌ 错误：使用 any 或缺少类型
+const fetchUser = async (id) => {
+  // ...
+}
+```
+
+#### Vue 组件规范
+```vue
+<script setup lang="ts">
+// ✅ 正确：使用 Composition API + TypeScript
+import { ref, computed } from 'vue';
+
+interface Props {
+  title: string;
+  count?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  count: 0,
+});
+
+const emit = defineEmits<{
+  update: [value: number];
+}>();
+
+const localCount = ref(props.count);
+</script>
+
+<template>
+  <div>{{ title }}</div>
+</template>
+```
+
+#### 命名规范
+- **组件文件**: PascalCase (例: `UserProfile.vue`, `DataTable.vue`)
+- **工具文件**: camelCase (例: `formatUtils.ts`, `dateHelper.ts`)
+- **常量文件**: UPPER_CASE (例: `API_BASE_URL`, `MAX_RETRY_COUNT`)
+- **类型/接口**: PascalCase (例: `UserInfo`, `ApiResponse`)
+- **变量/函数**: camelCase (例: `userData`, `fetchUserList`)
+
+### 3. 路径别名规范
+
+```typescript
+// 应用级别路径别名
+import { useUserStore } from '@/store/user';
+import UserList from '@/views/user/UserList.vue';
+
+// Workspace 包路径别名
+import { usePreferences } from '@vben/preferences';
+import { requestClient } from '@vben/request';
+import { VbenButton } from '@vben/common-ui';
+```
+
+---
+
+## 组件使用优先级
+
+在开发过程中，请遵循以下组件选择优先级：
+
+**1. Vben 自定义组件（最优先）** → **2. Ant Design Vue 组件（次选）** → **3. 原生 HTML（最后）**
+
+### 为什么优先使用 Vben 组件？
+
+- ✅ 统一的 API 设计，跨 UI 框架兼容
+- ✅ 内置表单验证、状态管理
+- ✅ 更好的 TypeScript 支持
+- ✅ 符合项目架构设计
+
+---
+
+## Vben 自定义组件使用规范
+
+框架提供了一套基于 TailwindCSS 的自定义组件，可适配不同 UI 框架。这些组件是**首选**，具有更好的一致性和扩展性。
+
+### 1. Vben Form 表单（优先使用）
+
+使用 `useVbenForm` 创建表单，底层基于 [vee-validate](https://vee-validate.logaretm.com/v4/)，支持强大的表单验证。
+
+```vue
+<script setup lang="ts">
+import { useVbenForm } from '#/adapter/form';
+
+// 定义表单 Schema
+const [Form, formApi] = useVbenForm({
+  // 表单配置
+  commonConfig: {
+    labelWidth: 100,
+  },
+  // 表单项配置
+  schema: [
+    {
+      component: 'Input',
+      fieldName: 'username',
+      label: '用户名',
+      rules: 'required',
+    },
+    {
+      component: 'InputPassword',
+      fieldName: 'password',
+      label: '密码',
+      rules: 'required',
+    },
+  ],
+  // 提交处理
+  handleSubmit: async (values) => {
+    console.log('表单值:', values);
+    await loginApi(values);
+  },
+});
+</script>
+
+<template>
+  <Form />
+</template>
+```
+
+#### 表单校验规则
+
+```typescript
+import { z } from '#/adapter/form';
+
+// 预定义规则
+{
+  rules: 'required', // 必填
+}
+
+{
+  rules: 'selectRequired', // 下拉必选
+}
+
+// Zod 复杂校验
+{
+  rules: z.string().email().min(5, { message: '邮箱格式不正确' }),
+}
+
+{
+  rules: z.string().refine((value) => value.length >= 6, {
+    message: '密码长度不能少于 6 位',
+  }),
+}
+```
+
+#### 表单联动
+
+```typescript
+{
+  fieldName: 'city',
+  component: 'Select',
+  label: '城市',
+  dependencies: {
+    // 触发字段
+    triggerFields: ['province'],
+    // 动态显示
+    show: (values) => !!values.province,
+    // 动态禁用
+    disabled: (values) => !values.province,
+    // 动态组件参数
+    componentProps: (values, formApi) => {
+      return {
+        options: getCityOptions(values.province),
+      };
+    },
+  },
+}
+```
+
+#### FormApi 常用方法
+
+```typescript
+// 提交表单
+await formApi.submitForm();
+
+// 设置表单值
+await formApi.setValues({ username: 'admin' });
+
+// 获取表单值
+const values = await formApi.getValues();
+
+// 重置表单
+await formApi.resetForm();
+
+// 校验表单
+await formApi.validate();
+
+// 更新 Schema
+formApi.updateSchema([...newSchema]);
+```
+
+### 2. Vben Modal 模态框（优先使用）
+
+使用 `useVbenModal` 创建模态框，支持拖拽、全屏、自动高度等功能。
+
+```vue
+<script setup lang="ts">
+import { useVbenModal } from '@vben/common-ui';
+
+const [Modal, modalApi] = useVbenModal({
+  title: '编辑用户',
+  // 开启拖拽
+  draggable: true,
+  // 确认回调
+  onConfirm: async () => {
+    const data = modalApi.getData();
+    await saveUser(data);
+  },
+});
+
+const handleOpen = () => {
+  modalApi.setData({ id: 1, name: 'John' });
+  modalApi.open();
+};
+</script>
+
+<template>
+  <a-button @click="handleOpen">打开弹窗</a-button>
+
+  <Modal>
+    <div>弹窗内容</div>
+  </Modal>
+</template>
+```
+
+#### 组件抽离模式
+
+```vue
+<script setup lang="ts">
+import { useVbenModal } from '@vben/common-ui';
+import UserForm from './UserForm.vue';
+
+// 通过 connectedComponent 连接内部组件
+const [Modal, modalApi] = useVbenModal({
+  title: '编辑用户',
+  connectedComponent: UserForm,
+  onOpenChange: (isOpen) => {
+    if (isOpen) {
+      // 打开时设置数据
+      modalApi.setData({ id: 1, name: 'John' });
+    }
+  },
+});
+</script>
+
+<template>
+  <Modal />
+</template>
+```
+
+#### ModalApi 常用方法
+
+```typescript
+// 打开弹窗
+modalApi.open();
+
+// 关闭弹窗
+modalApi.close();
+
+// 设置共享数据
+modalApi.setData({ id: 1, name: 'John' });
+
+// 获取共享数据
+const data = modalApi.getData();
+
+// 动态更新状态
+modalApi.setState({ title: '新标题', loading: true });
+
+// 锁定弹窗（提交中状态）
+modalApi.lock(true);
+modalApi.unlock();
+```
+
+### 3. Vben Drawer 抽屉（优先使用）
+
+使用 `useVbenDrawer` 创建抽屉，API 与 Modal 类似。
+
+```vue
+<script setup lang="ts">
+import { useVbenDrawer } from '@vben/common-ui';
+
+const [Drawer, drawerApi] = useVbenDrawer({
+  title: '用户详情',
+  // 抽屉位置
+  placement: 'right',
+  // 宽度
+  class: 'w-[600px]',
+  onConfirm: async () => {
+    await saveData();
+  },
+});
+</script>
+
+<template>
+  <Drawer>
+    <div>抽屉内容</div>
+  </Drawer>
+</template>
+```
+
+### 4. Vben Vxe Table 表格（优先使用）
+
+使用 `useVbenVxeGrid` 创建表格，基于 [vxe-table](https://vxetable.cn/)，支持虚拟滚动、树形表格、单元格编辑等。
+
+```vue
+<script setup lang="ts">
+import { useVbenVxeGrid } from '#/adapter/vxe-table';
+
+const [Grid, gridApi] = useVbenVxeGrid({
+  // 表格配置
+  gridOptions: {
+    columns: [
+      { field: 'id', title: 'ID', width: 80 },
+      { field: 'username', title: '用户名' },
+      { field: 'email', title: '邮箱' },
+      {
+        title: '操作',
+        width: 200,
+        slots: { default: 'action' },
+      },
+    ],
+    // 代理配置
+    proxyConfig: {
+      ajax: {
+        query: async ({ page }) => {
+          const response = await getUserList({
+            page: page.currentPage,
+            pageSize: page.pageSize,
+          });
+          return {
+            items: response.data,
+            total: response.total,
+          };
+        },
+      },
+    },
+  },
+  // 搜索表单配置
+  formOptions: {
+    schema: [
+      {
+        fieldName: 'username',
+        label: '用户名',
+        component: 'Input',
+      },
+      {
+        fieldName: 'status',
+        label: '状态',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '启用', value: 1 },
+            { label: '禁用', value: 0 },
+          ],
+        },
+      },
+    ],
+  },
+});
+
+const handleDelete = async (row: any) => {
+  await deleteUser(row.id);
+  gridApi.reload();
+};
+</script>
+
+<template>
+  <Grid>
+    <template #action="{ row }">
+      <a-button type="link" size="small">编辑</a-button>
+      <a-button type="link" danger size="small" @click="handleDelete(row)">
+        删除
+      </a-button>
+    </template>
+  </Grid>
+</template>
+```
+
+#### GridApi 常用方法
+
+```typescript
+// 重载表格（初始化）
+gridApi.reload();
+
+// 查询表格（保留分页）
+gridApi.query();
+
+// 设置 loading
+gridApi.setLoading(true);
+
+// 访问 vxe-table 实例
+gridApi.grid.getTableData();
+
+// 访问表单 API
+gridApi.formApi.setValues({ username: 'admin' });
+
+// 切换搜索表单显示
+gridApi.toggleSearchForm();
+```
+
+### 5. Page 页面布局组件
+
+使用 `Page` 组件作为页面根容器，提供统一的页面布局。
+
+```vue
+<script setup lang="ts">
+import { Page } from '@vben/common-ui';
+</script>
+
+<template>
+  <Page
+    title="用户管理"
+    description="管理系统用户信息"
+    auto-content-height
+  >
+    <template #extra>
+      <a-button type="primary">新增用户</a-button>
+    </template>
+
+    <!-- 页面内容 -->
+    <div>页面内容区域</div>
+
+    <template #footer>
+      <div>页面底部</div>
+    </template>
+  </Page>
+</template>
+```
+
+### 6. 其他 Vben 组件
+
+```vue
+<script setup lang="ts">
+import {
+  VbenAlert,           // 警告提示
+  VbenEllipsisText,    // 文本省略
+  VbenCountToAnimator, // 数字动画
+} from '@vben/common-ui';
+</script>
+
+<template>
+  <!-- 警告提示 -->
+  <VbenAlert type="info" title="提示信息" />
+
+  <!-- 文本省略 -->
+  <VbenEllipsisText :text="longText" :max-width="200" />
+
+  <!-- 数字动画 -->
+  <VbenCountToAnimator :end-value="1000" :duration="2000" />
+</template>
+```
+
+### Vben 组件适配器
+
+**web-antd 项目**的组件适配器位于 `src/adapter/component.ts`，将 Ant Design Vue 组件注册到 Vben 组件系统：
+
+```typescript
+import { globalShareState } from '@vben/common-ui';
+import { Input, Select, Button } from 'ant-design-vue';
+
+// 注册组件（已在 adapter/component.ts 中完成）
+globalShareState.setComponents({
+  Input,
+  Select,
+  Button,
+  // ... 更多 Ant Design Vue 组件
+});
+```
+
+**表单适配器配置**（`src/adapter/form.ts`）：
+
+```typescript
+// Ant Design Vue 组件默认使用 v-model:value
+setupVbenForm<ComponentType>({
+  config: {
+    baseModelPropName: 'value', // Ant Design Vue 默认模型属性
+    modelPropNameMap: {
+      Checkbox: 'checked',
+      Radio: 'checked',
+      Switch: 'checked',
+      Upload: 'fileList',
+    },
+  },
+});
+```
+
+**重要提示**：
+- Ant Design Vue 组件默认使用 `v-model:value` 进行双向绑定
+- 特殊组件使用不同的模型属性（如 Checkbox 使用 `checked`）
+- 这些配置已在 `src/adapter/form.ts` 中完成，无需手动配置
+
+### 7. ApiSelect 后端搜索功能
+
+`ApiSelect` 组件支持后端搜索功能，当选项数据量较大时，可以通过后端搜索实现按需加载，提升性能和用户体验。
+
+#### 基础用法
+
+```typescript
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: getUserOptions,
+    enableBackendSearch: true, // 启用后端搜索
+    labelField: 'username',
+    resultField: 'list',
+    valueField: 'id',
+  },
+  fieldName: 'userId',
+  label: '用户',
+}
+```
+
+#### 高级配置
+
+```typescript
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: getUserOptions,
+    enableBackendSearch: true,
+    searchFieldName: 'keyword',      // 自定义搜索字段名（默认: 'search'）
+    searchDebounce: 500,              // 自定义防抖延迟（默认: 300ms）
+    params: { limit: -1 },
+    labelField: 'username',
+    resultField: 'list',
+    valueField: 'id',
+  },
+  fieldName: 'userId',
+  label: '用户',
+}
+```
+
+#### 配置选项说明
+
+| 配置项 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `enableBackendSearch` | `boolean` | `false` | 是否启用后端搜索 |
+| `searchFieldName` | `string` | `'search'` | 搜索参数字段名，会传递给 API |
+| `searchDebounce` | `number` | `300` | 防抖延迟时间（毫秒） |
+
+#### 在 VxeTable Grid 中使用
+
+```typescript
+// apps/web-antd/src/views/system/role/list.vue
+const [Grid, gridApi] = useVbenVxeGrid<SystemRoleApi.SystemRole>({
+  formOptions: {
+    schema: useGridFormSchema(), // 包含 enableBackendSearch 的 ApiSelect
+    submitOnChange: true,
+  },
+  gridOptions: {
+    proxyConfig: {
+      ajax: {
+        query: async ({ page }: any, formValues: Recordable<any>) => {
+          // formValues 会自动包含后端搜索参数
+          return await getRoleList({
+            page: page.currentPage,
+            pageSize: page.pageSize,
+            ...formValues, // 包含搜索关键词
+          });
+        },
+      },
+    },
+  },
+});
+```
+
+#### 工作原理
+
+1. **适配层处理**：后端搜索功能由适配层（`src/adapter/component/index.ts`）自动处理
+2. **事件转换**：Ant Design Vue Select 使用 `onSearch` 事件，适配层会自动绑定并处理
+3. **参数更新**：搜索关键词会通过 `searchFieldName` 指定的字段名传递给 API
+4. **防抖优化**：默认 300ms 防抖，用户停止输入后才会触发搜索
+5. **自动配置**：启用后端搜索后，会自动设置 `showSearch: true` 和 `filterOption: false`
+
+#### 注意事项
+
+1. **API 参数处理**：后端搜索的关键词会通过 `searchFieldName` 指定的字段名传递给 API，确保后端接口支持该参数
+2. **防抖优化**：默认 300ms 防抖，用户停止输入后才会触发搜索，可根据实际情况调整
+3. **下拉框关闭**：下拉框关闭时会自动清除搜索参数（如果搜索关键词为空），确保下次打开时显示完整数据
+4. **值清除**：当选择的值被清除时，搜索参数也会同步清除
+5. **性能优化**：适配层实现了状态缓存机制，避免重复请求相同的关键词
+
+#### 实际使用示例
+
+```typescript
+// apps/web-antd/src/views/system/operation-log/data.ts
+export function useSearchSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'ApiSelect',
+      componentProps: {
+        allowClear: true,
+        api: getUserOptions,
+        enableBackendSearch: true, // 启用后端搜索
+        params: { limit: -1 },
+        labelField: 'username',
+        resultField: 'list',
+        valueField: 'id',
+      },
+      fieldName: 'userId',
+      label: $t('system.operationLog.username'),
+    },
+  ];
+}
+```
+
+---
+
+## Ant Design Vue 使用规范
+
+### 1. 组件导入方式
+
+```vue
+<script setup lang="ts">
+// ✅ 按需导入 Ant Design Vue 组件
+import { Button, Form, Input, message, Modal } from 'ant-design-vue';
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+</script>
+
+<template>
+  <a-button type="primary">按钮</a-button>
+  <a-form :model="form" :rules="rules">
+    <a-form-item label="用户名" name="username">
+      <a-input v-model:value="form.username" />
+    </a-form-item>
+  </a-form>
+</template>
+```
+
+### 2. 表单验证规范
+
+```vue
+<script setup lang="ts">
+import { ref, reactive } from 'vue';
+import { Button, Form, Input, InputPassword } from 'ant-design-vue';
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
+interface LoginForm {
+  username: string;
+  password: string;
+  remember: boolean;
+}
+
+const formRef = ref<FormInstance>();
+const form = reactive<LoginForm>({
+  username: '',
+  password: '',
+  remember: false,
+});
+
+const rules: Record<string, Rule[]> = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于 6 位', trigger: 'blur' },
+  ],
+};
+
+const handleSubmit = async () => {
+  if (!formRef.value) return;
+  try {
+    await formRef.value.validate();
+    // 提交表单
+  } catch (error) {
+    console.error('表单验证失败:', error);
+  }
+};
+</script>
+
+<template>
+  <a-form
+    ref="formRef"
+    :model="form"
+    :rules="rules"
+    :label-col="{ span: 6 }"
+    :wrapper-col="{ span: 18 }"
+  >
+    <a-form-item label="用户名" name="username">
+      <a-input
+        v-model:value="form.username"
+        placeholder="请输入用户名"
+      />
+    </a-form-item>
+    <a-form-item label="密码" name="password">
+      <a-input-password
+        v-model:value="form.password"
+        placeholder="请输入密码"
+      />
+    </a-form-item>
+    <a-form-item :wrapper-col="{ offset: 6, span: 18 }">
+      <a-button type="primary" @click="handleSubmit">登录</a-button>
+    </a-form-item>
+  </a-form>
+</template>
+```
+
+### 3. 表格使用规范
+
+**注意**：项目优先使用 `useVbenVxeGrid` 创建表格，详见 [Vben Vxe Table 表格](#4-vben-vxe-table-表格优先使用) 部分。
+
+如果直接使用 Ant Design Vue 表格：
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { Button, Table, Tag, Pagination } from 'ant-design-vue';
+import type { ColumnsType } from 'ant-design-vue/es/table';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  status: number;
+  createTime: string;
+}
+
+const loading = ref(false);
+const tableData = ref<User[]>([]);
+const total = ref(0);
+const currentPage = ref(1);
+const pageSize = ref(10);
+
+const columns: ColumnsType<User> = [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: '用户名', dataIndex: 'username' },
+  { title: '邮箱', dataIndex: 'email' },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    width: 100,
+    customRender: ({ record }) => {
+      return (
+        <Tag color={record.status === 1 ? 'success' : 'error'}>
+          {record.status === 1 ? '启用' : '禁用'}
+        </Tag>
+      );
+    },
+  },
+  {
+    title: '操作',
+    width: 200,
+    fixed: 'right',
+    customRender: ({ record }) => {
+      return (
+        <>
+          <Button type="link" size="small">编辑</Button>
+          <Button type="link" danger size="small">删除</Button>
+        </>
+      );
+    },
+  },
+];
+
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    // API 调用
+    const response = await getUserList({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+    });
+    tableData.value = response.data;
+    total.value = response.total;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleTableChange = (page: number, size: number) => {
+  currentPage.value = page;
+  pageSize.value = size;
+  fetchData();
+};
+
+onMounted(() => {
+  fetchData();
+});
+</script>
+
+<template>
+  <div class="p-4">
+    <a-table
+      :loading="loading"
+      :columns="columns"
+      :data-source="tableData"
+      :pagination="false"
+      bordered
+      class="w-full"
+    />
+
+    <div class="mt-4 flex justify-end">
+      <a-pagination
+        v-model:current="currentPage"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-size-options="['10', '20', '50', '100']"
+        show-size-changer
+        show-total
+        @change="handleTableChange"
+      />
+    </div>
+  </div>
+</template>
+```
+
+### 4. 消息提示规范
+
+```typescript
+import { message, Modal, notification } from 'ant-design-vue';
+
+// ✅ 成功提示
+message.success('操作成功');
+
+// ✅ 错误提示
+message.error('操作失败，请重试');
+
+// ✅ 警告提示
+message.warning('该操作不可逆，请谨慎操作');
+
+// ✅ 加载提示（带 key，可手动关闭）
+const hideLoading = message.loading({
+  content: '正在删除...',
+  duration: 0,
+  key: 'delete_loading',
+});
+// 完成后关闭
+hideLoading();
+message.success({ content: '删除成功', key: 'delete_loading' });
+
+// ✅ 确认对话框
+const handleDelete = async (id: string) => {
+  Modal.confirm({
+    title: '提示',
+    content: '确定要删除该项吗？',
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await deleteUser(id);
+        message.success('删除成功');
+        fetchData();
+      } catch (error) {
+        message.error('删除失败');
+      }
+    },
+  });
+};
+
+// ✅ 通知
+notification.info({
+  message: '系统通知',
+  description: '您有新的消息',
+  duration: 3,
+});
+```
+
+### 5. 对话框使用规范
+
+**注意**：项目优先使用 `useVbenModal` 创建模态框，详见 [Vben Modal 模态框](#2-vben-modal-模态框优先使用) 部分。
+
+如果直接使用 Ant Design Vue Modal：
+
+```vue
+<script setup lang="ts">
+import { ref, reactive } from 'vue';
+import { Button, Form, Input, Modal } from 'ant-design-vue';
+import type { FormInstance } from 'ant-design-vue/es/form';
+
+const modalVisible = ref(false);
+const formRef = ref<FormInstance>();
+const form = reactive({
+  name: '',
+  email: '',
+});
+
+const handleOpen = () => {
+  modalVisible.value = true;
+};
+
+const handleClose = () => {
+  formRef.value?.resetFields();
+  modalVisible.value = false;
+};
+
+const handleSubmit = async () => {
+  if (!formRef.value) return;
+
+  try {
+    await formRef.value.validate();
+    // 提交逻辑
+    await saveData(form);
+    message.success('保存成功');
+    handleClose();
+  } catch (error) {
+    console.error('表单验证失败:', error);
+  }
+};
+</script>
+
+<template>
+  <a-button type="primary" @click="handleOpen">打开对话框</a-button>
+
+  <a-modal
+    v-model:open="modalVisible"
+    title="编辑用户"
+    width="600px"
+    :mask-closable="false"
+    @cancel="handleClose"
+  >
+    <a-form
+      ref="formRef"
+      :model="form"
+      :label-col="{ span: 6 }"
+      :wrapper-col="{ span: 18 }"
+    >
+      <a-form-item label="姓名" name="name">
+        <a-input v-model:value="form.name" />
+      </a-form-item>
+      <a-form-item label="邮箱" name="email">
+        <a-input v-model:value="form.email" />
+      </a-form-item>
+    </a-form>
+
+    <template #footer>
+      <a-button @click="handleClose">取消</a-button>
+      <a-button type="primary" @click="handleSubmit">确定</a-button>
+    </template>
+  </a-modal>
+</template>
+```
+
+### 6. 下拉选择规范
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { Select } from 'ant-design-vue';
+
+interface Option {
+  label: string;
+  value: string | number;
+}
+
+const selectedValue = ref<string | number>('');
+const options = ref<Option[]>([]);
+const loading = ref(false);
+
+const fetchOptions = async () => {
+  loading.value = true;
+  try {
+    const response = await getOptionList();
+    options.value = response.data;
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchOptions();
+});
+</script>
+
+<template>
+  <a-select
+    v-model:value="selectedValue"
+    placeholder="请选择"
+    allow-clear
+    show-search
+    :loading="loading"
+    :filter-option="(input, option) => {
+      return (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
+    }"
+    class="w-full"
+  >
+    <a-select-option
+      v-for="item in options"
+      :key="item.value"
+      :value="item.value"
+    >
+      {{ item.label }}
+    </a-select-option>
+  </a-select>
+</template>
+```
+
+### 7. 日期选择规范
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { DatePicker } from 'ant-design-vue';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+
+const dateValue = ref<Dayjs | null>(null);
+const dateRange = ref<[Dayjs, Dayjs] | null>(null);
+
+// 快捷选项
+const shortcuts = [
+  {
+    label: '今天',
+    value: () => dayjs(),
+  },
+  {
+    label: '最近一周',
+    value: () => [dayjs().subtract(7, 'day'), dayjs()],
+  },
+  {
+    label: '最近一个月',
+    value: () => [dayjs().subtract(30, 'day'), dayjs()],
+  },
+];
+</script>
+
+<template>
+  <!-- 单个日期 -->
+  <a-date-picker
+    v-model:value="dateValue"
+    placeholder="选择日期"
+    format="YYYY-MM-DD"
+    value-format="YYYY-MM-DD"
+    class="w-full"
+  />
+
+  <!-- 日期范围 -->
+  <a-range-picker
+    v-model:value="dateRange"
+    :placeholder="['开始日期', '结束日期']"
+    format="YYYY-MM-DD"
+    value-format="YYYY-MM-DD"
+    class="w-full"
+  />
+</template>
+```
+
+### 8. 树形控件规范
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { Tree } from 'ant-design-vue';
+import type { DataNode } from 'ant-design-vue/es/tree';
+
+interface TreeNode extends DataNode {
+  id: string;
+  title: string;
+  children?: TreeNode[];
+}
+
+const treeData = ref<TreeNode[]>([]);
+const checkedKeys = ref<string[]>([]);
+
+const handleNodeClick = (selectedKeys: string[], info: any) => {
+  console.log('节点点击:', selectedKeys, info);
+};
+
+const getCheckedNodes = () => {
+  // 根据 checkedKeys 从 treeData 中查找节点
+  return checkedKeys.value;
+};
+
+onMounted(async () => {
+  const response = await getTreeData();
+  treeData.value = response.data;
+});
+</script>
+
+<template>
+  <a-tree
+    v-model:checkedKeys="checkedKeys"
+    :tree-data="treeData"
+    checkable
+    :field-names="{ children: 'children', title: 'title', key: 'id' }"
+    @select="handleNodeClick"
+  />
+</template>
+```
+
+---
+
+## 状态管理规范 (Pinia)
+
+```typescript
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+
+export const useUserStore = defineStore('user', () => {
+  // State
+  const userInfo = ref<UserInfo | null>(null);
+  const token = ref<string>('');
+
+  // Getters
+  const isLoggedIn = computed(() => !!token.value);
+  const userName = computed(() => userInfo.value?.username ?? '');
+
+  // Actions
+  const setUserInfo = (info: UserInfo) => {
+    userInfo.value = info;
+  };
+
+  const logout = async () => {
+    userInfo.value = null;
+    token.value = '';
+  };
+
+  return {
+    userInfo,
+    token,
+    isLoggedIn,
+    userName,
+    setUserInfo,
+    logout,
+  };
+});
+```
+
+---
+
+## API 请求规范
+
+```typescript
+import { requestClient } from '@vben/request';
+
+// 定义响应类型
+interface ApiResponse<T> {
+  code: number;
+  data: T;
+  message: string;
+}
+
+interface UserListParams {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+}
+
+// API 函数
+export const getUserList = async (params: UserListParams) => {
+  return requestClient.get<ApiResponse<UserInfo[]>>('/api/user/list', {
+    params,
+  });
+};
+
+export const createUser = async (data: Partial<UserInfo>) => {
+  return requestClient.post<ApiResponse<UserInfo>>('/api/user/create', data);
+};
+```
+
+### API 函数优化建议
+
+#### 1. 懒加载优化
+
+对于 `ApiTreeSelect` 等需要懒加载的组件，使用动态导入：
+
+```typescript
+// ✅ 推荐：使用动态导入（避免表单显示/隐藏时的卡顿）
+{
+  component: 'ApiTreeSelect',
+  componentProps: {
+    api: () =>
+      import('#/api/system/operation-log').then(
+        (m) => m.getOperationModuleList,
+      ),
+    // ...
+  },
+}
+
+// ❌ 不推荐：直接导入（可能导致性能问题）
+import { getOperationModuleList } from '#/api/system/operation-log';
+{
+  component: 'ApiTreeSelect',
+  componentProps: {
+    api: getOperationModuleList,
+    // ...
+  },
+}
+```
+
+#### 2. 后端搜索 API 设计
+
+当使用 `ApiSelect` 的后端搜索功能时，API 需要支持搜索参数：
+
+```typescript
+// ✅ 推荐：API 支持搜索参数
+export const getUserOptions = async (params?: {
+  search?: string; // 后端搜索关键词
+  limit?: number;
+  [key: string]: any;
+}) => {
+  return requestClient.get<ApiResponse<UserInfo[]>>('/api/user/options', {
+    params: {
+      ...params,
+      // search 参数会由 ApiSelect 自动传递
+    },
+  });
+};
+
+// 使用示例
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: getUserOptions,
+    enableBackendSearch: true,
+    searchFieldName: 'search', // 默认值，可自定义
+    // ...
+  },
+}
+```
+
+**后端搜索参数说明**：
+- 搜索关键词通过 `searchFieldName` 指定的字段名传递给 API（默认为 `'search'`）
+- 当用户输入搜索关键词时，API 会收到该参数
+- 当搜索关键词为空或下拉框关闭时，参数会被清除
+
+---
+
+## 路由配置规范
+
+```typescript
+import type { RouteRecordRaw } from 'vue-router';
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/user',
+    name: 'User',
+    component: () => import('@/views/user/index.vue'),
+    meta: {
+      title: '用户管理',
+      icon: 'lucide:users',
+      order: 1,
+      // 权限控制
+      authority: ['user:view'],
+    },
+    children: [
+      {
+        path: 'list',
+        name: 'UserList',
+        component: () => import('@/views/user/list.vue'),
+        meta: {
+          title: '用户列表',
+          icon: 'lucide:list',
+        },
+      },
+    ],
+  },
+];
+
+export default routes;
+```
+
+---
+
+## 样式规范
+
+```vue
+<template>
+  <!-- ✅ 优先使用 TailwindCSS 工具类 -->
+  <div class="flex items-center justify-between px-4 py-2 bg-white rounded-lg shadow-md">
+    <span class="text-lg font-semibold text-gray-900">{{ title }}</span>
+    <button class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">
+      操作
+    </button>
+  </div>
+</template>
+
+<style scoped>
+/* 仅在必要时使用 scoped 样式 */
+.custom-component {
+  /* 自定义样式 */
+}
+</style>
+```
+
+---
+
+## 性能优化规范
+
+### 1. 组件懒加载
+```typescript
+// 路由懒加载
+const UserList = () => import('@/views/user/list.vue');
+
+// 组件懒加载
+const HeavyComponent = defineAsyncComponent(() =>
+  import('@/components/HeavyComponent.vue')
+);
+```
+
+### 2. 响应式优化
+```typescript
+import { shallowRef, shallowReactive } from 'vue';
+
+// 对于大型对象，使用 shallowRef
+const largeData = shallowRef<ComplexData[]>([]);
+
+// 对于不需要深度响应的对象
+const config = shallowReactive({
+  settings: {},
+});
+```
+
+### 3. 虚拟列表
+```vue
+<template>
+  <!-- 大数据列表使用虚拟滚动 -->
+  <VbenVirtualList
+    :data="largeDataList"
+    :item-height="50"
+    :buffer="5"
+  >
+    <template #default="{ item }">
+      <div>{{ item.name }}</div>
+    </template>
+  </VbenVirtualList>
+</template>
+```
+
+### 4. 搜索表单性能优化
+
+#### 4.1 懒加载优化
+
+对于包含 `ApiTreeSelect` 的搜索表单，使用动态导入避免卡顿：
+
+```typescript
+// ✅ 推荐：使用动态导入
+export function useSearchSchema(): VbenFormSchema[] {
+  return [
+    {
+      component: 'ApiTreeSelect',
+      componentProps: {
+        api: () =>
+          import('#/api/system/operation-log').then(
+            (m) => m.getOperationModuleList,
+          ),
+        // ...
+      },
+    },
+  ];
+}
+```
+
+#### 4.2 后端搜索优化
+
+对于选项数据量较大的 `ApiSelect`，使用后端搜索功能：
+
+```typescript
+// ✅ 推荐：启用后端搜索（适用于选项数量 > 100 的场景）
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: getUserOptions,
+    enableBackendSearch: true, // 启用后端搜索
+    searchDebounce: 300,        // 防抖延迟（默认 300ms）
+    searchFieldName: 'search',  // 搜索参数字段名（默认 'search'）
+    // ...
+  },
+}
+
+// ❌ 不推荐：一次性加载所有选项（数据量大时会导致性能问题）
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: getUserOptions,
+    params: { limit: -1 }, // 加载所有数据
+    // ...
+  },
+}
+```
+
+**后端搜索性能优势**：
+- ✅ 按需加载：只在用户输入搜索关键词时请求数据
+- ✅ 防抖优化：默认 300ms 防抖，减少 API 请求次数
+- ✅ 状态缓存：适配层实现了状态缓存，避免重复请求相同关键词
+- ✅ 自动清除：下拉框关闭时自动清除搜索参数，确保下次打开时显示完整数据
+
+---
+
+## 国际化规范
+
+```typescript
+// 定义语言包
+// locales/zh-CN/user.json
+{
+  "user": {
+    "title": "用户管理",
+    "list": "用户列表",
+    "add": "添加用户"
+  }
+}
+
+// 使用 i18n
+import { $t } from '@/locales';
+
+const title = $t('user.title');
+
+// 在模板中
+<template>
+  <div>{{ $t('user.list') }}</div>
+</template>
+```
+
+---
+
+## 权限控制规范
+
+Vue Vben Admin 的权限系统采用**多层级权限控制**设计，支持路由权限、按钮权限、角色权限和权限码权限。
+
+### 权限系统架构概览
+
+- ✅ **路由权限**：控制页面访问
+- ✅ **按钮权限**：控制按钮/组件显示
+- ✅ **角色权限**：基于角色的访问控制（RBAC）
+- ✅ **权限码权限**：基于权限码的细粒度控制
+
+### 权限系统流程图
+
+```
+用户登录
+  ↓
+获取 accessToken
+  ↓
+获取用户信息（包含 roles）
+  ↓
+获取权限码列表（accessCodes）
+  ↓
+路由守卫拦截
+  ↓
+生成可访问路由（根据 roles 或后端菜单）
+  ↓
+生成可访问菜单
+  ↓
+页面渲染
+  ↓
+组件/按钮权限检查（v-access 指令）
+```
+
+### 1. 路由权限配置
+
+在路由配置中，通过 `meta.authority` 字段控制权限：
+
+```typescript
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/system/role',
+    name: 'SystemRole',
+    meta: {
+      title: '角色管理',
+      // 需要拥有 'admin' 或 'system:role:view' 角色才能访问
+      authority: ['admin', 'system:role:view'],
+    },
+    component: () => import('#/views/system/role/list.vue'),
+  },
+];
+```
+
+### 2. 按钮权限控制
+
+#### 使用权限指令 `v-access`
+
+```vue
+<script setup lang="ts">
+// 权限指令会自动注册，无需手动导入
+</script>
+
+<template>
+  <!-- 基于角色控制 -->
+  <button v-access:role="'admin'">管理员按钮</button>
+  <button v-access:role="['admin', 'editor']">编辑按钮</button>
+
+  <!-- 基于权限码控制 -->
+  <button v-access:code="'user:add'">添加用户</button>
+  <button v-access:code="['user:add', 'user:edit']">操作按钮</button>
+</template>
+```
+
+#### 使用 AccessControl 组件
+
+```vue
+<script setup lang="ts">
+import { AccessControl } from '@vben/access';
+import { Button as AButton } from 'ant-design-vue';
+
+function handleAdd() {
+  // 新增逻辑
+}
+
+function handleDelete() {
+  // 删除逻辑
+}
+
+function handleEdit() {
+  // 编辑逻辑
+}
+</script>
+
+<template>
+  <div>
+    <!-- 使用指令 -->
+    <a-button
+      v-access:code="'system:role:add'"
+      type="primary"
+      @click="handleAdd"
+    >
+      新增角色
+    </a-button>
+
+    <a-button
+      v-access:role="'admin'"
+      danger
+      @click="handleDelete"
+    >
+      删除
+    </a-button>
+
+    <!-- 使用组件 -->
+    <AccessControl :codes="['system:role:edit']" type="code">
+      <a-button @click="handleEdit">编辑</a-button>
+    </AccessControl>
+  </div>
+</template>
+```
+
+### 3. 编程式权限判断
+
+```vue
+<script setup lang="ts">
+import { message } from 'ant-design-vue';
+import { useAccess } from '@vben/access';
+
+const { hasAccessByCodes, hasAccessByRoles } = useAccess();
+
+// 判断是否有权限
+const canAdd = hasAccessByCodes(['system:role:add']);
+const isAdmin = hasAccessByRoles(['admin']);
+
+function handleAction() {
+  if (!canAdd) {
+    message.warning('您没有添加权限');
+    return;
+  }
+  // 执行操作
+}
+</script>
+```
+
+### 4. 权限系统核心流程
+
+```
+用户登录
+  ↓
+获取 accessToken
+  ↓
+获取用户信息（包含 roles）
+  ↓
+获取权限码列表（accessCodes）
+  ↓
+路由守卫拦截
+  ↓
+生成可访问路由（根据 roles 或后端菜单）
+  ↓
+生成可访问菜单
+  ↓
+页面渲染
+  ↓
+组件/按钮权限检查（v-access 指令）
+```
+
+### 5. 权限 Store 使用
+
+#### `useAccessStore` - 权限状态管理
+- `accessToken`: 登录令牌
+- `accessCodes`: 权限码列表
+- `accessMenus`: 可访问菜单
+- `accessRoutes`: 可访问路由
+- `isAccessChecked`: 是否已检查权限
+
+#### `useUserStore` - 用户信息管理
+- `userInfo`: 用户信息
+- `userRoles`: 用户角色列表
+
+#### `useAccess()` - 权限判断工具
+```typescript
+import { useAccess } from '@vben/access';
+
+const {
+  accessMode,          // 权限模式
+  hasAccessByCodes,   // 基于权限码判断
+  hasAccessByRoles,    // 基于角色判断
+  toggleAccessMode,    // 切换权限模式
+} = useAccess();
+```
+
+### 6. 权限模式配置
+
+#### 前端模式（`accessMode: 'frontend'`）
+- 路由配置在前端定义
+- 根据用户角色过滤路由
+- 菜单根据路由自动生成
+
+#### 后端模式（`accessMode: 'backend'`）
+- 路由/菜单从后端获取
+- 后端返回的菜单即为可访问的路由
+- 更灵活，权限完全由后端控制
+
+详细权限系统设计请参考：`.cursor/rules/access-system.mdc`
+
+---
+
+## 项目结构规范
+
+### web-antd 项目结构
+
+```
+apps/web-antd/
+├── src/                       # 源代码目录
+│   ├── adapter/              # 适配器目录
+│   │   ├── component.ts     # 组件适配器（Ant Design Vue → Vben）
+│   │   └── form.ts          # 表单适配器配置
+│   ├── api/                  # API 接口定义
+│   ├── views/                # 页面组件
+│   ├── router/               # 路由配置
+│   ├── store/                # Pinia Store
+│   ├── locales/              # 国际化
+│   ├── layouts/              # 布局组件
+│   ├── bootstrap.ts          # 应用启动
+│   ├── app.vue               # 根组件
+│   └── main.ts               # 入口文件
+├── package.json              # 项目配置
+├── vite.config.mts           # Vite 配置
+└── tsconfig.json             # TypeScript 配置
+```
+
+### Monorepo 整体结构
+
+```
+vue-vben-admin/
+├── apps/                      # 应用目录
+│   ├── web-ele/              # Element Plus 版本
+│   ├── web-antd/             # **Ant Design Vue 版本（当前项目）**
+│   ├── web-naive/            # Naive UI 版本
+│   └── backend-mock/         # Mock API 服务
+├── packages/                  # 共享包
+│   ├── @core/                # 核心 UI 组件
+│   │   ├── base/             # 基础功能
+│   │   ├── ui-kit/           # UI 组件库
+│   │   └── composables/      # 组合式函数
+│   ├── effects/              # 业务效果包
+│   │   ├── access/           # 权限控制
+│   │   ├── layouts/          # 布局组件
+│   │   ├── request/          # 请求封装
+│   │   └── common-ui/         # 通用 UI
+│   ├── stores/               # Pinia stores
+│   ├── locales/              # 国际化
+│   ├── utils/                # 工具函数
+│   └── types/                # 类型定义
+└── internal/                  # 内部工具
+    ├── vite-config/          # Vite 配置
+    ├── lint-configs/         # Lint 配置
+    └── tsconfig/             # TS 配置
+```
+
+### 文件组织规范
+
+```typescript
+// 每个模块的 index.ts 应明确导出
+export { useUserStore } from './user';
+export { useAppStore } from './app';
+export type { UserInfo, UserState } from './types';
+```
+
+---
+
+## Git 提交规范
+
+提交格式: `<type>: <subject>`
+
+### Type 类型
+- `feat`: 新功能
+- `fix`: 修复 Bug
+- `docs`: 文档更新
+- `style`: 代码格式调整（不影响功能）
+- `refactor`: 代码重构
+- `perf`: 性能优化
+- `test`: 测试相关
+- `build`: 构建系统或依赖更新
+- `ci`: CI/CD 配置修改
+- `chore`: 其他杂项修改
+
+### 提交示例
+```bash
+feat: 添加用户批量导入功能
+fix: 修复登录状态丢失问题
+refactor: 重构用户列表查询逻辑
+perf: 优化表格渲染性能
+docs: 更新 API 文档
+```
+
+### 提交原则
+- 一次提交只做一件事
+- Subject 不超过 50 字
+- 使用中文描述
+- 描述清晰、简洁
+
+---
+
+## Bug 修复规范
+
+1. **定位根因**: 深入分析问题本质，不做表面修复
+2. **最小改动**: 仅修改有问题的代码，避免牵连无关逻辑
+3. **添加注释**: 说明修复原因和问题根源
+4. **类型安全**: 确保修复后的代码类型正确
+
+```typescript
+// ❌ 错误：直接屏蔽错误
+// @ts-ignore
+const result = dangerousFunction();
+
+// ✅ 正确：修复类型问题
+const result = dangerousFunction() as ExpectedType;
+// 或者修改函数签名使其返回正确类型
+```
+
+---
+
+## 最佳实践
+
+### 1. 组件设计
+- 单一职责：每个组件只负责一个功能
+- 可复用性：提取通用逻辑到 composables
+- Props 验证：使用 TypeScript 接口定义 props
+- 事件命名：使用明确的动词命名（如 `onUpdate`, `onSubmit`）
+
+### 2. 状态管理
+- 局部状态：使用 `ref`/`reactive`
+- 全局状态：使用 Pinia store
+- 持久化：使用 `@vben/preferences` 存储用户偏好
+
+### 3. 错误处理
+```typescript
+import { message } from '@vben/common-ui';
+
+try {
+  await apiCall();
+  message.success('操作成功');
+} catch (error) {
+  console.error('操作失败:', error);
+  message.error(error.message || '操作失败，请重试');
+}
+```
+
+### 4. 代码复用
+```typescript
+// composables/useTable.ts
+export const useTable = <T>(fetchFn: (params: any) => Promise<T[]>) => {
+  const loading = ref(false);
+  const data = ref<T[]>([]);
+  const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  const fetchData = async () => {
+    loading.value = true;
+    try {
+      const result = await fetchFn({
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+      });
+      data.value = result;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  return {
+    loading,
+    data,
+    pagination,
+    fetchData,
+  };
+};
+```
+
+---
+
+## 禁止事项
+
+- ❌ 禁止使用 `any` 类型（除非有充分理由）
+- ❌ 禁止使用 Options API
+- ❌ 禁止直接修改 props
+- ❌ 禁止在 computed 中产生副作用
+- ❌ 禁止使用 `var` 声明变量
+- ❌ 禁止提交 console.log（生产环境）
+- ❌ 禁止使用内联样式（除非必要）
+- ❌ 禁止绕过 ESLint 规则（除非有充分理由并添加注释）
+
+---
+
+## 开发流程
+
+1. **需求分析**: 明确需求和实现方案
+2. **技术设计**: 考虑类型定义、组件结构、状态管理
+3. **编码实现**: 遵循规范，编写完整可运行的代码
+4. **自测验证**: 测试功能、检查类型、运行 lint
+5. **代码审查**: 确保代码质量和规范性
+6. **提交代码**: 使用规范的 commit message
+
+---
+
+## web-antd 项目常用命令
+
+在 `apps/web-antd` 目录下执行：
+
+```bash
+# 安装依赖（在项目根目录执行）
+pnpm install
+
+# 启动开发服务器
+pnpm dev
+
+# 构建生产版本
+pnpm build
+
+# 构建并分析打包体积
+pnpm build:analyze
+
+# 预览生产构建
+pnpm preview
+
+# TypeScript 类型检查
+pnpm typecheck
+```
+
+**注意**：所有命令需要在项目根目录执行，pnpm workspace 会自动识别并执行对应应用。
+
+---
+
+## 问题排查
+
+### 常见问题
+1. **类型错误**: 检查导入路径和类型定义，确认 `#/*` 路径别名配置
+2. **路径别名**: 确认 `apps/web-antd/tsconfig.json` 中的 `paths` 配置
+3. **依赖问题**: 使用 `pnpm install --force` 重新安装
+4. **构建失败**: 检查 TypeScript 错误和 ESLint 警告
+5. **组件导入错误**: 确认从 `ant-design-vue` 正确导入组件
+6. **表单绑定问题**: 确认使用 `v-model:value`（Ant Design Vue 默认）
+
+### 调试技巧
+```typescript
+// 使用 Vue Devtools
+// 使用 vite-plugin-inspect 检查构建
+// 使用 Performance API 分析性能
+// 检查 adapter/component.ts 中的组件注册
+// 检查 adapter/form.ts 中的表单配置
+```
+
+---
+
+## 官方文档参考
+
+在开发过程中，如果遇到问题或需要了解详细功能，请优先参考 `docs/src/guide/` 目录下的官方文档：
+
+### 基础指南 (essentials/)
+- `concept.md` - 核心概念
+- `development.md` - 开发指南
+- `route.md` - 路由配置
+- `settings.md` - 配置说明
+- `styles.md` - 样式方案
+- `icons.md` - 图标使用
+- `build.md` - 构建部署
+- `server.md` - 服务端交互
+- `external-module.md` - 外部模块
+
+### 深入理解 (in-depth/)
+- `access.md` - **权限控制**（按钮权限、路由权限）
+- `theme.md` - 主题配置
+- `layout.md` - 布局系统
+- `locale.md` - 国际化
+- `login.md` - 登录认证
+- `loading.md` - 加载状态
+- `features.md` - 功能特性
+- `ui-framework.md` - UI 框架适配
+- `check-updates.md` - 版本更新
+
+### 项目配置 (project/)
+- `dir.md` - 目录结构
+- `standard.md` - 开发规范
+- `cli.md` - 命令行工具
+- `vite.md` - Vite 配置
+- `tailwindcss.md` - TailwindCSS 配置
+- `changeset.md` - 变更日志
+- `test.md` - 测试指南
+
+### 其他 (other/)
+- `faq.md` - 常见问题
+- `project-update.md` - 项目升级
+- `remove-code.md` - 代码清理
+
+### 使用建议
+
+1. **遇到权限控制问题** → 查看 `in-depth/access.md`
+2. **需要配置路由** → 查看 `essentials/route.md`
+3. **样式相关问题** → 查看 `essentials/styles.md` 和 `project/tailwindcss.md`
+4. **构建部署问题** → 查看 `essentials/build.md` 和 `project/vite.md`
+5. **国际化配置** → 查看 `in-depth/locale.md`
+6. **主题定制** → 查看 `in-depth/theme.md`
+7. **常见问题** → 查看 `other/faq.md`
+
+---
+
+## 总结
+
+- 始终保持类型安全
+- 遵循 Vue 3 最佳实践
+- 保持代码简洁、可维护
+- 注重性能和用户体验
+- 及时更新技术栈
+- **遇到问题优先查阅官方文档**
