@@ -1,0 +1,4 @@
+#!/bin/bash
+# 安装脚本（Unix/macOS/Linux）
+# 统一入口
+node scripts/cli.js install "$@"

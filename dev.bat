@@ -1,0 +1,4 @@
+@echo off
+REM 启动脚本（Windows）
+REM 统一入口：自动判断交互式或命令行模式
+node scripts/cli.js dev %*

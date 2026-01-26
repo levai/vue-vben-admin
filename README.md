@@ -32,21 +32,24 @@ vue-vben-admin/
 ### 1. 安装依赖
 
 ```bash
-# 方式一：使用 npm 脚本（推荐）
-npm run install
+# 方式一：使用包装脚本（推荐）
+./install                    # 安装所有依赖
+./install --frontend-only    # 仅安装前端依赖
+# Windows: install.bat [options]
 
-# 方式二：直接使用 bash 脚本
-bash scripts/install.sh
+# 方式二：使用统一入口
+node scripts/cli.js install              # 安装所有依赖
+node scripts/cli.js install --frontend-only  # 仅前端
 
-# 仅安装前端依赖
-npm run install:frontend
-# 或
-bash scripts/install.sh --frontend-only
+# 方式三：直接运行脚本
+node scripts/install.js
+node scripts/install.js --frontend-only
 ```
 
 **注意**：
+- 安装脚本使用 Node.js 编写，支持 Windows/macOS/Linux
 - 根目录不使用 pnpm 管理依赖，所有依赖管理都在 `frontend` 目录进行
-- 后端依赖由 Maven 管理，无需单独安装
+- 后端依赖由 Maven 管理，会自动检测并安装（如果已安装 Maven）
 - 安装脚本会自动检测环境并安装相应依赖
 
 ### 2. 数据库初始化
@@ -60,29 +63,46 @@ cd backend
 
 ### 3. 启动项目
 
-#### 一键启动（推荐）
+#### 统一入口（推荐）✨
 
 ```bash
-# 同时启动前后端（跨平台支持 Windows/macOS/Linux）
-pnpm dev
+# 方式一：使用包装脚本（推荐）
+./dev                    # 交互式启动
+./dev all                # 启动全部（前端 + 后端）
+./dev frontend           # 仅启动前端
+./dev backend            # 仅启动后端
+./dev ele                # Element Plus 版本
+./dev docs               # 文档站点
+
+# Windows: dev.bat [mode]
+
+# 方式二：使用统一入口
+node scripts/cli.js dev              # 交互式启动
+node scripts/cli.js dev all          # 启动全部
+node scripts/cli.js dev frontend     # 仅前端
+node scripts/cli.js dev backend      # 仅后端
+node scripts/cli.js dev ele          # Element Plus
+node scripts/cli.js dev docs         # 文档站点
 ```
 
-#### 分别启动
+**交互式菜单选项**（无参数时）：
+- `1` - 启动全部（前端 + 后端）
+- `2` - 仅启动前端
+- `3` - 仅启动后端
+- `4` - 启动前端（Element Plus 版本）
+- `5` - 启动文档站点
+- `0` - 退出
 
-```bash
-# 仅启动前端
-pnpm run dev:frontend
-
-# 仅启动后端
-pnpm run dev:backend
-
-# 启动前端（Ant Design Vue 版本，直接进入前端目录）
-pnpm run dev:antd
-```
+**提示**：
+- 所有启动脚本都支持跨平台（Windows/macOS/Linux）
+- 使用 `Ctrl+C` 停止所有服务
+- Unix/macOS/Linux 系统可以直接使用 `./dev` 和 `./install`
+- Windows 系统可以使用 `dev.bat` 和 `install.bat`
 
 ### 4. 访问应用
 
-- **前端**: http://localhost:5173
+- **前端 (Ant Design Vue)**: http://localhost:5666
+- **前端 (Element Plus)**: http://localhost:5777
 - **后端 API**: http://localhost:8080
 - **API 文档**: http://localhost:8080/doc.html
 
@@ -112,29 +132,32 @@ pnpm run dev:antd
 
 ```bash
 # 启动开发服务器
-pnpm dev                    # 一键启动前后端（推荐）
-pnpm run dev:frontend       # 仅启动前端
-pnpm run dev:backend        # 仅启动后端
-pnpm run dev:antd          # 启动 Ant Design Vue 版本
+./dev [mode]                # 统一入口（推荐）
+# Windows: dev.bat [mode]
+
+node scripts/cli.js dev [mode]     # 统一入口
+# 模式: (无参数=交互式), all, frontend, backend, ele, docs
 ```
 
 ### 构建命令
 
 ```bash
-# 构建项目
-pnpm build                  # 构建前端（Ant Design Vue）
-pnpm run build:frontend     # 构建所有前端应用
+# 构建项目（需要进入 frontend 目录）
+cd frontend
+pnpm build:antd             # 构建前端（Ant Design Vue）
+pnpm build                  # 构建所有前端应用
 ```
 
 ### 代码质量
 
 ```bash
-# 代码检查
+# 代码检查（需要进入 frontend 目录）
+cd frontend
 pnpm lint                   # ESLint 检查
 pnpm format                 # 格式化代码
 
 # 清理
-pnpm clean                  # 清理构建产物
+cd frontend && pnpm clean && cd ../backend && mvn clean
 ```
 
 ## 🏗️ 技术栈
