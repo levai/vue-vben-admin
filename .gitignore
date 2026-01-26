@@ -14,7 +14,6 @@ Thumbs.db
 
 # IDE 配置
 .idea/
-.vscode/
 *.iml
 *.ipr
 *.iws
