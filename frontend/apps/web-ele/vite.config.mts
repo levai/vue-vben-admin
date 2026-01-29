@@ -11,8 +11,8 @@ export default defineConfig(async (config) => {
 
   const env = loadEnv(config?.mode || 'development', process.cwd(), '');
 
-  // 代理目标地址，可通过环境变量 VITE_API_PROXY 配置，默认为 http://localhost:5320/api
-  const apiProxy = env.VITE_API_PROXY || 'http://localhost:5320/api';
+  // 代理目标地址，可通过环境变量 VITE_API_PROXY 配置，默认为 http://127.0.0.1:5320/api
+  const apiProxy = env.VITE_API_PROXY || 'http://127.0.0.1:5320/api';
   console.log('[ apiProxy ]-14', apiProxy);
 
   return {
