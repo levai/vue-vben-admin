@@ -71,7 +71,7 @@ description: 基于 Vue Vben Admin (web-antd) 的前端开发规范与模式。�
 
 ## 表单与表格细节
 
-- **Vben 表单**：Schema 中 `component: 'ApiSelect'` 需后端搜索时加 `enableBackendSearch: true`；`ApiTreeSelect` 的 api 用动态 import 避免卡顿：`api: () => import('#/api/...').then(m => m.getXxxList)`
+- **Vben 表单**：Schema 中 `component: 'ApiSelect'` 需后端搜索时加 `enableBackendSearch: true`；**ApiSelect 的 api** 必须为「(params?) => Promise<数据>」，直接传方法引用如 `api: getUserOptions`，禁止 `api: () => import(...).then(m => m.getUserOptions)`（会致下拉无数据）；ApiTreeSelect 懒加载时用 `api: (params) => import('#/api/...').then(m => m.getXxxList(params))`。
 - **Ant Design Vue**：绑定用 `v-model:value`（Checkbox/Radio/Switch 等用适配器约定字段）
 - **国际化**：文案用 `$t('key')`，来自 `#/locales`
 

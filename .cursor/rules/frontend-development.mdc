@@ -576,6 +576,21 @@ setupVbenForm<ComponentType>({
 
 `ApiSelect` 组件支持后端搜索功能，当选项数据量较大时，可以通过后端搜索实现按需加载，提升性能和用户体验。
 
+#### api 入参约定（重要）
+
+组件内部会执行 **`api(params)`** 并期望得到「请求结果的 Promise」（如 `Promise<{ list, total }>`）。
+
+- **✅ 正确**：直接传入请求函数引用，组件会对其传参并拿到数据。
+  ```typescript
+  import { getUserOptions } from '#/api/system/user';
+  componentProps: { api: getUserOptions, resultField: 'list', ... }
+  ```
+- **✅ 正确**（懒加载时）：传入「接收 params 并返回数据 Promise」的函数。
+  ```typescript
+  api: (params) => import('#/api/system/user').then((m) => m.getUserOptions(params))
+  ```
+- **❌ 错误**：`api: () => import(...).then((m) => m.getUserOptions)` 会得到「函数」的 Promise，组件从返回值取 `resultField` 时为空，**下拉无数据**。
+
 #### 基础用法
 
 ```typescript
@@ -657,11 +672,13 @@ const [Grid, gridApi] = useVbenVxeGrid<SystemRoleApi.SystemRole>({
 
 #### 注意事项
 
-1. **API 参数处理**：后端搜索的关键词会通过 `searchFieldName` 指定的字段名传递给 API，确保后端接口支持该参数
-2. **防抖优化**：默认 300ms 防抖，用户停止输入后才会触发搜索，可根据实际情况调整
-3. **下拉框关闭**：下拉框关闭时会自动清除搜索参数（如果搜索关键词为空），确保下次打开时显示完整数据
-4. **值清除**：当选择的值被清除时，搜索参数也会同步清除
-5. **性能优化**：适配层实现了状态缓存机制，避免重复请求相同的关键词
+1. **api 必须返回数据**：`api` 须为「(params?) => Promise<数据>」形式，勿用「() => Promise<函数>」，否则下拉无数据（见上文「api 入参约定」）。
+2. **API 参数处理**：后端搜索的关键词会通过 `searchFieldName` 指定的字段名传递给 API，确保后端接口支持该参数
+3. **防抖优化**：默认 300ms 防抖，用户停止输入后才会触发搜索，可根据实际情况调整
+4. **下拉框关闭**：下拉框关闭时会自动清除搜索参数（如果搜索关键词为空），确保下次打开时显示完整数据
+5. **值清除**：当选择的值被清除时，搜索参数也会同步清除
+6. **性能优化**：适配层实现了状态缓存机制，避免重复请求相同的关键词
+7. **ApiTreeSelect**：若需懒加载，可用 `api: (params) => import('#/api/...').then((m) => m.getXxxList(params))`，保证传入的是「返回数据 Promise」的函数
 
 #### 实际使用示例
 

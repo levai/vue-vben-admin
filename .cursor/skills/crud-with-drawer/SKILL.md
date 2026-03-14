@@ -37,7 +37,8 @@ description: 根据项目前端规范生成完整 CRUD 功能（列表、搜索�
 ## 4. data.ts（`src/views/system/xxx/data.ts`）
 
 - **useFormSchema(isEdit)**：返回 `VbenFormSchema[]`，用于抽屉内表单；编辑时可为密码等字段设可选或占位提示。
-- **useGridFormSchema()**：返回搜索区表单项（Input、Select、ApiTreeSelect、RangePicker 等），fieldName 与接口查询参数一致。
+- **useGridFormSchema()**：返回搜索区表单项（Input、Select、ApiSelect、ApiTreeSelect、RangePicker 等），fieldName 与接口查询参数一致。
+- **ApiSelect 的 api**：必须直接传入请求函数（如 `import { getUserOptions } from '#/api/system/user';` 后 `api: getUserOptions`），勿用 `api: () => import(...).then(m => m.getUserOptions)`，否则组件拿到的是“函数”而非数据，下拉会无数据。
 - **useColumns(onActionClick, 其它?)**
   - `usePermissions(SYSTEM_PERMISSION_CODES.XXX)`，定义 `operationButtons`: `[{ code, text: $t('...'), hasAccess: hasPermission.EDIT }, ...]`。
   - 用 `.filter(btn => btn.hasAccess?.() ?? true).map(({ hasAccess, ...rest }) => rest)` 得到 `filteredOperations`。
@@ -65,7 +66,7 @@ description: 根据项目前端规范生成完整 CRUD 功能（列表、搜索�
 - [ ] API 使用 requestClient，类型为命名空间导出，方法命名 getXxxList/createXxx/updateXxx/deleteXxx
 - [ ] 新资源在 permission-codes 中增加 VIEW/ADD/EDIT/DELETE，列表按钮 v-access:code，表格操作 usePermissions 过滤
 - [ ] list.vue：Page + useVbenDrawer(connectedComponent) + useVbenVxeGrid（formOptions + proxyConfig + useColumns）
-- [ ] data.ts：useFormSchema、useGridFormSchema、useColumns 含权限过滤后的 operationButtons
+- [ ] data.ts：useFormSchema、useGridFormSchema、useColumns 含权限过滤后的 operationButtons；**ApiSelect 的 api 用直接引用**（如 `api: getUserOptions`），勿用 `() => import().then(m => m.getUserOptions)`
 - [ ] modules/form.vue：useVbenForm + useVbenDrawer onConfirm/onOpenChange，提交后 emit('success') 并 close
 - [ ] 所有文案 $t()，路径别名 #/
 
