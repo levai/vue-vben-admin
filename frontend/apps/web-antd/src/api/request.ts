@@ -19,7 +19,7 @@ import JSONBigInt from 'json-bigint';
 
 import { useAuthStore } from '#/store';
 
-import { refreshTokenApi } from './core';
+import { getAccessCodesApi, refreshTokenApi } from './core';
 
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
 
@@ -63,13 +63,20 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   }
 
   /**
-   * 刷新token逻辑
+   * 刷新 token 逻辑
+   * 刷新成功后同步拉取最新权限码，与业界常见做法一致（权限随 token 生命周期更新）
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
     const resp = await refreshTokenApi();
     const newToken = resp;
     accessStore.setAccessToken(newToken);
+    try {
+      const codes = await getAccessCodesApi();
+      accessStore.setAccessCodes(codes);
+    } catch {
+      // 权限拉取失败不阻断登录态，后续请求仍会带新 token
+    }
     return newToken;
   }
 
