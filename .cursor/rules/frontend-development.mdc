@@ -4,7 +4,7 @@ alwaysApply: true
 
 # Web-Antd 前端开发规范
 
-> 本文档是 **`apps/web-antd`** 项目的专用前端开发规范，基于 Ant Design Vue 框架。
+> 本文档是 **`frontend/apps/web-antd`** 项目的专用前端开发规范，基于 Ant Design Vue 框架。
 
 ## 📋 目录
 
@@ -23,11 +23,19 @@ alwaysApply: true
 13. [Git 提交规范](#git-提交规范)
 14. [最佳实践](#最佳实践)
 
+### 速查（详见下文）
+
+- **路径**：frontend/apps/web-antd，别名 `#/*` → src/*
+- **组件**：Vben 优先（useVbenForm、useVbenModal、useVbenDrawer、useVbenVxeGrid）→ Ant Design Vue
+- **API**：仅用 `requestClient`（#/api/request），类型命名空间导出，见 [API 请求规范](#api-请求规范) 与 `.cursor/rules/api-rules.mdc`
+- **权限**：权限码 `src/constants/permission-codes.ts`，格式 `ac:module:resource:action`；按钮 `v-access:code`，表格 `usePermissions`，见 [权限控制规范](#权限控制规范) 与 `.cursor/rules/access-system.mdc`
+- **CRUD**：列表+搜索+抽屉+删除见 `.cursor/skills/crud-with-drawer`
+
 ---
 
 ## 项目概述
 
-- **项目名称**: `@vben/web-antd` (apps/web-antd)
+- **项目名称**: `@vben/web-antd` (frontend/apps/web-antd)
 - **项目类型**: Vue Vben Admin 5.x - Ant Design Vue 版本
 - **架构**: Monorepo (pnpm workspace + Turbo)
 - **核心技术栈**:
@@ -40,14 +48,14 @@ alwaysApply: true
 - **样式方案**: TailwindCSS + PostCSS
 - **包管理**: pnpm 10+ (必须使用 pnpm)
 - **路径别名**: `#/*` 指向 `./src/*`
-- **官方文档**: 遇到问题或需要了解详细功能时，可参考 `docs/src/guide/` 目录下的官方文档
+- **官方文档**: 遇到问题或需要了解详细功能时，可参考 `frontend/docs/src/guide/` 目录下的官方文档
 
 ### 项目特点
 
 - ✅ 使用 **Ant Design Vue** 作为 UI 组件库
 - ✅ 使用 **Vben 组件系统** 作为统一组件抽象层
 - ✅ 支持 Ant Design Vue 的 `v-model:value` 绑定方式
-- ✅ 组件适配器位于 `src/adapter/component.ts`
+- ✅ 组件适配器位于 `src/adapter/component/`（入口为 index.ts）
 - ✅ 表单适配器位于 `src/adapter/form.ts`，配置了 Ant Design Vue 特定的模型属性映射
 
 ---
@@ -527,13 +535,13 @@ import {
 
 ### Vben 组件适配器
 
-**web-antd 项目**的组件适配器位于 `src/adapter/component.ts`，将 Ant Design Vue 组件注册到 Vben 组件系统：
+**web-antd 项目**的组件适配器位于 `src/adapter/component/`（入口 `index.ts`），将 Ant Design Vue 组件注册到 Vben 组件系统：
 
 ```typescript
 import { globalShareState } from '@vben/common-ui';
 import { Input, Select, Button } from 'ant-design-vue';
 
-// 注册组件（已在 adapter/component.ts 中完成）
+// 注册组件（已在 adapter/component/index.ts 中完成）
 globalShareState.setComponents({
   Input,
   Select,
@@ -616,7 +624,7 @@ setupVbenForm<ComponentType>({
 #### 在 VxeTable Grid 中使用
 
 ```typescript
-// apps/web-antd/src/views/system/role/list.vue
+// frontend/apps/web-antd/src/views/system/role/list.vue
 const [Grid, gridApi] = useVbenVxeGrid<SystemRoleApi.SystemRole>({
   formOptions: {
     schema: useGridFormSchema(), // 包含 enableBackendSearch 的 ApiSelect
@@ -658,7 +666,7 @@ const [Grid, gridApi] = useVbenVxeGrid<SystemRoleApi.SystemRole>({
 #### 实际使用示例
 
 ```typescript
-// apps/web-antd/src/views/system/operation-log/data.ts
+// frontend/apps/web-antd/src/views/system/operation-log/data.ts
 export function useSearchSchema(): VbenFormSchema[] {
   return [
     {
@@ -1689,7 +1697,7 @@ const {
 ### web-antd 项目结构
 
 ```
-apps/web-antd/
+frontend/apps/web-antd/
 ├── src/                       # 源代码目录
 │   ├── adapter/              # 适配器目录
 │   │   ├── component.ts     # 组件适配器（Ant Design Vue → Vben）
@@ -1708,33 +1716,25 @@ apps/web-antd/
 └── tsconfig.json             # TypeScript 配置
 ```
 
-### Monorepo 整体结构
+### Monorepo 整体结构（前端）
+
+以下为仓库根下的 `frontend/` 目录结构，与当前项目一致：
 
 ```
-vue-vben-admin/
+frontend/
 ├── apps/                      # 应用目录
+│   ├── web-antd/             # **Ant Design Vue 版本（主应用）**
 │   ├── web-ele/              # Element Plus 版本
-│   ├── web-antd/             # **Ant Design Vue 版本（当前项目）**
 │   ├── web-naive/            # Naive UI 版本
 │   └── backend-mock/         # Mock API 服务
 ├── packages/                  # 共享包
 │   ├── @core/                # 核心 UI 组件
-│   │   ├── base/             # 基础功能
-│   │   ├── ui-kit/           # UI 组件库
-│   │   └── composables/      # 组合式函数
-│   ├── effects/              # 业务效果包
-│   │   ├── access/           # 权限控制
-│   │   ├── layouts/          # 布局组件
-│   │   ├── request/          # 请求封装
-│   │   └── common-ui/         # 通用 UI
+│   ├── effects/              # 业务效果包（access、layouts、request、common-ui）
 │   ├── stores/               # Pinia stores
 │   ├── locales/              # 国际化
 │   ├── utils/                # 工具函数
 │   └── types/                # 类型定义
-└── internal/                  # 内部工具
-    ├── vite-config/          # Vite 配置
-    ├── lint-configs/         # Lint 配置
-    └── tsconfig/             # TS 配置
+└── internal/                  # 内部工具（vite-config、lint-configs、tsconfig）
 ```
 
 ### 文件组织规范
@@ -1888,7 +1888,7 @@ export const useTable = <T>(fetchFn: (params: any) => Promise<T[]>) => {
 
 ## web-antd 项目常用命令
 
-在 `apps/web-antd` 目录下执行：
+在 `frontend/apps/web-antd` 目录下执行：
 
 ```bash
 # 安装依赖（在项目根目录执行）
@@ -1918,7 +1918,7 @@ pnpm typecheck
 
 ### 常见问题
 1. **类型错误**: 检查导入路径和类型定义，确认 `#/*` 路径别名配置
-2. **路径别名**: 确认 `apps/web-antd/tsconfig.json` 中的 `paths` 配置
+2. **路径别名**: 确认 `frontend/apps/web-antd/tsconfig.json` 中的 `paths` 配置
 3. **依赖问题**: 使用 `pnpm install --force` 重新安装
 4. **构建失败**: 检查 TypeScript 错误和 ESLint 警告
 5. **组件导入错误**: 确认从 `ant-design-vue` 正确导入组件
@@ -1929,7 +1929,7 @@ pnpm typecheck
 // 使用 Vue Devtools
 // 使用 vite-plugin-inspect 检查构建
 // 使用 Performance API 分析性能
-// 检查 adapter/component.ts 中的组件注册
+// 检查 adapter/component/index.ts 中的组件注册
 // 检查 adapter/form.ts 中的表单配置
 ```
 
@@ -1937,7 +1937,7 @@ pnpm typecheck
 
 ## 官方文档参考
 
-在开发过程中，如果遇到问题或需要了解详细功能，请优先参考 `docs/src/guide/` 目录下的官方文档：
+在开发过程中，如果遇到问题或需要了解详细功能，请优先参考 `frontend/docs/src/guide/` 目录下的官方文档：
 
 ### 基础指南 (essentials/)
 - `concept.md` - 核心概念

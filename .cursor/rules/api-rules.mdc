@@ -7,7 +7,7 @@ globs:
 
 # API 客户端开发规范
 
-> 本文档是 Vue Vben Admin 项目的 API 客户端开发规范，基于 `@vben/request` 包。
+> 适用于 **frontend/apps/web-antd** 的 API 层（`src/api/`），基于 `@vben/request`。路径以仓库根为基准。
 
 ## 📋 目录
 
@@ -42,7 +42,7 @@ globs:
 项目提供两个客户端实例：
 
 ```typescript
-// apps/web-antd/src/api/request.ts
+// frontend/apps/web-antd/src/api/request.ts
 import { RequestClient } from '@vben/request';
 
 // 标准客户端（带完整拦截器）
@@ -69,7 +69,7 @@ export const baseRequestClient = new RequestClient({
 ### 标准 API 函数结构
 
 ```typescript
-// apps/web-antd/src/api/system/user.ts
+// frontend/apps/web-antd/src/api/system/user.ts
 import { requestClient } from '#/api/request';
 
 // 1. 定义命名空间和类型
@@ -171,7 +171,7 @@ export interface User {
 请求拦截器会自动添加以下请求头：
 
 ```typescript
-// apps/web-antd/src/api/request.ts
+// frontend/apps/web-antd/src/api/request.ts
 client.addRequestInterceptor({
   fulfilled: async (config) => {
     const accessStore = useAccessStore();
@@ -458,7 +458,7 @@ async function updateUser(
 ### 完整 API 文件示例
 
 ```typescript
-// apps/web-antd/src/api/system/user.ts
+// frontend/apps/web-antd/src/api/system/user.ts
 import type { Recordable } from '@vben/types';
 
 import { requestClient } from '#/api/request';
@@ -620,7 +620,7 @@ onMounted(() => {
 ### 特殊场景：刷新 Token
 
 ```typescript
-// apps/web-antd/src/api/core/auth.ts
+// frontend/apps/web-antd/src/api/core/auth.ts
 import { baseRequestClient } from '#/api/request';
 
 /**

@@ -14,7 +14,7 @@ description: 在 Vben Admin 中添加新路由和菜单项的标准流程。
 ## 工作流步骤
 
 1.  **创建路由配置文件**:
-    - 在 `router/routes/modules/` 下创建新的路由模块文件（如 `product.ts`）。
+    - 在 **`src/router/routes/modules/`**（即 `frontend/apps/web-antd/src/router/routes/modules/`）下创建新的路由模块文件（如 `product.ts`）。
     - 定义路由的 `path`, `name`, `component`, 和 `meta` 信息。
 2.  **配置菜单元信息 (meta)**:
     - `title`: 菜单标题（支持 i18n 键名）。

@@ -1,0 +1,15 @@
+---
+alwaysApply: false
+---
+
+# 后端规则索引
+
+后端规范统一在 **仓库根目录** `.cursor/rules/`，需要时在根目录查看；本目录仅作索引。
+
+| 规范 | 路径（以仓库根为基准） |
+|------|------------------------|
+| 后端开发规范 | `.cursor/rules/backend-development.mdc` |
+| 命名规范说明 | `.cursor/rules/命名规范说明.mdc` |
+| 全局规范 | `.cursor/rules/global-rules.mdc` |
+
+Cursor 会随工作区加载根目录规则；本文件仅作入口说明。

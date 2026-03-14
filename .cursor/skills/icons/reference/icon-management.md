@@ -29,7 +29,7 @@ description: 规范化使用 Vben Admin 中的图标资源（Iconify, Lucide, SV
 
 **提示词:**
 
-> 在侧边栏导航中为“用户管理”添加一个 Lucide 图标。
+> 在侧边栏导航中为"用户管理"添加一个 Lucide 图标。
 
 **配置示例:**
 `icon: 'lucide:user'` 或直接在 `meta` 中配置。

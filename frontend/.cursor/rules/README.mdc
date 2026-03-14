@@ -1,0 +1,16 @@
+---
+alwaysApply: false
+---
+
+# 前端规则索引
+
+前端 / API / 权限规范统一在 **仓库根目录** `.cursor/rules/`，需要时在根目录查看；本目录仅作索引。
+
+| 规范 | 路径（以仓库根为基准） |
+|------|------------------------|
+| 前端开发规范 | `.cursor/rules/frontend-development.mdc` |
+| API 客户端规范 | `.cursor/rules/api-rules.mdc` |
+| 权限系统设计 | `.cursor/rules/access-system.mdc` |
+| 全局规范 | `.cursor/rules/global-rules.mdc` |
+
+Cursor 会随工作区加载根目录规则；本文件仅作入口说明。

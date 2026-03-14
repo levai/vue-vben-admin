@@ -77,6 +77,8 @@ vue-vben-admin/
     └── rules/                 # 规则文件
 ```
 
+**路径约定**：本文档及本仓库规则/技能中的路径均以**仓库根**为基准。前端主应用：`frontend/apps/web-antd`；后端：`backend`。
+
 ---
 
 ## 🔧 开发环境要求
@@ -159,7 +161,7 @@ yarn install # 禁止
 
 #### 应用级别别名（`#/*`）
 
-在 `apps/web-antd/package.json` 中配置：
+在 `frontend/apps/web-antd/package.json` 中配置：
 
 ```json
 {
@@ -333,12 +335,18 @@ mvn spring-boot:run
 
 ### 规则文件组织
 
-项目规则文件位于 `.cursor/rules/` 目录：
+**规则**（唯一规范来源）：仓库根目录 `.cursor/rules/`
 
-- `global-rules.mdc` - 全局规则（本文档）
-- `frontend-development.mdc` - 前端开发规范
-- `backend-development.mdc` - 后端开发规范（引用文档）
-- `access-system.mdc` - 权限系统设计
+| 文件 | 说明 |
+|------|------|
+| global-rules.mdc | 全局规范（本文档） |
+| frontend-development.mdc | 前端开发（frontend/apps/web-antd） |
+| api-rules.mdc | API 客户端（requestClient、类型、命名） |
+| access-system.mdc | 权限系统（权限码、v-access、usePermissions） |
+| backend-development.mdc | 后端开发 |
+| 命名规范说明.mdc | 后端命名与项目结构 |
+
+**技能**：仓库根目录 `.cursor/skills/`，可用 @.cursor/skills 或 @.cursor/skills/xxx 按需引用。
 
 ### 文档引用
 

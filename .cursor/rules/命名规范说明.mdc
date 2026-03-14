@@ -4,6 +4,8 @@ alwaysApply: true
 
 # 后端服务命名规范和项目结构
 
+> 以下包结构及路径均指 **backend 项目内**，即 `backend/src/main/java/com/vben/admin/`。路径以仓库根为基准。
+
 ## 📋 项目结构
 
 ```
@@ -657,5 +659,5 @@ apps/backend-service/src/main/java/com/vben/admin/core/utils/
 ## 📖 相关文档
 
 - [项目 README](../../README.md)
-- [技术栈与开发规范分析](../../docs/技术栈与开发规范分析.md) - 详细的技术栈分析和开发规范
-- [Token 最佳实践](../../docs/TOKEN_BEST_PRACTICES.md) - JWT Token 使用最佳实践
+- [技术栈与开发规范分析](../../backend/docs/技术栈与开发规范分析.md)
+- [Token 最佳实践](../../backend/docs/TOKEN_BEST_PRACTICES.md)

@@ -4,7 +4,7 @@ alwaysApply: true
 
 # Web-Antd 权限系统设计分析
 
-> 本文档是 **`apps/web-antd`** 项目的权限系统使用规范，基于实际项目代码编写。
+> 本文档是 **`frontend/apps/web-antd`** 项目的权限系统使用规范，基于实际项目代码编写。
 
 ## 📋 目录
 
@@ -19,6 +19,14 @@ alwaysApply: true
 9. [权限模式（前端/后端）](#权限模式前后端)
 10. [核心组件与 API](#核心组件与-api)
 11. [实际使用示例](#实际使用示例)
+
+### 速查（详见下文）
+
+- **权限码**：`src/constants/permission-codes.ts`，格式 **`ac:module:resource:action`**（如 `ac:system:user:add`）
+- **页面按钮**：`v-access:code="SYSTEM_PERMISSION_CODES.XXX.ADD"`，用常量勿手写
+- **表格操作列**：`data.ts` 中 `usePermissions(SYSTEM_PERMISSION_CODES.XXX)`，`hasPermission.EDIT()` 等过滤 actionButtons
+- **编程判断**：优先 `usePermissions(模块常量)`；多码/角色用 `useAccess` 的 `hasAccessByCodes` / `hasAccessByRoles`
+- **模式**：当前为后端菜单模式（accessMode: backend），路由由后端菜单控制
 
 ---
 
@@ -159,7 +167,7 @@ const isAdmin = hasAccessByRoles(['admin']);
 
 ### 方式二：使用 `usePermissions`（推荐）⭐
 
-**来源**：`apps/web-antd/src/hooks/use-permissions.ts`，项目自定义封装
+**来源**：`frontend/apps/web-antd/src/hooks/use-permissions.ts`，项目自定义封装
 
 ```typescript
 import { usePermissions } from '#/hooks/use-permissions';
@@ -226,7 +234,7 @@ export function usePermissions<T extends PermissionCodesObject>(codes: T) {
 
 路由权限通过 `router/guard.ts` 中的 `setupAccessGuard` 实现：
 
-```typescript:47:120:apps/web-antd/src/router/guard.ts
+```typescript:47:120:frontend/apps/web-antd/src/router/guard.ts
 function setupAccessGuard(router: Router) {
   router.beforeEach(async (to, from) => {
     const accessStore = useAccessStore();
@@ -389,7 +397,7 @@ import { $t } from '#/locales';
 </template>
 ```
 
-**实际项目示例**（`apps/web-antd/src/views/system/user/list.vue`）：
+**实际项目示例**（`frontend/apps/web-antd/src/views/system/user/list.vue`）：
 
 ```vue
 <template>
@@ -659,7 +667,7 @@ function hasAccessByRoles(roles: string[]) {
 
 ### 3. 角色获取流程
 
-**web-antd** 项目的登录流程（`apps/web-antd/src/store/auth.ts`）：
+**web-antd** 项目的登录流程（`frontend/apps/web-antd/src/store/auth.ts`）：
 
 ```typescript
 async function authLogin(
@@ -752,7 +760,7 @@ interface AccessState {
 
 ### 2. 权限码获取
 
-通过 API 获取用户权限码（`apps/web-antd/src/api/core/auth.ts`）：
+通过 API 获取用户权限码（`frontend/apps/web-antd/src/api/core/auth.ts`）：
 
 ```typescript
 import { requestClient } from '#/api/request';
@@ -798,7 +806,7 @@ function hasAccessByCodes(codes: string[]) {
 - 权限相对固定
 - 前端需要完全控制路由结构
 
-**配置**（`apps/web-antd/src/preferences.ts`）：
+**配置**（`frontend/apps/web-antd/src/preferences.ts`）：
 ```typescript
 import { defineOverridesPreferences } from '@vben/preferences';
 
@@ -822,7 +830,7 @@ export const overridesPreferences = defineOverridesPreferences({
 - 权限动态变化
 - 需要后端统一管理权限
 
-**配置**（`apps/web-antd/src/preferences.ts`）：
+**配置**（`frontend/apps/web-antd/src/preferences.ts`）：
 ```typescript
 import { defineOverridesPreferences } from '@vben/preferences';
 
@@ -833,7 +841,7 @@ export const overridesPreferences = defineOverridesPreferences({
 });
 ```
 
-**后端菜单 API**（`apps/web-antd/src/api/core/menu.ts`）：
+**后端菜单 API**（`frontend/apps/web-antd/src/api/core/menu.ts`）：
 ```typescript
 import type { RouteRecordStringComponent } from '@vben/types';
 import { requestClient } from '#/api/request';
@@ -849,7 +857,7 @@ export async function getAllMenusApi() {
 
 ### 3. 权限生成逻辑
 
-**web-antd** 项目的权限生成逻辑（`apps/web-antd/src/router/access.ts`）：
+**web-antd** 项目的权限生成逻辑（`frontend/apps/web-antd/src/router/access.ts`）：
 
 ```typescript
 import type {
@@ -943,7 +951,7 @@ const {
 
 #### `usePermissions()` - 权限管理 Hook（推荐使用）⭐
 
-**web-antd** 项目提供的权限管理 Hook（`apps/web-antd/src/hooks/use-permissions.ts`）：
+**web-antd** 项目提供的权限管理 Hook（`frontend/apps/web-antd/src/hooks/use-permissions.ts`）：
 
 ```typescript
 import { usePermissions } from '#/hooks/use-permissions';
@@ -973,7 +981,7 @@ if (hasPermission.ADD()) {
 
 ### 3. API
 
-**web-antd** 项目的权限相关 API（`apps/web-antd/src/api/core/`）：
+**web-antd** 项目的权限相关 API（`frontend/apps/web-antd/src/api/core/`）：
 
 ```typescript
 // 导入 API 函数
@@ -994,8 +1002,8 @@ import {
 ```
 
 **API 文件位置**：
-- `apps/web-antd/src/api/core/auth.ts` - 认证相关 API
-- `apps/web-antd/src/api/core/menu.ts` - 菜单相关 API
+- `frontend/apps/web-antd/src/api/core/auth.ts` - 认证相关 API
+- `frontend/apps/web-antd/src/api/core/menu.ts` - 菜单相关 API
 
 ---
 
@@ -1027,7 +1035,7 @@ const routes: RouteRecordRaw[] = [
 
 ### 2. 按钮权限控制（使用 v-access 指令）
 
-**实际项目示例**（`apps/web-antd/src/views/system/user/list.vue`）：
+**实际项目示例**（`frontend/apps/web-antd/src/views/system/user/list.vue`）：
 
 ```vue
 <script setup lang="ts">
@@ -1059,7 +1067,7 @@ function onCreate() {
 
 ### 3. 表格操作按钮权限（使用 usePermissions）
 
-**实际项目示例**（`apps/web-antd/src/views/system/user/data.ts`）：
+**实际项目示例**（`frontend/apps/web-antd/src/views/system/user/data.ts`）：
 
 ```typescript
 import { usePermissions } from '#/hooks/use-permissions';

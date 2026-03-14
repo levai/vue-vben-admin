@@ -8,7 +8,8 @@ description: 标准化 Vben Admin 中的二次确认、消息提示与反馈交�
 
 ## 必备条件
 
-- 使用 Ant Design Vue 的 `Modal.confirm` 和 `message` 组件。
+- 使用 **Ant Design Vue** 的 `Modal.confirm` 和 `message`：`import { message, Modal } from 'ant-design-vue';`
+- 路径：frontend/apps/web-antd 下组件均可直接使用。
 
 ## 工作流步骤
 

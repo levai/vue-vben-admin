@@ -115,13 +115,13 @@ node scripts/cli.js dev docs         # 文档站点
 
 ### 前端文档
 
-- [前端开发规范](./frontend/.cursor/rules/frontend-development.mdc)
-- [权限系统设计](./frontend/.cursor/rules/access-system.mdc)
+- [前端开发规范](./.cursor/rules/frontend-development.mdc)
+- [权限系统设计](./.cursor/rules/access-system.mdc)
 - [前端 README](./frontend/README.md)
 
 ### 后端文档
 
-- [后端开发规范](./backend/.cursor/rules/backend-development.mdc)
+- [后端开发规范](./.cursor/rules/backend-development.mdc)
 - [后端 README](./backend/README.md)
 - [技术栈分析](./backend/docs/技术栈与开发规范分析.md)
 - [Token 最佳实践](./backend/docs/TOKEN_BEST_PRACTICES.md)
@@ -188,7 +188,7 @@ cd frontend && pnpm clean && cd ../backend && mvn clean
 ### 前端开发
 
 1. 进入前端目录：`cd frontend`
-2. 查看前端文档：`frontend/.cursor/rules/frontend-development.mdc`
+2. 查看前端文档：`.cursor/rules/frontend-development.mdc`
 3. 遵循 Vue 3 Composition API 规范
 4. 使用 TypeScript 类型定义
 5. 遵循项目代码规范
@@ -196,7 +196,7 @@ cd frontend && pnpm clean && cd ../backend && mvn clean
 ### 后端开发
 
 1. 进入后端目录：`cd backend`
-2. 查看后端文档：`backend/.cursor/rules/backend-development.mdc`
+2. 查看后端文档：`.cursor/rules/backend-development.mdc`
 3. 遵循 Spring Boot 3 规范
 4. 使用 MyBatis Plus 进行数据库操作
 5. 遵循 RESTful API 设计规范
