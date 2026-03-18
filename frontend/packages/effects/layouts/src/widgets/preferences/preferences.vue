@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
 
 import { Settings } from '@vben/icons';
 import { $t, loadLocaleMessages } from '@vben/locales';
@@ -53,10 +53,21 @@ const listen = computed(() => {
   }
   return result;
 });
+
+const vueAttrs = useAttrs();
+type ClassType = Array<object | string> | object | string;
+const bindProps = computed((): Record<string, unknown> & { class?: ClassType } => {
+  const merged = { ...vueAttrs, ...attrs.value };
+  if (merged.class === null) {
+    const { class: _c, ...rest } = merged;
+    return { ...rest, class: undefined };
+  }
+  return merged as Record<string, unknown> & { class?: ClassType };
+});
 </script>
 <template>
   <div>
-    <Drawer v-bind="{ ...$attrs, ...attrs }" v-on="listen" />
+    <Drawer v-bind="bindProps" v-on="listen" />
 
     <div @click="() => drawerApi.open()">
       <slot>

@@ -35,8 +35,11 @@ export function useVbenVxeGrid<
       onBeforeUnmount(() => {
         api.unmount();
       });
-      api.setState({ ...props, ...attrs });
-      return () => h(VxeGrid, { ...props, ...attrs, api: extendedApi }, slots);
+      const state = { ...props, ...attrs };
+      if (state.class === null) state.class = undefined;
+      api.setState(state as Partial<VxeGridProps<any, BaseFormComponentType>>);
+      return () =>
+        h(VxeGrid, { ...props, ...attrs, api: extendedApi } as any, slots);
     },
     {
       name: 'VbenVxeGrid',

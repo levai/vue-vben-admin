@@ -45,29 +45,34 @@ function getOperationTypeLabel(type: string): string {
   return labelMap[type] || type;
 }
 
+type ElTagType = 'primary' | 'success' | 'info' | 'warning' | 'danger';
+
 /**
  * 获取操作类型标签颜色
  */
-function getOperationTypeColor(type: string) {
-  const colorMap: Record<string, string> = {
+function getOperationTypeColor(type: string): ElTagType {
+  const colorMap: Record<string, ElTagType> = {
     view: 'info',
     add: 'success',
     edit: 'warning',
     delete: 'danger',
     export: 'primary',
-    import: '',
+    import: 'info',
     login: 'success',
     logout: 'info',
     download: 'primary',
     upload: 'success',
   };
-  return colorMap[type] || 'info';
+  return colorMap[type] ?? 'info';
 }
 
 /**
  * 格式化状态标签
  */
-function getStatusTag(status: number) {
+function getStatusTag(status: number): {
+  type: ElTagType;
+  text: string;
+} {
   return status === 1
     ? { type: 'success', text: $t('system.operationLog.status.success') }
     : { type: 'danger', text: $t('system.operationLog.status.failed') };
